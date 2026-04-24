@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "276611421496",
+    "firebase_url": "https://equipment-borrowingsystem-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "equipment-borrowingsystem",
+    "storage_bucket": "equipment-borrowingsystem.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:276611421496:android:4fc71b1c630afa2524ddcd",
+        "android_client_info": {
+          "package_name": "com.example.equipmentborrowingandmanagementsystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy9wck9jRl5cfHHLu6JnY8FO1ANMRquqI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:276611421496:android:92e0c1c5fffca57c24ddcd",
+        "android_client_info": {
+          "package_name": "com.example.equipmentborrowingapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy9wck9jRl5cfHHLu6JnY8FO1ANMRquqI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
