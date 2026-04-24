@@ -233,7 +233,9 @@ fun EquipmentListScreen(
                 )
             } else {
                 LazyColumn(
-                    modifier = Modifier.height(520.dp),
+                    modifier = Modifier
+                        .heightIn(max = 620.dp)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(filteredEquipmentList, key = { it.id }) { equipment ->
@@ -270,7 +272,7 @@ private fun ModernEquipmentCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
     ) {
         Column(
             modifier = Modifier.padding(14.dp)
@@ -286,7 +288,7 @@ private fun ModernEquipmentCard(
                         error = painterResource(id = localImageResId),
                         placeholder = painterResource(id = localImageResId),
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(108.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color(0xFFF5F5F5))
                     )
@@ -296,7 +298,7 @@ private fun ModernEquipmentCard(
                         contentDescription = equipment.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(108.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color(0xFFF5F5F5))
                     )
@@ -374,7 +376,7 @@ private fun ModernEquipmentCard(
                 text = when {
                     !equipment.isBorrowable -> "Lab Use Only"
                     equipment.availableQuantity <= 0 -> "Out of Stock"
-                    else -> "Borrow Request"
+                    else -> "Request Now"
                 },
                 onClick = onBorrowClick,
                 enabled = canBorrow
