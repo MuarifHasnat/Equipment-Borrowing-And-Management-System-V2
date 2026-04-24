@@ -39,3 +39,4 @@ val StockOut = Color(0xFFDC2626)
 
 // ================= DIVIDER =================
 val DividerLight = Color(0xFFE5E7EB)
+val ColorDarkSurface = Color(0xFF1F2937)
