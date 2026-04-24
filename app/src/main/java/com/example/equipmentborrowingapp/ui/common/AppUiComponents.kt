@@ -33,7 +33,15 @@ import com.example.equipmentborrowingapp.ui.theme.SurfaceWhite
 import com.example.equipmentborrowingapp.ui.theme.TextLight
 import com.example.equipmentborrowingapp.ui.theme.TextPrimary
 import com.example.equipmentborrowingapp.ui.theme.TextSecondary
-
+import androidx.compose.foundation.layout.ColumnScope
+import com.example.equipmentborrowingapp.ui.theme.Success
+import com.example.equipmentborrowingapp.ui.theme.SuccessLight
+import com.example.equipmentborrowingapp.ui.theme.Warning
+import com.example.equipmentborrowingapp.ui.theme.WarningLight
+import com.example.equipmentborrowingapp.ui.theme.Error as AppError
+import com.example.equipmentborrowingapp.ui.theme.ErrorLight
+import com.example.equipmentborrowingapp.ui.theme.Info
+import com.example.equipmentborrowingapp.ui.theme.InfoLight
 @Composable
 fun GradientHeaderCard(
     title: String,
@@ -297,6 +305,76 @@ fun TwoColumnInfoRow(
         LabeledValue(
             title = rightTitle,
             value = rightValue
+        )
+    }
+}
+
+
+@Composable
+fun AlertInfoCard(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                color = PrimaryDark,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = message,
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfessionalStatusBadge(
+    text: String,
+    type: String,
+    modifier: Modifier = Modifier
+) {
+    val (bgColor, textColor) = when (type.trim().lowercase()) {
+        "success", "approved", "returned", "active", "available" ->
+            Pair(SuccessLight, Success)
+
+        "warning", "pending", "low", "maintenance" ->
+            Pair(WarningLight, Warning)
+
+        "error", "rejected", "overdue", "problematic", "out" ->
+            Pair(ErrorLight, AppError)
+
+        "info" ->
+            Pair(InfoLight, Info)
+
+        else ->
+            Pair(DividerLight, TextSecondary)
+    }
+
+    Box(
+        modifier = modifier
+            .background(bgColor, RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
         )
     }
 }
