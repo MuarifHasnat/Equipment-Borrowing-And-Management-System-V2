@@ -20,7 +20,7 @@ import com.example.equipmentborrowingapp.ui.common.*
 import com.example.equipmentborrowingapp.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-
+import androidx.compose.ui.draw.clip
 @Composable
 fun MyRequestsScreen(
     requestList: List<BorrowRequest>,
@@ -68,7 +68,7 @@ fun MyRequestsScreen(
 
         if (filteredList.isEmpty()) {
             EmptyStateText(
-                text = "No $selectedFilter requests found",
+                text = "No $selectedFilter requests available",
                 modifier = Modifier.weight(1f)
             )
         } else {
@@ -108,8 +108,9 @@ private fun ModernRequestCard(request: BorrowRequest) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(5.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(5.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
 
@@ -119,14 +120,18 @@ private fun ModernRequestCard(request: BorrowRequest) {
                     AsyncImage(
                         model = request.equipmentImageUrl,
                         contentDescription = null,
-                        modifier = Modifier.size(90.dp),
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(16.dp)),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Image(
                         painter = painterResource(id = fallbackImageResId),
                         contentDescription = null,
-                        modifier = Modifier.size(90.dp)
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(16.dp))
                     )
                 }
 
@@ -146,10 +151,9 @@ private fun ModernRequestCard(request: BorrowRequest) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    AppStatusBadge(
+                    ProfessionalStatusBadge(
                         text = status,
-                        backgroundColor = badgeColor,
-                        textColor = TextPrimary
+                        type = status
                     )
                 }
             }
@@ -157,7 +161,7 @@ private fun ModernRequestCard(request: BorrowRequest) {
             if (status == "Overdue") {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "⚠ Please return immediately",
+                    text = "⚠ Overdue item. Please return it as soon as possible.",
                     color = MaterialTheme.colorScheme.error
                 )
             }
