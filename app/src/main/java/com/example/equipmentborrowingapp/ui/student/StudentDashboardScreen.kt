@@ -1,43 +1,25 @@
 package com.example.equipmentborrowingapp.ui.student
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.equipmentborrowingapp.ui.common.GradientHeaderCard
-import com.example.equipmentborrowingapp.ui.common.PrimaryActionButton
-import com.example.equipmentborrowingapp.ui.common.SectionTitle
-import com.example.equipmentborrowingapp.ui.common.SummaryStatCard
-import com.example.equipmentborrowingapp.ui.theme.AppBackground
-import com.example.equipmentborrowingapp.ui.theme.ErrorLight
-import com.example.equipmentborrowingapp.ui.theme.InfoLight
-import com.example.equipmentborrowingapp.ui.theme.Primary
-import com.example.equipmentborrowingapp.ui.theme.PrimaryLight
-import com.example.equipmentborrowingapp.ui.theme.SurfaceWhite
-import com.example.equipmentborrowingapp.ui.theme.SuccessLight
-import com.example.equipmentborrowingapp.ui.theme.TextLight
-import com.example.equipmentborrowingapp.ui.theme.TextPrimary
+import com.example.equipmentborrowingapp.ui.theme.*
 
 @Composable
 fun StudentDashboardScreen(
@@ -54,109 +36,246 @@ fun StudentDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            GradientHeaderCard(
-                title = "Student Panel",
-                subtitle = "Lab & Equipment Access",
-                description = "Manage requests, explore lab resources, and access available equipment quickly."
-            )
+            StudentHeroCard()
 
             Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "Overview",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                SummaryStatCard(
+                StudentMiniStatCard(
                     title = "Equipment",
                     value = "Browse",
-                    bgColor = PrimaryLight,
                     modifier = Modifier.weight(1f)
                 )
 
-                SummaryStatCard(
+                StudentMiniStatCard(
                     title = "Requests",
                     value = "Track",
-                    bgColor = SuccessLight,
                     modifier = Modifier.weight(1f)
                 )
 
-                SummaryStatCard(
+                StudentMiniStatCard(
                     title = "Lab PCs",
-                    value = "Access",
-                    bgColor = InfoLight,
+                    value = "Report",
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(26.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            SectionTitle(
+            AlertCard(
+                title = "Reminder",
+                message = "Check your request status regularly and return approved equipment before the due date.",
+                icon = Icons.Filled.WarningAmber
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
                 text = "Quick Actions",
-                modifier = Modifier.fillMaxWidth()
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            DashboardActionCard(
+                title = "View Equipment",
+                subtitle = "Browse available lab equipment and request items",
+                icon = Icons.Filled.Inventory2,
+                onClick = onViewEquipmentClick
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            DashboardActionCard(
+                title = "My Requests",
+                subtitle = "Track pending, approved, overdue and returned items",
+                icon = Icons.Filled.ListAlt,
+                onClick = onMyRequestsClick
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            DashboardActionCard(
+                title = "Lab Computers",
+                subtitle = "View lab PCs and report software issues",
+                icon = Icons.Filled.Computer,
+                onClick = onLabComputersClick
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            OutlinedButton(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = SurfaceWhite,
+                    contentColor = Error
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Logout,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Logout", fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun StudentHeroCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.horizontalGradient(
+                    listOf(Primary, Secondary)
+                ),
+                RoundedCornerShape(24.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column {
+            Text(
+                text = "Student Panel",
+                color = TextLight.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Lab & Equipment Access",
+                color = TextLight,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Borrow equipment, track requests, and report lab software issues from one clean dashboard.",
+                color = TextLight.copy(alpha = 0.92f),
+                style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            DashboardActionCard(
-                title = "View Equipment",
-                subtitle = "Browse available items for borrowing",
-                icon = {
-                    Icon(
-                        imageVector = Icons.Filled.QrCodeScanner,
-                        contentDescription = null,
-                        tint = TextLight,
-                        modifier = Modifier.size(28.dp)
-                    )
-                },
-                onClick = onViewEquipmentClick
+            Surface(
+                color = TextLight.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(50)
+            ) {
+                Text(
+                    text = "Role: Student",
+                    color = TextLight,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudentMiniStatCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(92.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = value,
+                color = Primary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            DashboardActionCard(
-                title = "My Requests",
-                subtitle = "Check your submitted request history",
-                icon = {
-                    Icon(
-                        imageVector = Icons.Filled.ListAlt,
-                        contentDescription = null,
-                        tint = TextLight,
-                        modifier = Modifier.size(28.dp)
-                    )
-                },
-                onClick = onMyRequestsClick
+            Text(
+                text = title,
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlertCard(
+    title: String,
+    message: String,
+    icon: ImageVector
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = WarningLight),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Warning
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            DashboardActionCard(
-                title = "Lab Computers",
-                subtitle = "Explore available lab computers",
-                icon = {
-                    Icon(
-                        imageVector = Icons.Filled.Computer,
-                        contentDescription = null,
-                        tint = TextLight,
-                        modifier = Modifier.size(28.dp)
-                    )
-                },
-                onClick = onLabComputersClick
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            PrimaryActionButton(
-                text = "Logout",
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Column {
+                Text(
+                    text = title,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = message,
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -165,32 +284,40 @@ fun StudentDashboardScreen(
 private fun DashboardActionCard(
     title: String,
     subtitle: String,
-    icon: @Composable () -> Unit,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
-    androidx.compose.material3.Card(
+    Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = Primary
-        ),
-        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 6.dp),
-        onClick = onClick
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            icon()
+            Surface(
+                color = PrimaryLight,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Primary
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = TextLight,
+                    color = TextPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -199,9 +326,8 @@ private fun DashboardActionCard(
 
                 Text(
                     text = subtitle,
-                    color = TextLight.copy(alpha = 0.9f),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }
