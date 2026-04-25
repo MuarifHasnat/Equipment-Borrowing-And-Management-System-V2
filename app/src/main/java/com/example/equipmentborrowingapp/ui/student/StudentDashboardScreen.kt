@@ -1,5 +1,5 @@
 package com.example.equipmentborrowingapp.ui.student
-
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +26,7 @@ fun StudentDashboardScreen(
     onViewEquipmentClick: () -> Unit,
     onMyRequestsClick: () -> Unit,
     onLabComputersClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     Surface(
@@ -88,11 +89,19 @@ fun StudentDashboardScreen(
 
             Text(
                 text = "Quick Actions",
+
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary,
                 fontWeight = FontWeight.ExtraBold
             )
+            Spacer(modifier = Modifier.height(12.dp))
 
+            DashboardActionCard(
+                title = "My Profile",
+                subtitle = "View your account details",
+                icon = Icons.Filled.Person,
+                onClick = onProfileClick
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             DashboardActionCard(

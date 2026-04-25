@@ -60,6 +60,7 @@ import kotlinx.coroutines.launch
 import com.example.equipmentborrowingapp.navigation.isAdminScreen
 import com.example.equipmentborrowingapp.navigation.isStudentScreen
 import androidx.activity.compose.BackHandler
+import com.example.equipmentborrowingapp.ui.student.StudentProfileScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -78,6 +79,8 @@ class MainActivity : ComponentActivity() {
                 // Auth / session state
                 var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Login) }
                 var currentUserRole by remember { mutableStateOf<String?>(null) }
+                var currentUserName by remember { mutableStateOf("") }
+                var currentUserEmail by remember { mutableStateOf("") }
                 val equipmentViewModel = remember { EquipmentViewModel() }
                 val requestViewModel = remember { RequestViewModel() }
                 val labComputerViewModel = remember { LabComputerViewModel() }
@@ -146,6 +149,9 @@ class MainActivity : ComponentActivity() {
 
                     adminCounts = AdminDashboardCounts()
                     labComputerViewModel.clearStudentLabComputers()
+
+                    currentUserName = ""
+                    currentUserEmail = ""
                 }
 
                 fun isAdmin(): Boolean = currentUserRole == "admin"
@@ -186,12 +192,19 @@ class MainActivity : ComponentActivity() {
                         return
                     }
 
-                    authRepository.getUserRole(uid) { role ->
+                    authRepository.getCurrentUser { user ->
                         runOnUiThread {
-                            val normalizedRole = role?.trim()?.lowercase()
-                            currentUserRole = normalizedRole
+                            if (user == null) {
+                                showMessage(UiMessages.UNKNOWN_ROLE)
+                                safeLogoutToLogin()
+                                return@runOnUiThread
+                            }
 
-                            when (normalizedRole) {
+                            currentUserName = user.name
+                            currentUserEmail = user.email
+                            currentUserRole = user.role.trim().lowercase()
+
+                            when (currentUserRole) {
                                 "admin", "student" -> onReady?.invoke()
                                 else -> {
                                     showMessage(UiMessages.UNKNOWN_ROLE)
@@ -428,13 +441,29 @@ class MainActivity : ComponentActivity() {
                                     onLabComputersClick = {
                                         loadLabComputersForStudent()
                                     },
+                                    onProfileClick = {
+                                        currentScreen = AppScreen.StudentProfile
+                                    },
                                     onLogout = {
                                         safeLogoutToLogin()
                                     }
                                 )
                             }
                         }
-
+                        AppScreen.StudentProfile -> {
+                            if (!isStudent()) {
+                                redirectUnauthorized(AppScreen.StudentProfile)
+                            } else {
+                                StudentProfileScreen(
+                                    userName = currentUserName.ifBlank { "Student" },
+                                    userEmail = currentUserEmail.ifBlank { "No email found" },
+                                    role = currentUserRole ?: "student",
+                                    onBackClick = {
+                                        currentScreen = AppScreen.StudentDashboard
+                                    }
+                                )
+                            }
+                        }
                         AppScreen.EquipmentList -> {
                             if (!isStudent()) {
                                 redirectUnauthorized(AppScreen.EquipmentList)
@@ -755,7 +784,13 @@ class MainActivity : ComponentActivity() {
                         AppScreen.Register -> {
                             currentScreen = AppScreen.Login
                         }
-
+                        AppScreen.AdminProfile -> {
+                            // future use
+                            currentScreen = AppScreen.AdminDashboard
+                        }
+                        AppScreen.StudentProfile -> {
+                            currentScreen = AppScreen.StudentDashboard
+                        }
                         AppScreen.StudentDashboard -> {
                             // Dashboard e back dile logout hoye login e jabe
                             safeLogoutToLogin()
@@ -820,6 +855,7 @@ class MainActivity : ComponentActivity() {
 
                         when (currentScreen) {
                             in listOf(
+                                AppScreen.StudentProfile,
                                 AppScreen.StudentDashboard,
                                 AppScreen.EquipmentList,
                                 AppScreen.BorrowRequest,
