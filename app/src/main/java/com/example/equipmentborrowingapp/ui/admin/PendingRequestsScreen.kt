@@ -18,7 +18,8 @@ import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 import kotlinx.coroutines.launch
-
+import com.example.equipmentborrowingapp.ui.theme.SurfaceWhite
+import com.example.equipmentborrowingapp.ui.common.ProfessionalStatusBadge
 private fun getRequestStatusColor(status: String): Color {
     return when (status.lowercase()) {
         "pending" -> Color(0xFFFF9800)
@@ -46,13 +47,17 @@ private fun RequestCardImage(
             contentScale = ContentScale.Crop,
             placeholder = painterResource(fallbackImageResId),
             error = painterResource(fallbackImageResId),
-            modifier = Modifier.size(90.dp).clip(RoundedCornerShape(12.dp))
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(16.dp))
         )
     } else {
         Image(
             painter = painterResource(fallbackImageResId),
             contentDescription = contentDescription,
-            modifier = Modifier.size(90.dp)
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(16.dp))
         )
     }
 }
@@ -177,8 +182,9 @@ fun PendingRequestsScreen(
                         items(requestList) { request ->
 
                             Card(
-                                shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(4.dp)
+                                shape = RoundedCornerShape(20.dp),
+                                elevation = CardDefaults.cardElevation(5.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
 
@@ -204,9 +210,9 @@ fun PendingRequestsScreen(
                                             Text("Borrow: ${request.borrowDate}")
                                             Text("Due: ${request.dueDate}")
 
-                                            Text(
-                                                "Status: ${request.status}",
-                                                color = getRequestStatusColor(request.status)
+                                            ProfessionalStatusBadge(
+                                                text = request.status,
+                                                type = request.status
                                             )
                                         }
                                     }
@@ -224,7 +230,7 @@ fun PendingRequestsScreen(
                                             },
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Text("Approve")
+                                            Text("Approve Request")
                                         }
 
                                         OutlinedButton(
@@ -234,7 +240,7 @@ fun PendingRequestsScreen(
                                             },
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Text("Reject")
+                                            Text("Reject Request")
                                         }
                                     }
                                 }

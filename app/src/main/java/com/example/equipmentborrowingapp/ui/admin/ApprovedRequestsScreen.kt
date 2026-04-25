@@ -18,7 +18,8 @@ import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 import kotlinx.coroutines.launch
-
+import com.example.equipmentborrowingapp.ui.theme.SurfaceWhite
+import com.example.equipmentborrowingapp.ui.common.ProfessionalStatusBadge
 private fun getRequestStatusColor(status: String): Color {
     return when (status.lowercase()) {
         "approved" -> Color(0xFF4CAF50)
@@ -43,13 +44,17 @@ private fun RequestCardImage(
             contentScale = ContentScale.Crop,
             placeholder = painterResource(fallback),
             error = painterResource(fallback),
-            modifier = Modifier.size(90.dp).clip(RoundedCornerShape(12.dp))
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(16.dp))
         )
     } else {
         Image(
             painter = painterResource(fallback),
             contentDescription = contentDescription,
-            modifier = Modifier.size(90.dp)
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(16.dp))
         )
     }
 }
@@ -149,9 +154,10 @@ fun ApprovedRequestsScreen(
                         items(requestList) { request ->
 
                             Card(
-                                shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(4.dp)
-                            ) {
+                                shape = RoundedCornerShape(20.dp),
+                                elevation = CardDefaults.cardElevation(5.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
+                            ){
                                 Column(modifier = Modifier.padding(14.dp)) {
 
                                     Row {
@@ -180,15 +186,16 @@ fun ApprovedRequestsScreen(
                                                 Text("Returned: ${request.returnedDate}")
                                             }
 
-                                            Text(
-                                                "Status: ${request.status}",
-                                                color = getRequestStatusColor(request.status)
+                                            ProfessionalStatusBadge(
+                                                text = request.status,
+                                                type = request.status
                                             )
 
                                             if (request.status.equals("Overdue", true)) {
                                                 Text(
-                                                    "⚠ Overdue",
-                                                    color = Color.Red
+                                                    "⚠ Overdue item. Return is required.",
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
                                             }
                                         }
@@ -208,7 +215,7 @@ fun ApprovedRequestsScreen(
                                                     || request.status.equals("Overdue", true),
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Text("Mark Returned")
+                                            Text("Mark as Returned")
                                         }
 
                                         OutlinedButton(
