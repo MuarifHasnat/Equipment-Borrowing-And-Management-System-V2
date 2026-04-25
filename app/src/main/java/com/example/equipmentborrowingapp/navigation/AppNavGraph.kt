@@ -71,6 +71,9 @@ fun AppNavGraph(startDestination: String = AppRoute.Login.route) {
                 onManageEquipmentClick = {},
                 onManageLabComputersClick = {},
                 onViewSoftwareReportsClick = {},
+                onProfileClick = {
+                    navController.navigate(AppRoute.AdminProfile.route)
+                },
                 onLogout = {
                     navController.navigate(AppRoute.Login.route) {
                         popUpTo(0)

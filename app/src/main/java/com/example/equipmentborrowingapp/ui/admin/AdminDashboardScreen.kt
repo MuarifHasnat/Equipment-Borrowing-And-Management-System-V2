@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.ui.theme.*
-
+import androidx.compose.material.icons.filled.Person
 @Composable
 fun AdminDashboardScreen(
     totalEquipmentCount: Int,
@@ -39,6 +39,7 @@ fun AdminDashboardScreen(
     onManageEquipmentClick: () -> Unit,
     onManageLabComputersClick: () -> Unit,
     onViewSoftwareReportsClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = AppBackground) {
@@ -89,7 +90,14 @@ fun AdminDashboardScreen(
             }
 
             Text("Quick Actions", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+            Spacer(modifier = Modifier.height(12.dp))
 
+            AdminActionCard(
+                title = "My Profile",
+                subtitle = "View admin details",
+                icon = Icons.Filled.Person,
+                onClick = onProfileClick
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             AdminActionCard("Add New Equipment", "Create new lab equipment item", Icons.Filled.AddCircleOutline, onAddEquipmentClick)

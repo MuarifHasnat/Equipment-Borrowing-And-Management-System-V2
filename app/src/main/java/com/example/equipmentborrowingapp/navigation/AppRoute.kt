@@ -17,6 +17,7 @@ sealed class AppRoute(val route: String) {
 
     // Admin
     object AdminDashboard : AppRoute("admin_dashboard")
+    object AdminProfile : AppRoute("admin_profile")
     object AddEquipment : AppRoute("add_equipment")
     object ManageEquipment : AppRoute("manage_equipment")
     object PendingRequests : AppRoute("pending_requests")

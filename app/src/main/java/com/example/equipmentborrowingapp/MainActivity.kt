@@ -61,6 +61,7 @@ import com.example.equipmentborrowingapp.navigation.isAdminScreen
 import com.example.equipmentborrowingapp.navigation.isStudentScreen
 import androidx.activity.compose.BackHandler
 import com.example.equipmentborrowingapp.ui.student.StudentProfileScreen
+import com.example.equipmentborrowingapp.ui.admin.AdminProfileScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -977,13 +978,29 @@ class MainActivity : ComponentActivity() {
                                         onViewSoftwareReportsClick = {
                                             loadAllSoftwareReportsAndOpen()
                                         },
+                                        onProfileClick = {
+                                            currentScreen = AppScreen.AdminProfile
+                                        },
                                         onLogout = {
                                             safeLogoutToLogin()
                                         }
                                     )
                                 }
                             }
-
+                            AppScreen.AdminProfile -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.AdminProfile)
+                                } else {
+                                    AdminProfileScreen(
+                                        userName = currentUserName.ifBlank { "Admin" },
+                                        userEmail = currentUserEmail.ifBlank { "No email found" },
+                                        role = currentUserRole ?: "admin",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.AdminDashboard
+                                        }
+                                    )
+                                }
+                            }
                             AppScreen.AddEquipment -> {
                                 if (!isAdmin()) {
                                     redirectUnauthorized(AppScreen.AddEquipment)
