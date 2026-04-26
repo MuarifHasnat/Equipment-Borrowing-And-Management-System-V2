@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.ui.theme.*
 import androidx.compose.material.icons.filled.Person
+import com.example.equipmentborrowingapp.ui.common.NotificationCard
+import androidx.compose.material.icons.filled.Notifications
 @Composable
 fun AdminDashboardScreen(
     totalEquipmentCount: Int,
@@ -32,6 +34,7 @@ fun AdminDashboardScreen(
     pendingRequestsCount: Int,
     approvedRequestsCount: Int,
     returnedItemsCount: Int,
+    onNotificationClick: () -> Unit,
     overdueItemsCount: Int,
     onAddEquipmentClick: () -> Unit,
     onViewPendingRequestsClick: () -> Unit,
@@ -41,6 +44,7 @@ fun AdminDashboardScreen(
     onViewSoftwareReportsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit
+
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = AppBackground) {
         Column(
@@ -80,14 +84,34 @@ fun AdminDashboardScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            if (lowStockCount > 0 || pendingRequestsCount > 0 || overdueItemsCount > 0) {
-                AdminAlertCard(
-                    lowStockCount = lowStockCount,
-                    pendingRequestsCount = pendingRequestsCount,
-                    overdueItemsCount = overdueItemsCount
+            if (pendingRequestsCount > 0) {
+                NotificationCard(
+                    title = "Pending Requests",
+                    message = "$pendingRequestsCount request(s) need admin approval.",
+                    type = "warning"
                 )
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(10.dp))
             }
+
+            if (lowStockCount > 0) {
+                NotificationCard(
+                    title = "Low Stock Alert",
+                    message = "$lowStockCount equipment item(s) are low in stock.",
+                    type = "warning"
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            if (overdueItemsCount > 0) {
+                NotificationCard(
+                    title = "Overdue Items",
+                    message = "$overdueItemsCount item(s) are overdue and need follow-up.",
+                    type = "error"
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text("Quick Actions", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
             Spacer(modifier = Modifier.height(12.dp))
@@ -99,7 +123,14 @@ fun AdminDashboardScreen(
                 onClick = onProfileClick
             )
             Spacer(modifier = Modifier.height(12.dp))
-
+            AdminActionCard(
+                title = "Notifications",
+                subtitle = "View system alerts",
+                icon = Icons.Filled.Notifications,
+                onClick = {
+                    onNotificationClick()
+                }
+            )
             AdminActionCard("Add New Equipment", "Create new lab equipment item", Icons.Filled.AddCircleOutline, onAddEquipmentClick)
             AdminActionCard("Pending Requests", "Review and approve student requests", Icons.Filled.HourglassEmpty, onViewPendingRequestsClick)
             AdminActionCard("Approved Requests", "Track approved and overdue items", Icons.Filled.CheckCircleOutline, onViewApprovedRequestsClick)

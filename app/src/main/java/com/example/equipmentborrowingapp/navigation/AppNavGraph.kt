@@ -8,7 +8,8 @@ import com.example.equipmentborrowingapp.ui.admin.AdminDashboardScreen
 import com.example.equipmentborrowingapp.ui.auth.LoginScreen
 import com.example.equipmentborrowingapp.ui.auth.RegisterScreen
 import com.example.equipmentborrowingapp.ui.student.StudentDashboardScreen
-
+import com.example.equipmentborrowingapp.ui.common.NotificationScreen
+import com.example.equipmentborrowingapp.data.model.AppNotification
 @Composable
 fun AppNavGraph(startDestination: String = AppRoute.Login.route) {
     val navController = rememberNavController()
@@ -39,7 +40,16 @@ fun AppNavGraph(startDestination: String = AppRoute.Login.route) {
                 }
             )
         }
-
+        composable(AppRoute.Notifications.route) {
+            NotificationScreen(
+                notificationList = emptyList<AppNotification>(),
+                onMarkReadClick = {},
+                onDeleteClick = {},
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
         composable(AppRoute.StudentDashboard.route) {
             StudentDashboardScreen(
                 onViewEquipmentClick = {},
@@ -47,6 +57,9 @@ fun AppNavGraph(startDestination: String = AppRoute.Login.route) {
                 onLabComputersClick = {},
                 onProfileClick = {
                     navController.navigate(AppRoute.StudentProfile.route)
+                },
+                onNotificationClick = {
+                    navController.navigate(AppRoute.Notifications.route)
                 },
                 onLogout = {
                     navController.navigate(AppRoute.Login.route) {
@@ -74,6 +87,9 @@ fun AppNavGraph(startDestination: String = AppRoute.Login.route) {
                 onProfileClick = {
                     navController.navigate(AppRoute.AdminProfile.route)
                 },
+                onNotificationClick = {
+                    navController.navigate(AppRoute.Notifications.route)
+                },
                 onLogout = {
                     navController.navigate(AppRoute.Login.route) {
                         popUpTo(0)
@@ -81,5 +97,6 @@ fun AppNavGraph(startDestination: String = AppRoute.Login.route) {
                 }
             )
         }
+
     }
 }

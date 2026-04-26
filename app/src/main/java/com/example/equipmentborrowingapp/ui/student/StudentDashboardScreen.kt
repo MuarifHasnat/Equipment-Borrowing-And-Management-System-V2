@@ -20,13 +20,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.ui.theme.*
-
+import androidx.compose.material.icons.filled.Notifications
 @Composable
 fun StudentDashboardScreen(
     onViewEquipmentClick: () -> Unit,
     onMyRequestsClick: () -> Unit,
     onLabComputersClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     Surface(
@@ -121,7 +122,14 @@ fun StudentDashboardScreen(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-
+            DashboardActionCard(
+                title = "Notifications",
+                subtitle = "View alerts and updates",
+                icon = Icons.Filled.Notifications,
+                onClick = {
+                    onNotificationClick()
+                }
+            )
             DashboardActionCard(
                 title = "Lab Computers",
                 subtitle = "View lab PCs and report software issues",

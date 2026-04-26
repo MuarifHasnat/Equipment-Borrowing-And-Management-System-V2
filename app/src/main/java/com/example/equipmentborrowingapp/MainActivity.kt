@@ -62,13 +62,17 @@ import com.example.equipmentborrowingapp.navigation.isStudentScreen
 import androidx.activity.compose.BackHandler
 import com.example.equipmentborrowingapp.ui.student.StudentProfileScreen
 import com.example.equipmentborrowingapp.ui.admin.AdminProfileScreen
+import com.example.equipmentborrowingapp.viewmodel.NotificationViewModel
+import com.example.equipmentborrowingapp.ui.common.NotificationScreen
+import com.example.equipmentborrowingapp.data.model.AppNotification
+import com.example.equipmentborrowingapp.data.repository.NotificationRepository
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
     private val equipmentRepository = EquipmentRepository()
     private val requestRepository = RequestRepository()
     private val labComputerRepository = LabComputerRepository()
-
+    private val notificationRepository = NotificationRepository()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,14 +93,32 @@ class MainActivity : ComponentActivity() {
                 val adminEquipmentViewModel = remember { AdminEquipmentViewModel() }
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
-
+                val notificationViewModel = remember { NotificationViewModel() }
                 fun showMessage(message: String) {
                     scope.launch {
                         snackbarHostState.showSnackbar(message)
                     }
                 }
                 // Screen data state
-
+                fun sendNotification(
+                    userId: String,
+                    role: String,
+                    title: String,
+                    message: String,
+                    type: String = "info"
+                ) {
+                    notificationRepository.sendNotification(
+                        AppNotification(
+                            userId = userId,
+                            role = role,
+                            title = title,
+                            message = message,
+                            type = type,
+                            isRead = false,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                }
 
                 var adminAllRequests by remember { mutableStateOf<List<BorrowRequest>>(emptyList()) }
                 var labComputerList by remember { mutableStateOf<List<LabComputer>>(emptyList()) }
@@ -210,8 +232,13 @@ class MainActivity : ComponentActivity() {
                                 else -> {
                                     showMessage(UiMessages.UNKNOWN_ROLE)
                                     safeLogoutToLogin()
+                                    notificationViewModel.clearNotifications()
                                 }
                             }
+                            notificationViewModel.startListening(
+                                userId = uid,
+                                role = currentUserRole ?: "student"
+                            )
                         }
                     }
                 }
@@ -329,6 +356,14 @@ class MainActivity : ComponentActivity() {
                                 if (success) UiMessages.REQUEST_APPROVED else message
                             )
                             if (success) {
+                                sendNotification(
+                                    userId = request.userId,
+                                    role = "student",
+                                    title = "Request Approved",
+                                    message = "Your request for ${request.equipmentName} has been approved.",
+                                    type = "success"
+                                )
+
                                 refreshRequestsForAdmin()
                             }
                         }
@@ -343,6 +378,14 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
+                                sendNotification(
+                                    userId = request.userId,
+                                    role = "student",
+                                    title = "Request Rejected",
+                                    message = "Your request for ${request.equipmentName} has been rejected.",
+                                    type = "error"
+                                )
+
                                 refreshRequestsForAdmin()
                             }
                         }
@@ -357,6 +400,14 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
+                                sendNotification(
+                                    userId = request.userId,
+                                    role = "student",
+                                    title = "Item Returned",
+                                    message = "${request.equipmentName} has been marked as returned.",
+                                    type = "info"
+                                )
+
                                 refreshRequestsForAdmin()
                             }
                         }
@@ -444,6 +495,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onProfileClick = {
                                         currentScreen = AppScreen.StudentProfile
+                                    },
+                                    onNotificationClick = {
+                                        currentScreen = AppScreen.Notifications
                                     },
                                     onLogout = {
                                         safeLogoutToLogin()
@@ -574,6 +628,14 @@ class MainActivity : ComponentActivity() {
                                                                             )
 
                                                                             if (success) {
+                                                                                sendNotification(
+                                                                                    userId = "",
+                                                                                    role = "admin",
+                                                                                    title = "New Borrow Request",
+                                                                                    message = "$userName requested ${equipment.name}",
+                                                                                    type = "warning"
+                                                                                )
+
                                                                                 equipmentViewModel.loadEquipment {
                                                                                     runOnUiThread {
                                                                                         currentScreen = AppScreen.EquipmentList
@@ -714,6 +776,14 @@ class MainActivity : ComponentActivity() {
                                                                 runOnUiThread {
                                                                     showMessage(message)
                                                                     if (success) {
+                                                                        sendNotification(
+                                                                            userId = "",
+                                                                            role = "admin",
+                                                                            title = "New Software Issue",
+                                                                            message = "$userName reported issue in $softwareName on ${computer.pcName}",
+                                                                            type = "warning"
+                                                                        )
+
                                                                         currentScreen = AppScreen.LabComputerList
                                                                     }
                                                                 }
@@ -784,6 +854,13 @@ class MainActivity : ComponentActivity() {
 
                         AppScreen.Register -> {
                             currentScreen = AppScreen.Login
+                        }
+                        AppScreen.Notifications -> {
+                            if (isAdmin()) {
+                                currentScreen = AppScreen.AdminDashboard
+                            } else {
+                                currentScreen = AppScreen.StudentDashboard
+                            }
                         }
                         AppScreen.AdminProfile -> {
                             // future use
@@ -946,7 +1023,24 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-
+                            AppScreen.Notifications -> {
+                                NotificationScreen(
+                                    notificationList = notificationViewModel.notificationList,
+                                    onMarkReadClick = { notification ->
+                                        notificationViewModel.markAsRead(notification.id)
+                                    },
+                                    onDeleteClick = { notification ->
+                                        notificationViewModel.deleteNotification(notification.id)
+                                    },
+                                    onBackClick = {
+                                        if (isAdmin()) {
+                                            currentScreen = AppScreen.AdminDashboard
+                                        } else {
+                                            currentScreen = AppScreen.StudentDashboard
+                                        }
+                                    }
+                                )
+                            }
 
                             AppScreen.AdminDashboard -> {
                                 if (!isAdmin()) {
@@ -980,6 +1074,9 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onProfileClick = {
                                             currentScreen = AppScreen.AdminProfile
+                                        },
+                                        onNotificationClick = {
+                                            currentScreen = AppScreen.Notifications
                                         },
                                         onLogout = {
                                             safeLogoutToLogin()

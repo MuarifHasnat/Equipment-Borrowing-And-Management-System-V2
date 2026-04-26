@@ -378,3 +378,48 @@ fun ProfessionalStatusBadge(
         )
     }
 }
+@Composable
+fun NotificationCard(
+    title: String,
+    message: String,
+    type: String,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = when (type.lowercase()) {
+        "warning" -> WarningLight
+        "error" -> ErrorLight
+        "success" -> SuccessLight
+        else -> InfoLight
+    }
+
+    val textColor = when (type.lowercase()) {
+        "warning" -> Warning
+        "error" -> AppError
+        "success" -> Success
+        else -> Info
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = title,
+                color = textColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = message,
+                color = TextPrimary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}

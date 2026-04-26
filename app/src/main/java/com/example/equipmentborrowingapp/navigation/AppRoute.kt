@@ -23,4 +23,6 @@ sealed class AppRoute(val route: String) {
     object PendingRequests : AppRoute("pending_requests")
     object ApprovedRequests : AppRoute("approved_requests")
     object ManageLabComputers : AppRoute("manage_lab_computers")
+    object Notifications : AppRoute("notifications")
+
 }

@@ -5,7 +5,7 @@ sealed class AppScreen(val route: String) {
     object AdminProfile : AppScreen("admin_profile")
     object Login : AppScreen("login")
     object Register : AppScreen("register")
-
+    object Notifications : AppScreen("notifications")
     object StudentDashboard : AppScreen("student_dashboard")
     object EquipmentList : AppScreen("equipment_list")
     object BorrowRequest : AppScreen("borrow_request")
