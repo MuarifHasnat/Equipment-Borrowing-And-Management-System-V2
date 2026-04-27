@@ -66,6 +66,7 @@ import com.example.equipmentborrowingapp.viewmodel.NotificationViewModel
 import com.example.equipmentborrowingapp.ui.common.NotificationScreen
 import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.example.equipmentborrowingapp.data.repository.NotificationRepository
+import com.example.equipmentborrowingapp.ui.student.EquipmentDetailsScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -547,9 +548,9 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             EquipmentListScreen(
                                                 equipmentList = equipmentViewModel.equipmentList,
-                                                onBorrowClick = { equipment ->
+                                                onViewDetailsClick = { equipment ->
                                                     selectedEquipment = equipment
-                                                    currentScreen = AppScreen.BorrowRequest
+                                                    currentScreen = AppScreen.EquipmentDetails
                                                 },
                                                 onBackClick = {
                                                     currentScreen = AppScreen.StudentDashboard
@@ -560,7 +561,21 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+                        AppScreen.EquipmentDetails -> {
+                            selectedEquipment?.let { equipment ->
+                                EquipmentDetailsScreen(
+                                    equipment = equipment,
+                                    onBorrowClick = { equipment ->
+                                        selectedEquipment = equipment
+                                        currentScreen = AppScreen.BorrowRequest
+                                    },
+                                    onBackClick = {
+                                        currentScreen = AppScreen.EquipmentList
+                                    }
 
+                                )
+                            }
+                        }
                         AppScreen.BorrowRequest -> {
                             if (!isStudent()) {
                                 redirectUnauthorized(AppScreen.BorrowRequest)
@@ -879,7 +894,9 @@ class MainActivity : ComponentActivity() {
                         AppScreen.LabComputerList -> {
                             currentScreen = AppScreen.StudentDashboard
                         }
-
+                        AppScreen.EquipmentDetails -> {
+                            currentScreen = AppScreen.EquipmentList
+                        }
                         AppScreen.BorrowRequest -> {
                             currentScreen = AppScreen.EquipmentList
                         }
@@ -936,6 +953,7 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.StudentProfile,
                                 AppScreen.StudentDashboard,
                                 AppScreen.EquipmentList,
+                                AppScreen.EquipmentDetails,
                                 AppScreen.BorrowRequest,
                                 AppScreen.MyRequests,
                                 AppScreen.LabComputerList,

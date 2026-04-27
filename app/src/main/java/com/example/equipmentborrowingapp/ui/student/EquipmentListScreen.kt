@@ -32,7 +32,7 @@ import com.example.equipmentborrowingapp.ui.theme.*
 @Composable
 fun EquipmentListScreen(
     equipmentList: List<Equipment>,
-    onBorrowClick: (Equipment) -> Unit,
+    onViewDetailsClick: (Equipment) -> Unit,
     onBackClick: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -241,7 +241,7 @@ fun EquipmentListScreen(
                     items(filteredEquipmentList, key = { it.id }) { equipment ->
                         ModernEquipmentCard(
                             equipment = equipment,
-                            onBorrowClick = { onBorrowClick(equipment) }
+                            onViewDetailsClick = { onViewDetailsClick(equipment) }
                         )
                     }
                 }
@@ -260,7 +260,7 @@ fun EquipmentListScreen(
 @Composable
 private fun ModernEquipmentCard(
     equipment: Equipment,
-    onBorrowClick: () -> Unit
+    onViewDetailsClick: () -> Unit
 ) {
     val localImageResId = EquipmentImageMapper.getImageRes(equipment.imageName)
     val stockStatus = getStockStatus(equipment.availableQuantity, equipment.totalQuantity)
@@ -373,13 +373,9 @@ private fun ModernEquipmentCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             PrimaryActionButton(
-                text = when {
-                    !equipment.isBorrowable -> "Lab Use Only"
-                    equipment.availableQuantity <= 0 -> "Out of Stock"
-                    else -> "Request Now"
-                },
-                onClick = onBorrowClick,
-                enabled = canBorrow
+                text = "View Details",
+                onClick = onViewDetailsClick,
+                enabled = true
             )
         }
     }

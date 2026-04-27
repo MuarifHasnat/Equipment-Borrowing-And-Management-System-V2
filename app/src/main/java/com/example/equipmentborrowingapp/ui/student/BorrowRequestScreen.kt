@@ -3,41 +3,29 @@ package com.example.equipmentborrowingapp.ui.student
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,17 +34,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.R
 import com.example.equipmentborrowingapp.data.model.Equipment
-import com.example.equipmentborrowingapp.ui.common.AppStatusBadge
-import com.example.equipmentborrowingapp.ui.common.GradientHeaderCard
-import com.example.equipmentborrowingapp.ui.common.PrimaryActionButton
-import com.example.equipmentborrowingapp.ui.common.SecondaryActionButton
-import com.example.equipmentborrowingapp.ui.common.SectionTitle
-import com.example.equipmentborrowingapp.ui.theme.AppBackground
-import com.example.equipmentborrowingapp.ui.theme.InfoLight
-import com.example.equipmentborrowingapp.ui.theme.SuccessLight
-import com.example.equipmentborrowingapp.ui.theme.TextPrimary
-import com.example.equipmentborrowingapp.ui.theme.WarningLight
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
+import com.example.equipmentborrowingapp.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -67,16 +46,19 @@ fun BorrowRequestScreen(
     equipment: Equipment,
     onSubmitClick: (Int, String, String) -> Unit,
     onBackClick: () -> Unit
+
 ) {
     var quantityText by remember { mutableStateOf("1") }
+    var purpose by remember { mutableStateOf("") }
     var borrowDate by remember { mutableStateOf("") }
     var dueDate by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
     var showBorrowDatePicker by remember { mutableStateOf(false) }
     var showDueDatePicker by remember { mutableStateOf(false) }
 
-    val fallbackImageResId = getFallbackImageRes(imageName = equipment.imageName)
+    val fallbackImageResId = getFallbackImageRes(equipment.imageName)
     val hasImageUrl = equipment.imageUrl.trim().isNotBlank()
     val canSubmit = equipment.availableQuantity > 0 && equipment.isBorrowable
 
@@ -88,232 +70,126 @@ fun BorrowRequestScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
-            GradientHeaderCard(
-                title = "Borrow Request",
-                subtitle = "Request Equipment Access",
-                description = "Review equipment details, choose quantity, and select borrowing dates before submitting."
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White)
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (hasImageUrl) {
-                            AsyncImage(
-                                model = equipment.imageUrl.trim(),
-                                contentDescription = equipment.name,
-                                contentScale = ContentScale.Crop,
-                                placeholder = painterResource(id = fallbackImageResId),
-                                error = painterResource(id = fallbackImageResId),
-                                modifier = Modifier
-                                    .size(110.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(androidx.compose.ui.graphics.Color(0xFFF5F5F5))
-                            )
-                        } else {
-                            Image(
-                                painter = painterResource(id = fallbackImageResId),
-                                contentDescription = equipment.name,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(110.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(androidx.compose.ui.graphics.Color(0xFFF5F5F5))
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(14.dp))
-
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = formatEquipmentName(
-                                    equipment.name.ifBlank { "Unknown Equipment" }
-                                ),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                AppStatusBadge(
-                                    text = formatCategory(equipment.category.ifBlank { "N/A" }),
-                                    backgroundColor = InfoLight,
-                                    textColor = TextPrimary
-                                )
-
-                                AppStatusBadge(
-                                    text = if (equipment.isBorrowable) "Borrowable" else "Lab Use Only",
-                                    backgroundColor = if (equipment.isBorrowable) SuccessLight else WarningLight,
-                                    textColor = TextPrimary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = "Condition: ${
-                                    equipment.condition.ifBlank { "N/A" }
-                                        .replaceFirstChar {
-                                            if (it.isLowerCase()) {
-                                                it.titlecase(Locale.getDefault())
-                                            } else {
-                                                it.toString()
-                                            }
-                                        }
-                                }",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = androidx.compose.ui.graphics.Color(0xFF333333)
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = "Available: ${equipment.availableQuantity}/${equipment.totalQuantity}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = androidx.compose.ui.graphics.Color(0xFF333333)
-                            )
-                        }
-                    }
-
-                    if (!equipment.isBorrowable || equipment.availableQuantity <= 0) {
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = when {
-                                !equipment.isBorrowable ->
-                                    "This equipment is lab-use-only and cannot be borrowed."
-                                equipment.availableQuantity <= 0 ->
-                                    "This equipment is currently out of stock."
-                                else -> ""
-                            },
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Primary
+                )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            SectionTitle(
-                text = "Request Details",
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "Borrow Equipment",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Fill the details to borrow",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            EquipmentPreviewCard(
+                equipment = equipment,
+                hasImageUrl = hasImageUrl,
+                fallbackImageResId = fallbackImageResId
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            Text(
+                text = "Borrow Details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = quantityText,
-                onValueChange = {
-                    quantityText = it.filter { ch -> ch.isDigit() }
-                    errorMessage = ""
-                },
-                label = { Text("Quantity") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(14.dp)
-            )
+            DetailsPanel {
+                QuantityInputCard(
+                    value = quantityText,
+                    onValueChange = {
+                        quantityText = it.filter { ch -> ch.isDigit() }
+                        errorMessage = ""
+                    }
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                BorrowInfoCard(
+                    icon = Icons.Filled.Assignment,
+                    title = "Purpose",
+                    value = purpose,
+                    placeholder = "Enter purpose",
+                    onValueChange = {
+                        purpose = it
+                        errorMessage = ""
+                    }
+                )
 
-            Text(
-                text = "Enter the quantity you want to request.",
-                style = MaterialTheme.typography.bodySmall,
-                color = androidx.compose.ui.graphics.Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showBorrowDatePicker = true }
-            ) {
-                OutlinedTextField(
+                DateInfoCard(
+                    icon = Icons.Filled.CalendarMonth,
+                    title = "Borrow Date",
                     value = borrowDate,
-                    onValueChange = {},
-                    enabled = false,
-                    readOnly = true,
-                    label = { Text("Borrow Date") },
-                    placeholder = { Text("Select date") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    placeholder = "Select date",
+                    onClick = { showBorrowDatePicker = true }
                 )
-            }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Tap the field to select the borrow date.",
-                style = MaterialTheme.typography.bodySmall,
-                color = androidx.compose.ui.graphics.Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDueDatePicker = true }
-            ) {
-                OutlinedTextField(
+                DateInfoCard(
+                    icon = Icons.Filled.EventAvailable,
+                    title = "Return Date",
                     value = dueDate,
-                    onValueChange = {},
-                    enabled = false,
-                    readOnly = true,
-                    label = { Text("Due Date") },
-                    placeholder = { Text("Select date") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    placeholder = "Select date",
+                    onClick = { showDueDatePicker = true }
+                )
+
+                BorrowInfoCard(
+                    icon = Icons.Filled.NoteAlt,
+                    title = "Notes (Optional)",
+                    value = notes,
+                    placeholder = "Add any notes",
+                    onValueChange = { notes = it }
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "Maximum borrow period is 14 days.",
-                style = MaterialTheme.typography.bodySmall,
-                color = androidx.compose.ui.graphics.Color.Gray
+                text = "Guidelines",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary
             )
 
-            if (errorMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(10.dp))
+
+            GuidelinesPanel()
+
+            if (errorMessage.isNotBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
+                    color = Error,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(22.dp))
 
-            PrimaryActionButton(
-                text = "Submit Request",
+            Button(
                 onClick = {
                     val quantity = quantityText.toIntOrNull()
-
                     val validationMessage = validateBorrowRequestInput(
                         quantity = quantity,
                         availableQuantity = equipment.availableQuantity,
@@ -322,51 +198,372 @@ fun BorrowRequestScreen(
                         dueDate = dueDate
                     )
 
-                    if (validationMessage != null) {
+                    if (purpose.isBlank()) {
+                        errorMessage = "Please enter purpose"
+                    } else if (validationMessage != null) {
                         errorMessage = validationMessage
                     } else {
                         errorMessage = ""
-                        onSubmitClick(
-                            quantity ?: 1,
-                            borrowDate.trim(),
-                            dueDate.trim()
-                        )
+                        onSubmitClick(quantity ?: 1, borrowDate.trim(), dueDate.trim())
                     }
                 },
-                enabled = canSubmit
-            )
+                enabled = canSubmit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp),
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Primary,
+                    contentColor = TextLight,
+                    disabledContainerColor = DividerLight,
+                    disabledContentColor = TextSecondary
+                )
+            ) {
+                Text(
+                    text = "View Details",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SecondaryActionButton(
-                text = "Back",
-                onClick = onBackClick
-            )
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 
     if (showBorrowDatePicker) {
         DatePickerModal(
-            onDateSelected = { selectedDate ->
-                borrowDate = selectedDate
+            onDateSelected = {
+                borrowDate = it
                 errorMessage = ""
             },
-            onDismiss = {
-                showBorrowDatePicker = false
-            }
+            onDismiss = { showBorrowDatePicker = false }
         )
     }
 
     if (showDueDatePicker) {
         DatePickerModal(
-            onDateSelected = { selectedDate ->
-                dueDate = selectedDate
+            onDateSelected = {
+                dueDate = it
                 errorMessage = ""
             },
-            onDismiss = {
-                showDueDatePicker = false
-            }
+            onDismiss = { showDueDatePicker = false }
         )
+    }
+}
+
+@Composable
+private fun EquipmentPreviewCard(
+    equipment: Equipment,
+    hasImageUrl: Boolean,
+    fallbackImageResId: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (hasImageUrl) {
+            AsyncImage(
+                model = equipment.imageUrl.trim(),
+                contentDescription = equipment.name,
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = fallbackImageResId),
+                error = painterResource(id = fallbackImageResId),
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(SurfaceWhite)
+            )
+        } else {
+            Image(
+                painter = painterResource(id = fallbackImageResId),
+                contentDescription = equipment.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(SurfaceWhite)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = formatEquipmentName(equipment.name.ifBlank { "Unknown Equipment" }),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Available: ${equipment.availableQuantity}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Secondary
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = if (equipment.availableQuantity > 0) Success else Error,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (equipment.availableQuantity > 0) "In Stock" else "Out of Stock",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (equipment.availableQuantity > 0) Success else Error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsPanel(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun QuantityInputCard(
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppBackground, RoundedCornerShape(20.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconCircle(Icons.Filled.Inventory2)
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Quantity",
+                color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                placeholder = { Text("Enter quantity") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = DividerLight,
+                    focusedContainerColor = SurfaceWhite,
+                    unfocusedContainerColor = SurfaceWhite
+                ),
+                shape = RoundedCornerShape(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BorrowInfoCard(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppBackground, RoundedCornerShape(20.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconCircle(icon)
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                placeholder = { Text(placeholder) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = DividerLight,
+                    focusedContainerColor = SurfaceWhite,
+                    unfocusedContainerColor = SurfaceWhite
+                ),
+                shape = RoundedCornerShape(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DateInfoCard(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    placeholder: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppBackground, RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconCircle(icon)
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = value.ifBlank { placeholder },
+                color = if (value.isBlank()) TextSecondary else TextPrimary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Icon(
+            imageVector = Icons.Filled.CalendarMonth,
+            contentDescription = null,
+            tint = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun IconCircle(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .background(PrimaryLight, RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Primary,
+            modifier = Modifier.size(25.dp)
+        )
+    }
+}
+
+@Composable
+private fun GuidelinesPanel() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            GuidelineRow(
+                icon = Icons.Filled.Security,
+                title = "Handle with Care",
+                subtitle = "Keep the equipment safe"
+            )
+            GuidelineRow(
+                icon = Icons.Filled.Schedule,
+                title = "Return on Time",
+                subtitle = "Return before the due date"
+            )
+            GuidelineRow(
+                icon = Icons.Filled.Assignment,
+                title = "Use Responsibly",
+                subtitle = "Use only for learning & projects"
+            )
+        }
+    }
+}
+
+@Composable
+private fun GuidelineRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppBackground, RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(Primary, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = TextLight,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = subtitle,
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
     }
 }
 
@@ -386,8 +583,7 @@ private fun DatePickerModal(
                     val selectedMillis = datePickerState.selectedDateMillis
                     if (selectedMillis != null) {
                         val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        val selectedDate = formatter.format(Date(selectedMillis))
-                        onDateSelected(selectedDate)
+                        onDateSelected(formatter.format(Date(selectedMillis)))
                     }
                     onDismiss()
                 }
@@ -412,29 +608,12 @@ private fun validateBorrowRequestInput(
     borrowDate: String,
     dueDate: String
 ): String? {
-    if (!isBorrowable) {
-        return "This equipment is lab-use-only"
-    }
-
-    if (availableQuantity <= 0) {
-        return "This equipment is out of stock"
-    }
-
-    if (quantity == null) {
-        return "Please enter a valid quantity"
-    }
-
-    if (quantity <= 0) {
-        return "Quantity must be greater than 0"
-    }
-
-    if (quantity > availableQuantity) {
-        return "Requested quantity exceeds available stock"
-    }
-
-    if (borrowDate.isBlank() || dueDate.isBlank()) {
-        return "Please select borrow date and due date"
-    }
+    if (!isBorrowable) return "This equipment is lab-use-only"
+    if (availableQuantity <= 0) return "This equipment is out of stock"
+    if (quantity == null) return "Please enter a valid quantity"
+    if (quantity <= 0) return "Quantity must be greater than 0"
+    if (quantity > availableQuantity) return "Requested quantity exceeds available stock"
+    if (borrowDate.isBlank() || dueDate.isBlank()) return "Please select borrow date and due date"
 
     val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     format.isLenient = false
@@ -451,9 +630,7 @@ private fun validateBorrowRequestInput(
         null
     }
 
-    if (borrowDateParsed == null || dueDateParsed == null) {
-        return "Invalid date selected"
-    }
+    if (borrowDateParsed == null || dueDateParsed == null) return "Invalid date selected"
 
     val todayString = format.format(System.currentTimeMillis())
     val todayParsed = try {
@@ -473,9 +650,7 @@ private fun validateBorrowRequestInput(
     val diffMillis = dueDateParsed.time - borrowDateParsed.time
     val diffDays = diffMillis / (1000 * 60 * 60 * 24)
 
-    if (diffDays > 14) {
-        return "Borrow period cannot be more than 14 days"
-    }
+    if (diffDays > 14) return "Borrow period cannot be more than 14 days"
 
     return null
 }
@@ -496,15 +671,4 @@ private fun formatEquipmentName(name: String): String {
                 if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
             }
         }
-}
-
-private fun formatCategory(category: String): String {
-    return when (category.trim().lowercase()) {
-        "cc" -> "Computer Components"
-        "ece" -> "Electronics"
-        "ee" -> "Electrical"
-        else -> category.replaceFirstChar { ch ->
-            if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
-        }
-    }
 }
