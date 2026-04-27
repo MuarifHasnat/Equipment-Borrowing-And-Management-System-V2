@@ -220,7 +220,7 @@ fun BorrowRequestScreen(
                 )
             ) {
                 Text(
-                    text = "View Details",
+                    text = "Submit Request",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold
                 )
