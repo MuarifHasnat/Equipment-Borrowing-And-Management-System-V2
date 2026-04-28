@@ -1,4 +1,4 @@
-# Equipment Borrowing App
+# Equipment Borrowing and Management App
 
 ## Overview
 Equipment Borrowing And Management System is an Android application built with Kotlin, Jetpack Compose, and Firebase for managing equipment borrowing in an academic or lab environment.
