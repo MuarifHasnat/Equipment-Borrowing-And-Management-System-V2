@@ -127,7 +127,25 @@ class AuthRepository {
     fun getCurrentUserUid(): String? {
         return auth.currentUser?.uid
     }
+    fun sendPasswordResetEmail(
+        email: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val normalizedEmail = email.trim()
 
+        if (normalizedEmail.isBlank()) {
+            onResult(false, "Please enter your email first")
+            return
+        }
+
+        auth.sendPasswordResetEmail(normalizedEmail)
+            .addOnSuccessListener {
+                onResult(true, "Password reset email sent")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to send reset email")
+            }
+    }
     fun logout() {
         auth.signOut()
     }

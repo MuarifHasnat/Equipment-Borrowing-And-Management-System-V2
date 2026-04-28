@@ -4,17 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,18 +18,9 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,13 +30,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.equipmentborrowingapp.R
 
 @Composable
@@ -66,16 +44,21 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var role by remember { mutableStateOf("student") } // Default role
+    var role by remember { mutableStateOf("student") }
 
-    // Shared Colors
-    val screenBg = Color(0xFFF5F2F7)
-    val whiteCard = Color(0xFFFDFDFD)
-    val borderColor = Color(0xFFD7D7D7)
-    val textGray = Color(0xFF8A8A8A)
-    val darkText = Color(0xFF222222)
+    val screenBg = Color(0xFFF7F4FF)
+    val whiteCard = Color(0xFFFFFFFF)
+    val borderColor = Color(0xFFE2DDF0)
+    val textGray = Color(0xFF7B728A)
+    val darkText = Color(0xFF1F1B2D)
+
+    val purpleDark = Color(0xFF4F1DFF)
     val purple = Color(0xFF7A19FF)
-    val purpleDark = Color(0xFF6200EA)
+    val purpleLight = Color(0xFF9B5CFF)
+
+    val registerAction = {
+        onRegisterClick(name.trim(), email.trim(), password, role)
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -84,31 +67,40 @@ fun RegisterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFFF6F1FF),
+                            Color(0xFFFFFFFF),
+                            Color(0xFFF3EEFF)
+                        )
+                    )
+                )
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 26.dp, vertical = 24.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(22.dp))
 
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(140.dp)
+                    .size(145.dp)
                     .clip(CircleShape)
                     .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFFD7E8FF),
-                                Color(0xFFE8D7FF),
-                                Color(0xFFFFD7E7)
+                        Brush.radialGradient(
+                            listOf(
+                                Color(0xFFE9E2FF),
+                                Color(0xFFF3EEFF),
+                                Color.White
                             )
                         )
                     )
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.robot_login),
-                    contentDescription = "Robot",
-                    modifier = Modifier.size(100.dp),
+                    contentDescription = null,
+                    modifier = Modifier.size(105.dp),
                     contentScale = ContentScale.Fit
                 )
             }
@@ -116,221 +108,156 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "Join the Platform",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF8E8E8E),
+                text = "Equipment Borrowing System",
+                color = textGray,
+                style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Create a new account to continue",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF8E8E8E),
+                text = "Create Account",
+                color = darkText,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Text(
+                text = "Join the platform to continue",
+                color = textGray,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
 
-            OutlinedTextField(
+            Spacer(modifier = Modifier.height(24.dp))
+
+            AuthField(
                 value = name,
                 onValueChange = { name = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp)
-                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(16.dp)),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = darkText, fontWeight = FontWeight.SemiBold
-                ),
-                placeholder = {
-                    Text("Full Name", color = textGray, fontWeight = FontWeight.SemiBold)
-                },
-                leadingIcon = {
-                    Icon(Icons.Filled.Person, contentDescription = "Name", tint = Color(0xFF2C2C2C))
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = whiteCard, unfocusedContainerColor = whiteCard,
-                    focusedBorderColor = borderColor, unfocusedBorderColor = borderColor,
-                    cursorColor = purple
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                )
+                placeholder = "Full Name",
+                icon = Icons.Filled.Person,
+                borderColor = borderColor,
+                whiteCard = whiteCard,
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
+            AuthField(
                 value = email,
                 onValueChange = { email = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp)
-                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(16.dp)),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = darkText, fontWeight = FontWeight.SemiBold
-                ),
-                placeholder = {
-                    Text("Email", color = textGray, fontWeight = FontWeight.SemiBold)
-                },
-                leadingIcon = {
-                    Icon(Icons.Filled.Email, contentDescription = "Email", tint = Color(0xFF2C2C2C))
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = whiteCard, unfocusedContainerColor = whiteCard,
-                    focusedBorderColor = borderColor, unfocusedBorderColor = borderColor,
-                    cursorColor = purple
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                )
+                placeholder = "Email",
+                icon = Icons.Filled.Email,
+                borderColor = borderColor,
+                whiteCard = whiteCard,
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp)
-                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(16.dp)),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = darkText, fontWeight = FontWeight.SemiBold
-                ),
-                placeholder = {
-                    Text("Password", color = textGray, fontWeight = FontWeight.SemiBold)
-                },
+                placeholder = { Text("Password", color = textGray) },
                 leadingIcon = {
-                    Icon(Icons.Filled.Lock, contentDescription = "Password", tint = Color(0xFF2C2C2C))
+                    Icon(Icons.Filled.Lock, contentDescription = null, tint = darkText)
                 },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                            contentDescription = "Toggle Password",
-                            tint = Color(0xFF1F1F1F)
+                            contentDescription = null,
+                            tint = darkText
                         )
                     }
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = whiteCard, unfocusedContainerColor = whiteCard,
-                    focusedBorderColor = borderColor, unfocusedBorderColor = borderColor,
+                    focusedContainerColor = whiteCard,
+                    unfocusedContainerColor = whiteCard,
+                    focusedBorderColor = borderColor,
+                    unfocusedBorderColor = borderColor,
                     cursorColor = purple
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        onRegisterClick(name.trim(), email.trim(), password, role)
-                    }
-                )
+                keyboardActions = KeyboardActions(onDone = { registerAction() }),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Custom Role Selector UI
             Text(
                 text = "Select Role",
                 modifier = Modifier.fillMaxWidth(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
                 color = textGray,
-                textAlign = TextAlign.Start
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Student Card
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                        .shadow(elevation = if (role == "student") 4.dp else 0.dp, shape = RoundedCornerShape(12.dp))
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (role == "student") purple else whiteCard)
-                        .border(
-                            width = 1.dp,
-                            color = if (role == "student") purple else borderColor,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .clickable { role = "student" }
-                ) {
-                    Text(
-                        text = "Student",
-                        color = if (role == "student") Color.White else textGray,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                RoleOptionCard(
+                    text = "Student",
+                    selected = role == "student",
+                    onClick = { role = "student" },
+                    modifier = Modifier.weight(1f),
+                    purple = purple,
+                    purpleLight = purpleLight,
+                    whiteCard = whiteCard,
+                    borderColor = borderColor,
+                    textGray = textGray
+                )
 
-                // Admin Card
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                        .shadow(elevation = if (role == "admin") 4.dp else 0.dp, shape = RoundedCornerShape(12.dp))
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (role == "admin") purple else whiteCard)
-                        .border(
-                            width = 1.dp,
-                            color = if (role == "admin") purple else borderColor,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .clickable { role = "admin" }
-                ) {
-                    Text(
-                        text = "Admin",
-                        color = if (role == "admin") Color.White else textGray,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                RoleOptionCard(
+                    text = "Admin",
+                    selected = role == "admin",
+                    onClick = { role = "admin" },
+                    modifier = Modifier.weight(1f),
+                    purple = purple,
+                    purpleLight = purpleLight,
+                    whiteCard = whiteCard,
+                    borderColor = borderColor,
+                    textGray = textGray
+                )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp))
-                    .clip(RoundedCornerShape(16.dp))
+                    .shadow(6.dp, RoundedCornerShape(16.dp))
                     .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(purpleDark, purple)
-                        )
+                        Brush.horizontalGradient(
+                            listOf(purpleDark, purple, purpleLight)
+                        ),
+                        RoundedCornerShape(16.dp)
                     )
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        onRegisterClick(name.trim(), email.trim(), password, role)
+                    .clickable {
+                        registerAction()
                     }
             ) {
                 Text(
                     text = "Register",
                     color = Color.White,
-                    fontSize = 22.sp,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold
                 )
             }
@@ -340,26 +267,99 @@ fun RegisterScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Already have an account? ",
-                    color = Color(0xFF8A8A8A),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    color = textGray,
+                    style = MaterialTheme.typography.bodyLarge
                 )
 
                 Text(
                     text = "Login",
                     color = purple,
-                    fontSize = 14.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        onGoToLogin()
-                    }
+                    modifier = Modifier.clickable { onGoToLogin() }
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun AuthField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    borderColor: Color,
+    whiteCard: Color,
+    keyboardType: KeyboardType,
+    imeAction: ImeAction
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder, color = Color(0xFF7B728A)) },
+        leadingIcon = {
+            Icon(icon, contentDescription = null, tint = Color(0xFF1F1B2D))
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = whiteCard,
+            unfocusedContainerColor = whiteCard,
+            focusedBorderColor = borderColor,
+            unfocusedBorderColor = borderColor
+        ),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = imeAction
+        ),
+        singleLine = true
+    )
+}
+
+@Composable
+private fun RoleOptionCard(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    purple: Color,
+    purpleLight: Color,
+    whiteCard: Color,
+    borderColor: Color,
+    textGray: Color
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .height(52.dp)
+            .shadow(
+                elevation = if (selected) 5.dp else 2.dp,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .background(
+                brush = if (selected) {
+                    Brush.horizontalGradient(listOf(purple, purpleLight))
+                } else {
+                    Brush.horizontalGradient(listOf(whiteCard, whiteCard))
+                },
+                shape = RoundedCornerShape(16.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (selected) purple else borderColor,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable { onClick() }
+    ) {
+        Text(
+            text = text,
+            color = if (selected) Color.White else textGray,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.ExtraBold
+        )
     }
 }

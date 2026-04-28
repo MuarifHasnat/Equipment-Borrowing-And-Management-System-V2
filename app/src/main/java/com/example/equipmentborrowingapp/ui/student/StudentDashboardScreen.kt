@@ -130,6 +130,7 @@ fun StudentDashboardScreen(
                     onNotificationClick()
                 }
             )
+            Spacer(modifier = Modifier.height(12.dp))
             DashboardActionCard(
                 title = "Lab Computers",
                 subtitle = "View lab PCs and report software issues",

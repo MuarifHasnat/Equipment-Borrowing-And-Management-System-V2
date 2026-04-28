@@ -967,10 +967,7 @@ class MainActivity : ComponentActivity() {
                                         if (email.isBlank() || password.isBlank()) {
                                             showMessage(UiMessages.EMAIL_PASSWORD_REQUIRED)
                                         } else {
-                                            authRepository.loginUser(
-                                                email,
-                                                password
-                                            ) { success, message ->
+                                            authRepository.loginUser(email, password) { success, message ->
                                                 runOnUiThread {
                                                     showMessage(message)
 
@@ -978,8 +975,7 @@ class MainActivity : ComponentActivity() {
                                                         loadLoggedInUserRole {
                                                             when (currentUserRole) {
                                                                 "student" -> {
-                                                                    currentScreen =
-                                                                        AppScreen.StudentDashboard
+                                                                    currentScreen = AppScreen.StudentDashboard
                                                                 }
 
                                                                 "admin" -> {
@@ -987,8 +983,7 @@ class MainActivity : ComponentActivity() {
                                                                         refreshPending = true,
                                                                         refreshApproved = true
                                                                     ) {
-                                                                        currentScreen =
-                                                                            AppScreen.AdminDashboard
+                                                                        currentScreen = AppScreen.AdminDashboard
                                                                     }
                                                                 }
 
@@ -1003,8 +998,23 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     },
+
                                     onGoToRegister = {
                                         currentScreen = AppScreen.Register
+                                    },
+
+                                    // ✅ FORGOT PASSWORD
+                                    onForgotPasswordClick = { email ->
+                                        authRepository.sendPasswordResetEmail(email) { success, message ->
+                                            runOnUiThread {
+                                                showMessage(message)
+                                            }
+                                        }
+                                    },
+
+                                    // ✅ GOOGLE CLICK
+                                    onGoogleClick = {
+                                        showMessage("Google Sign-In coming soon")
                                     }
                                 )
                             }
