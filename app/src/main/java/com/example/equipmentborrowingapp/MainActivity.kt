@@ -67,6 +67,8 @@ import com.example.equipmentborrowingapp.ui.common.NotificationScreen
 import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.example.equipmentborrowingapp.data.repository.NotificationRepository
 import com.example.equipmentborrowingapp.ui.student.EquipmentDetailsScreen
+import com.example.equipmentborrowingapp.ui.student.RequestSubmittedScreen
+
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -132,6 +134,10 @@ class MainActivity : ComponentActivity() {
 
                 // Selected item state
                 var selectedEquipment by remember { mutableStateOf<Equipment?>(null) }
+                var submittedQuantity by remember { mutableStateOf(1) }
+                var submittedBorrowDate by remember { mutableStateOf("") }
+                var submittedDueDate by remember { mutableStateOf("") }
+                var submittedPurpose by remember { mutableStateOf("Lab Project") }
                 var selectedLabComputer by remember { mutableStateOf<LabComputer?>(null) }
 
                 // Dashboard state
@@ -644,7 +650,7 @@ class MainActivity : ComponentActivity() {
 
                                                                             if (success) {
                                                                                 sendNotification(
-                                                                                    userId = "",
+                                                                                    userId = "admin", // or actual admin UID list
                                                                                     role = "admin",
                                                                                     title = "New Borrow Request",
                                                                                     message = "$userName requested ${equipment.name}",
@@ -653,7 +659,12 @@ class MainActivity : ComponentActivity() {
 
                                                                                 equipmentViewModel.loadEquipment {
                                                                                     runOnUiThread {
-                                                                                        currentScreen = AppScreen.EquipmentList
+                                                                                        submittedQuantity = quantity
+                                                                                        submittedBorrowDate = borrowDate
+                                                                                        submittedDueDate = dueDate
+                                                                                        submittedPurpose = "Lab Project"
+
+                                                                                        currentScreen = AppScreen.RequestSubmitted
                                                                                     }
                                                                                 }
                                                                             }
@@ -676,7 +687,23 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-
+                        AppScreen.RequestSubmitted -> {
+                            selectedEquipment?.let { equipment ->
+                                RequestSubmittedScreen(
+                                    equipment = equipment,
+                                    quantity = submittedQuantity,
+                                    borrowDate = submittedBorrowDate,
+                                    dueDate = submittedDueDate,
+                                    purpose = submittedPurpose,
+                                    onViewRequestClick = {
+                                        loadStudentRequestsAndOpenMyRequests()
+                                    },
+                                    onBackHomeClick = {
+                                        currentScreen = AppScreen.StudentDashboard
+                                    }
+                                )
+                            }
+                        }
                         AppScreen.MyRequests -> {
                             if (!isStudent()) {
                                 redirectUnauthorized(AppScreen.MyRequests)
@@ -890,6 +917,9 @@ class MainActivity : ComponentActivity() {
                         }
 
                         AppScreen.EquipmentList,
+                        AppScreen.RequestSubmitted -> {
+                            currentScreen = AppScreen.StudentDashboard
+                        }
                         AppScreen.MyRequests,
                         AppScreen.LabComputerList -> {
                             currentScreen = AppScreen.StudentDashboard
@@ -955,9 +985,11 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.EquipmentList,
                                 AppScreen.EquipmentDetails,
                                 AppScreen.BorrowRequest,
+                                AppScreen.RequestSubmitted,
                                 AppScreen.MyRequests,
                                 AppScreen.LabComputerList,
                                 AppScreen.ReportSoftwareIssue
+
                             ) -> {
                                 renderStudentScreens()
                             }

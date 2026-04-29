@@ -11,7 +11,7 @@ sealed class AppScreen(val route: String) {
     object EquipmentDetails : AppScreen("equipment_details")
     
     object BorrowRequest : AppScreen("borrow_request")
-
+    object RequestSubmitted : AppScreen("request_submitted")
     object MyRequests : AppScreen("my_requests")
     object LabComputerList : AppScreen("lab_computer_list")
     object ReportSoftwareIssue : AppScreen("report_software_issue")
