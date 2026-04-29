@@ -2,6 +2,7 @@ package com.example.equipmentborrowingapp.data.repository
 
 import com.example.equipmentborrowingapp.data.model.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthRepository {
@@ -57,6 +58,57 @@ class AuthRepository {
             }
             .addOnFailureListener { e ->
                 onResult(false, e.message ?: "Login failed")
+            }
+    }
+
+    fun loginWithGoogle(
+        idToken: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+        auth.signInWithCredential(credential)
+            .addOnSuccessListener { authResult ->
+                val firebaseUser = authResult.user
+
+                if (firebaseUser == null) {
+                    onResult(false, "Google login failed")
+                    return@addOnSuccessListener
+                }
+
+                val uid = firebaseUser.uid
+                val email = firebaseUser.email?.trim() ?: ""
+                val name = firebaseUser.displayName?.trim().orEmpty().ifBlank { "Student" }
+
+                val userRef = firestore.collection("users").document(uid)
+
+                userRef.get()
+                    .addOnSuccessListener { document ->
+                        if (document.exists()) {
+                            onResult(true, "Google login successful")
+                        } else {
+                            val user = User(
+                                uid = uid,
+                                name = name,
+                                email = email,
+                                role = "student"
+                            )
+
+                            userRef.set(user)
+                                .addOnSuccessListener {
+                                    onResult(true, "Google account created successfully")
+                                }
+                                .addOnFailureListener { e ->
+                                    onResult(false, e.message ?: "Failed to save Google user")
+                                }
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        onResult(false, e.message ?: "Failed to check user data")
+                    }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Google login failed")
             }
     }
 
@@ -127,6 +179,7 @@ class AuthRepository {
     fun getCurrentUserUid(): String? {
         return auth.currentUser?.uid
     }
+
     fun sendPasswordResetEmail(
         email: String,
         onResult: (Boolean, String) -> Unit
@@ -140,12 +193,27 @@ class AuthRepository {
 
         auth.sendPasswordResetEmail(normalizedEmail)
             .addOnSuccessListener {
-                onResult(true, "Password reset email sent")
+                onResult(
+                    true,
+                    "If an account exists with this email, a password reset link has been sent."
+                )
             }
             .addOnFailureListener { e ->
-                onResult(false, e.message ?: "Failed to send reset email")
+                val errorMessage = when {
+                    e.message?.contains("badly formatted", ignoreCase = true) == true ->
+                        "Please enter a valid email address"
+
+                    e.message?.contains("network", ignoreCase = true) == true ->
+                        "Network error. Please check your internet connection"
+
+                    else ->
+                        "Unable to send reset email. Please try again later."
+                }
+
+                onResult(false, errorMessage)
             }
     }
+
     fun logout() {
         auth.signOut()
     }

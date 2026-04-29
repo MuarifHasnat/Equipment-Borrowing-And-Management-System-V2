@@ -1,6 +1,7 @@
 package com.example.equipmentborrowingapp.ui.auth
 
 import android.content.Context
+import android.util.Patterns
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -45,7 +46,11 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // 🎨 Professional Colors
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf(email) }
+    var resetEmailError by remember { mutableStateOf<String?>(null) }
+
+    // Professional Colors
     val screenBg = Color(0xFFF7F4FF)
     val whiteCard = Color(0xFFFFFFFF)
     val borderColor = Color(0xFFE2DDF0)
@@ -82,7 +87,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🤖 Robot Image with soft gradient
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -131,7 +135,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 📧 Email
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -158,7 +161,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 🔒 Password
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -205,14 +207,19 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = { onForgotPasswordClick(email.trim()) }) {
+                TextButton(
+                    onClick = {
+                        resetEmail = email.trim()
+                        resetEmailError = null
+                        showForgotPasswordDialog = true
+                    }
+                ) {
                     Text("Forgot Password?", color = purple)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🚀 Gradient Login Button
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -251,7 +258,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Google button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -285,5 +291,111 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showForgotPasswordDialog = false
+                resetEmailError = null
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.LockReset,
+                    contentDescription = null,
+                    tint = purple
+                )
+            },
+            title = {
+                Text(
+                    text = "Reset Password",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter your registered email address. We will send you a password reset link.",
+                        color = textGray,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = {
+                            resetEmail = it
+                            resetEmailError = null
+                        },
+                        placeholder = {
+                            Text("Email address")
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Email, contentDescription = null)
+                        },
+                        isError = resetEmailError != null,
+                        supportingText = {
+                            resetEmailError?.let {
+                                Text(text = it)
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = whiteCard,
+                            unfocusedContainerColor = whiteCard,
+                            focusedBorderColor = purple,
+                            unfocusedBorderColor = borderColor
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val finalEmail = resetEmail.trim()
+
+                        when {
+                            finalEmail.isBlank() -> {
+                                resetEmailError = "Please enter your email address"
+                            }
+
+                            !Patterns.EMAIL_ADDRESS.matcher(finalEmail).matches() -> {
+                                resetEmailError = "Please enter a valid email address"
+                            }
+
+                            else -> {
+                                onForgotPasswordClick(finalEmail)
+                                showForgotPasswordDialog = false
+                                resetEmailError = null
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = purple
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Send Reset Link")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showForgotPasswordDialog = false
+                        resetEmailError = null
+                    }
+                ) {
+                    Text("Cancel", color = textGray)
+                }
+            },
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 }

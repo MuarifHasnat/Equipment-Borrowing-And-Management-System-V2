@@ -68,7 +68,12 @@ import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.example.equipmentborrowingapp.data.repository.NotificationRepository
 import com.example.equipmentborrowingapp.ui.student.EquipmentDetailsScreen
 import com.example.equipmentborrowingapp.ui.student.RequestSubmittedScreen
-
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import androidx.compose.runtime.mutableIntStateOf
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -102,6 +107,9 @@ class MainActivity : ComponentActivity() {
                         snackbarHostState.showSnackbar(message)
                     }
                 }
+
+
+
                 // Screen data state
                 fun sendNotification(
                     userId: String,
@@ -134,7 +142,7 @@ class MainActivity : ComponentActivity() {
 
                 // Selected item state
                 var selectedEquipment by remember { mutableStateOf<Equipment?>(null) }
-                var submittedQuantity by remember { mutableStateOf(1) }
+                var submittedQuantity by remember { mutableIntStateOf(1) }
                 var submittedBorrowDate by remember { mutableStateOf("") }
                 var submittedDueDate by remember { mutableStateOf("") }
                 var submittedPurpose by remember { mutableStateOf("Lab Project") }
@@ -315,6 +323,79 @@ class MainActivity : ComponentActivity() {
 
                                 onComplete?.invoke()
                             }
+                        }
+                    }
+                }
+
+                fun openDashboardAfterLogin() {
+                    loadLoggedInUserRole {
+                        when (currentUserRole) {
+                            "student" -> {
+                                currentScreen = AppScreen.StudentDashboard
+                            }
+
+                            "admin" -> {
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.AdminDashboard
+                                }
+                            }
+
+                            else -> {
+                                showMessage(UiMessages.UNKNOWN_ROLE)
+                                safeLogoutToLogin()
+                            }
+                        }
+                    }
+                }
+
+                fun startGoogleSignIn() {
+                    scope.launch {
+                        try {
+                            val credentialManager = CredentialManager.create(this@MainActivity)
+
+                            val googleIdOption = GetGoogleIdOption.Builder()
+                                .setFilterByAuthorizedAccounts(false)
+                                .setServerClientId("276611421496-rdsl2hnb8pgrh1edke7nu42jobsooc90.apps.googleusercontent.com")
+                                .build()
+
+                            val request = GetCredentialRequest.Builder()
+                                .addCredentialOption(googleIdOption)
+                                .build()
+
+                            val result = credentialManager.getCredential(
+                                request = request,
+                                context = this@MainActivity
+                            )
+
+                            val credential = result.credential
+
+                            if (
+                                credential is CustomCredential &&
+                                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                            ) {
+                                val googleIdTokenCredential =
+                                    GoogleIdTokenCredential.createFrom(credential.data)
+
+                                authRepository.loginWithGoogle(
+                                    idToken = googleIdTokenCredential.idToken
+                                ) { success, message ->
+                                    runOnUiThread {
+                                        showMessage(message)
+
+                                        if (success) {
+                                            openDashboardAfterLogin()
+                                        }
+                                    }
+                                }
+                            } else {
+                                showMessage("Invalid Google credential")
+                            }
+
+                        } catch (e: Exception) {
+                            showMessage(e.message ?: "Google Sign-In cancelled or failed")
                         }
                     }
                 }
@@ -1004,27 +1085,7 @@ class MainActivity : ComponentActivity() {
                                                     showMessage(message)
 
                                                     if (success) {
-                                                        loadLoggedInUserRole {
-                                                            when (currentUserRole) {
-                                                                "student" -> {
-                                                                    currentScreen = AppScreen.StudentDashboard
-                                                                }
-
-                                                                "admin" -> {
-                                                                    refreshAdminDashboardData(
-                                                                        refreshPending = true,
-                                                                        refreshApproved = true
-                                                                    ) {
-                                                                        currentScreen = AppScreen.AdminDashboard
-                                                                    }
-                                                                }
-
-                                                                else -> {
-                                                                    showMessage(UiMessages.UNKNOWN_ROLE)
-                                                                    safeLogoutToLogin()
-                                                                }
-                                                            }
-                                                        }
+                                                        openDashboardAfterLogin()
                                                     }
                                                 }
                                             }
@@ -1037,16 +1098,17 @@ class MainActivity : ComponentActivity() {
 
                                     // ✅ FORGOT PASSWORD
                                     onForgotPasswordClick = { email ->
-                                        authRepository.sendPasswordResetEmail(email) { success, message ->
+                                        authRepository.sendPasswordResetEmail(email) { _, message ->
                                             runOnUiThread {
                                                 showMessage(message)
                                             }
                                         }
                                     },
 
+
                                     // ✅ GOOGLE CLICK
                                     onGoogleClick = {
-                                        showMessage("Google Sign-In coming soon")
+                                        startGoogleSignIn()
                                     }
                                 )
                             }
