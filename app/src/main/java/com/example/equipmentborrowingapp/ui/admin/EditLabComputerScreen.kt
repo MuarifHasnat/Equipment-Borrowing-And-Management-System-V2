@@ -1,40 +1,43 @@
 package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.data.model.LabComputer
 
+// Modern Colors
+private object EditLabColors {
+    val ModernBg = Color(0xFFF4F7FB)
+    val CardWhite = Color(0xFFFFFFFF)
+    val TextDark = Color(0xFF1E293B)
+    val TextMuted = Color(0xFF64748B)
+    val PrimaryIndigo = Color(0xFF4F46E5)
+    val PurpleAccent = Color(0xFF7C3AED)
+    val RedLight = Color(0xFFFEF2F2)
+    val RedText = Color(0xFFDC2626)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditLabComputerScreen(
     computer: LabComputer,
@@ -58,132 +61,148 @@ fun EditLabComputerScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Lab Computer") },
-            text = { Text("Are you sure you want to delete ${computer.pcName}?") },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = EditLabColors.CardWhite,
+            title = {
+                Text("Delete Lab Computer", fontWeight = FontWeight.Bold, color = EditLabColors.TextDark)
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete '${computer.pcName}'? This action cannot be undone.",
+                    color = EditLabColors.TextMuted
+                )
+            },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         showDeleteDialog = false
                         onDeleteClick(computer)
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EditLabColors.RedText)
                 ) {
                     Text("Delete")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showDeleteDialog = false }
-                ) {
-                    Text("Cancel")
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel", color = EditLabColors.TextMuted)
                 }
             }
         )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF8F7FA)
-    ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = EditLabColors.ModernBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Top
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Lab Monitoring",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.Gray
-            )
+            // Modern Header with Back Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp, top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .background(EditLabColors.CardWhite, RoundedCornerShape(12.dp))
+                        .shadow(2.dp, RoundedCornerShape(12.dp))
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Back",
+                        tint = EditLabColors.TextDark
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Edit Lab Computer",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = EditLabColors.TextDark,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "Modify computer details",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EditLabColors.TextMuted
+                    )
+                }
+            }
 
-            Text(
-                text = "Edit Lab Computer",
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedTextField(
+            // Input Fields
+            ModernTextField(
                 value = pcName,
                 onValueChange = {
                     pcName = it
                     errorMessage = ""
                 },
-                label = { Text("PC Name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                label = "PC Name",
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                ModernTextField(
+                    value = labRoom,
+                    onValueChange = {
+                        labRoom = it
+                        errorMessage = ""
+                    },
+                    label = "Lab Room",
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
 
-            OutlinedTextField(
-                value = labRoom,
-                onValueChange = {
-                    labRoom = it
-                    errorMessage = ""
-                },
-                label = { Text("Lab Room") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-            )
+                ModernTextField(
+                    value = ipAddress,
+                    onValueChange = {
+                        ipAddress = it
+                        errorMessage = ""
+                    },
+                    label = "IP Address (Opt)",
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next)
+                )
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
+            ModernTextField(
                 value = locationNote,
                 onValueChange = {
                     locationNote = it
                     errorMessage = ""
                 },
-                label = { Text("Location Note") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                label = "Location Note",
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = ipAddress,
-                onValueChange = {
-                    ipAddress = it
-                    errorMessage = ""
-                },
-                label = { Text("IP Address (optional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                )
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth()
+            // Modern Dropdown Menu for Status
+            ExposedDropdownMenuBox(
+                expanded = statusExpanded,
+                onExpandedChange = { statusExpanded = !statusExpanded }
             ) {
-                OutlinedTextField(
+                ModernTextField(
                     value = status,
                     onValueChange = {},
+                    label = "Status",
                     readOnly = true,
-                    enabled = false,
-                    label = { Text("Status") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { statusExpanded = true }
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded)
+                    },
+                    modifier = Modifier.menuAnchor()
                 )
 
-                DropdownMenu(
+                ExposedDropdownMenu(
                     expanded = statusExpanded,
-                    onDismissRequest = { statusExpanded = false }
+                    onDismissRequest = { statusExpanded = false },
+                    modifier = Modifier.background(EditLabColors.CardWhite)
                 ) {
                     statusOptions.forEach { item ->
                         DropdownMenuItem(
-                            text = { Text(item) },
+                            text = { Text(item, color = EditLabColors.TextDark) },
                             onClick = {
                                 status = item
                                 statusExpanded = false
@@ -194,32 +213,41 @@ fun EditLabComputerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
+            ModernTextField(
                 value = remarks,
                 onValueChange = {
                     remarks = it
                     errorMessage = ""
                 },
-                label = { Text("Remarks") },
-                modifier = Modifier.fillMaxWidth()
+                label = "Remarks",
+                singleLine = false,
+                modifier = Modifier.height(100.dp) // Taller box for remarks
             )
 
+            // Error Message Display
             if (errorMessage.isNotBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error
-                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(EditLabColors.RedLight, RoundedCornerShape(12.dp))
+                        .border(1.dp, EditLabColors.RedText.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.Warning, contentDescription = "Error", tint = EditLabColors.RedText)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = errorMessage, color = EditLabColors.RedText, style = MaterialTheme.typography.bodyMedium)
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
+            // Save Button
             Button(
                 onClick = {
                     errorMessage = when {
-                        computer.id.isBlank() -> "Invalid computer id"
+                        computer.id.isBlank() -> "Invalid computer ID"
                         pcName.isBlank() -> "PC name is required"
                         labRoom.isBlank() -> "Lab room is required"
                         else -> ""
@@ -238,28 +266,86 @@ fun EditLabComputerScreen(
                         )
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = EditLabColors.PrimaryIndigo.copy(alpha = 0.5f)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Save Changes")
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.horizontalGradient(listOf(EditLabColors.PrimaryIndigo, EditLabColors.PurpleAccent)),
+                            shape = RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save Changes", color = Color.White, fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // Delete Button
             OutlinedButton(
                 onClick = { showDeleteDialog = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = EditLabColors.RedText),
+                border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(EditLabColors.RedText.copy(alpha = 0.5f), EditLabColors.RedText.copy(alpha = 0.5f))))
             ) {
-                Text("Delete Lab Computer")
+                Icon(Icons.Rounded.DeleteOutline, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete Lab Computer", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedButton(
-                onClick = onBackClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Back")
-            }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+// Reusable Modern TextField Composable
+@Composable
+private fun ModernTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = true,
+    readOnly: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, color = EditLabColors.TextMuted) },
+        singleLine = singleLine,
+        readOnly = readOnly,
+        trailingIcon = trailingIcon,
+        keyboardOptions = keyboardOptions,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = EditLabColors.CardWhite,
+            unfocusedContainerColor = EditLabColors.CardWhite,
+            focusedBorderColor = EditLabColors.PrimaryIndigo,
+            unfocusedBorderColor = Color.Transparent,
+            focusedTextColor = EditLabColors.TextDark,
+            unfocusedTextColor = EditLabColors.TextDark,
+            cursorColor = EditLabColors.PrimaryIndigo
+        )
+    )
 }

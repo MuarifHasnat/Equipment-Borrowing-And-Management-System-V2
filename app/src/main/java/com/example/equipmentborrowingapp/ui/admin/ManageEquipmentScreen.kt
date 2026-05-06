@@ -2,69 +2,62 @@ package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
+// Modern Colors
+private object ManageColors {
+    val ModernBg = Color(0xFFF4F7FB)
+    val CardWhite = Color(0xFFFFFFFF)
+    val TextDark = Color(0xFF1E293B)
+    val TextMuted = Color(0xFF64748B)
+    val PrimaryIndigo = Color(0xFF4F46E5)
+    val PrimaryIndigoLight = Color(0xFFE0E7FF)
+}
+
 // Helper to get matching Badge Colors (Background to Text Color)
 private fun getStockBadgeColors(available: Int, total: Int): Pair<Color, Color> {
     return when {
-        total <= 0 -> Pair(Color(0xFFF5F5F5), Color(0xFF757575)) // Gray
-        available <= 0 -> Pair(Color(0xFFFFEBEE), Color(0xFFD32F2F)) // Red
-        available <= 2 -> Pair(Color(0xFFFFF8E1), Color(0xFFF57F17)) // Orange
-        else -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))           // Green
+        total <= 0 -> Pair(Color(0xFFF1F5F9), Color(0xFF64748B)) // Gray
+        available <= 0 -> Pair(Color(0xFFFEF2F2), Color(0xFFDC2626)) // Red
+        available <= 2 -> Pair(Color(0xFFFFF7ED), Color(0xFFEA580C)) // Orange
+        else -> Pair(Color(0xFFF0FDF4), Color(0xFF16A34A))           // Green
     }
 }
 
 @Composable
 private fun StatusBadge(text: String, bgColor: Color, textColor: Color) {
-    Box(
-        modifier = Modifier
-            .background(bgColor, RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
+    Surface(
+        color = bgColor,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.padding(end = 8.dp)
     ) {
         Text(
             text = text,
             color = textColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.ExtraBold
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         )
     }
 }
@@ -75,9 +68,9 @@ private fun EquipmentCardImage(imageName: String, imageUrl: String, contentDescr
     val hasImageUrl = imageUrl.trim().isNotBlank()
 
     val modifier = Modifier
-        .size(100.dp)
-        .clip(RoundedCornerShape(18.dp))
-        .background(Color(0xFFF3F4F8))
+        .size(90.dp)
+        .clip(RoundedCornerShape(14.dp))
+        .background(ManageColors.ModernBg)
 
     if (hasImageUrl) {
         AsyncImage(
@@ -93,7 +86,7 @@ private fun EquipmentCardImage(imageName: String, imageUrl: String, contentDescr
             painter = painterResource(id = fallbackImageResId),
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
-            modifier = modifier.padding(8.dp) // Slight padding for local icons
+            modifier = modifier.padding(8.dp)
         )
     }
 }
@@ -104,70 +97,79 @@ fun ManageEquipmentScreen(
     onEditClick: (Equipment) -> Unit,
     onBackClick: () -> Unit
 ) {
-    // Premium Color Palette
-    val bgColor = Color(0xFFF8F7FA)
-    val cardBg = Color.White
-    val gradientStart = Color(0xFFE040FB) // Vibrant Pink
-    val gradientEnd = Color(0xFF8A2BE2)   // Deep Purple
-    val darkText = Color(0xFF1A1A1A)
-    val grayText = Color(0xFF888888)
-    val dividerColor = Color(0xFFF0F0F0)
-
-    Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
+    Surface(modifier = Modifier.fillMaxSize(), color = ManageColors.ModernBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // --- Premium Header ---
+            // 🔙 Modern Top Bar
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp, top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .background(ManageColors.CardWhite, RoundedCornerShape(12.dp))
+                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Back",
+                        tint = ManageColors.TextDark
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Inventory",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = grayText,
-                        fontWeight = FontWeight.Bold
+                        text = "Manage Equipment",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = ManageColors.TextDark,
+                        fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Manage Equipment",
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Black,
-                        color = darkText
+                        text = "Inventory Overview",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ManageColors.TextMuted
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
             if (equipmentList.isEmpty()) {
                 // --- Empty State ---
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("No equipment found.", fontSize = 16.sp, color = grayText, fontWeight = FontWeight.SemiBold)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No equipment found.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ManageColors.TextMuted
+                    )
                 }
             } else {
                 // --- Gorgeous List State ---
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
                     items(equipmentList, key = { it.id }) { equipment ->
                         Card(
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = cardBg),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = ManageColors.CardWhite),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f))
                         ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
 
                                 // Top Section: Image + Details
-                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
                                     EquipmentCardImage(equipment.imageName, equipment.imageUrl, equipment.name)
 
                                     Spacer(modifier = Modifier.width(16.dp))
@@ -175,27 +177,26 @@ fun ManageEquipmentScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = equipment.name,
-                                            fontSize = 19.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = darkText,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ManageColors.TextDark,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
 
-                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Spacer(modifier = Modifier.height(4.dp))
 
-                                        // Subtle info text
                                         Text(
                                             text = "${equipment.category} • ${equipment.condition}",
-                                            fontSize = 13.sp,
-                                            color = grayText,
-                                            fontWeight = FontWeight.SemiBold
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = ManageColors.TextMuted,
+                                            fontWeight = FontWeight.Medium
                                         )
 
                                         Spacer(modifier = Modifier.height(10.dp))
 
                                         // Beautiful Status Badges
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth()) {
                                             val stockColors = getStockBadgeColors(equipment.availableQuantity, equipment.totalQuantity)
                                             StatusBadge(
                                                 text = "Stock: ${equipment.availableQuantity}/${equipment.totalQuantity}",
@@ -203,8 +204,8 @@ fun ManageEquipmentScreen(
                                                 textColor = stockColors.second
                                             )
 
-                                            val typeBg = if (equipment.isBorrowable) Color(0xFFF3E5F5) else Color(0xFFFFF3E0)
-                                            val typeText = if (equipment.isBorrowable) Color(0xFF6A1B9A) else Color(0xFFE65100)
+                                            val typeBg = if (equipment.isBorrowable) Color(0xFFF3E8FF) else Color(0xFFFEF3C7)
+                                            val typeText = if (equipment.isBorrowable) Color(0xFF7E22CE) else Color(0xFFD97706)
                                             StatusBadge(
                                                 text = if (equipment.isBorrowable) "Borrowable" else "Lab Use",
                                                 bgColor = typeBg,
@@ -214,61 +215,33 @@ fun ManageEquipmentScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(18.dp))
-                                HorizontalDivider(color = dividerColor, thickness = 1.dp)
                                 Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = ManageColors.ModernBg)
+                                Spacer(modifier = Modifier.height(12.dp))
 
-                                // Bottom Section: Action Buttons
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                // Bottom Section: Action Button Only
+                                Button(
+                                    onClick = { onEditClick(equipment) },
+                                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = ManageColors.PrimaryIndigoLight,
+                                        contentColor = ManageColors.PrimaryIndigo
+                                    ),
+                                    elevation = ButtonDefaults.buttonElevation(0.dp)
                                 ) {
-                                    // Gradient Edit Button
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1.2f)
-                                            .height(46.dp)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(Brush.horizontalGradient(listOf(gradientStart, gradientEnd)))
-                                            .clickable { onEditClick(equipment) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("Edit Equipment", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                                    }
-
-                                    // Subtle Outlined Back Button
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(0.8f)
-                                            .height(46.dp)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .border(1.5.dp, dividerColor, RoundedCornerShape(16.dp))
-                                            .clickable { onBackClick() },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("Back", color = darkText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    }
+                                    Icon(
+                                        Icons.Rounded.Edit,
+                                        contentDescription = "Edit",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Edit Equipment", fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     }
                 }
-            }
-
-            // Global Back Button (if empty)
-            if (equipmentList.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .border(1.5.dp, Color(0xFFDCDCDC), RoundedCornerShape(20.dp))
-                        .clickable { onBackClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Go Back", color = darkText, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

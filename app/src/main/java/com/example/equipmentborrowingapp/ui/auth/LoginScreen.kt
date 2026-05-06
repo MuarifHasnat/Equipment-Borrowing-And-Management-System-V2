@@ -4,12 +4,10 @@ import android.content.Context
 import android.util.Patterns
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -40,31 +38,40 @@ fun LoginScreen(
         context.getSharedPreferences("AuthPrefs", Context.MODE_PRIVATE)
     }
 
-    var email by remember {
-        mutableStateOf(sharedPref.getString("SAVED_EMAIL", "") ?: "")
-    }
+    // States
+    var email by remember { mutableStateOf(sharedPref.getString("SAVED_EMAIL", "") ?: "") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var loginError by remember { mutableStateOf<String?>(null) }
 
+    // Forgot Password States
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     var resetEmail by remember { mutableStateOf(email) }
     var resetEmailError by remember { mutableStateOf<String?>(null) }
 
-    // Professional Colors
+    // Colors (Consider moving these to your ui/theme/Color.kt eventually)
     val screenBg = Color(0xFFF7F4FF)
     val whiteCard = Color(0xFFFFFFFF)
     val borderColor = Color(0xFFE2DDF0)
     val textGray = Color(0xFF7B728A)
     val darkText = Color(0xFF1F1B2D)
-
     val purpleDark = Color(0xFF4F1DFF)
     val purple = Color(0xFF7A19FF)
     val purpleLight = Color(0xFF9B5CFF)
 
+    // Validation & Login Logic
     val performLogin = {
         val finalEmail = email.trim()
-        sharedPref.edit().putString("SAVED_EMAIL", finalEmail).apply()
-        onLoginClick(finalEmail, password)
+        when {
+            finalEmail.isBlank() -> loginError = "Email cannot be empty"
+            !Patterns.EMAIL_ADDRESS.matcher(finalEmail).matches() -> loginError = "Please enter a valid email"
+            password.isBlank() -> loginError = "Password cannot be empty"
+            else -> {
+                loginError = null
+                sharedPref.edit().putString("SAVED_EMAIL", finalEmail).apply()
+                onLoginClick(finalEmail, password)
+            }
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = screenBg) {
@@ -73,20 +80,16 @@ fun LoginScreen(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color(0xFFF6F1FF),
-                            Color(0xFFFFFFFF),
-                            Color(0xFFF3EEFF)
-                        )
+                        listOf(Color(0xFFF6F1FF), Color(0xFFFFFFFF), Color(0xFFF3EEFF))
                     )
                 )
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Logo Box
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -94,17 +97,13 @@ fun LoginScreen(
                     .clip(CircleShape)
                     .background(
                         brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFFE9E2FF),
-                                Color(0xFFF3EEFF),
-                                Color.White
-                            )
+                            colors = listOf(Color(0xFFE9E2FF), Color(0xFFF3EEFF), Color.White)
                         )
                     )
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.robot_login),
-                    contentDescription = null,
+                    contentDescription = "App Logo",
                     modifier = Modifier.size(110.dp),
                     contentScale = ContentScale.Fit
                 )
@@ -113,7 +112,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Equipment Borrowing System",
+                text = "EBSM System",
                 color = textGray,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
@@ -128,20 +127,35 @@ fun LoginScreen(
                 fontWeight = FontWeight.ExtraBold
             )
 
-            Text(
-                text = "Sign in to continue",
-                color = textGray
-            )
+            Text(text = "Sign in to continue", color = textGray)
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Main Login Error Message
+            if (loginError != null) {
+                Text(
+                    text = loginError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    textAlign = TextAlign.Start
+                )
+            }
+
+            // Email Input
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    loginError = null // Clear error when typing
+                },
                 placeholder = { Text("Email") },
                 leadingIcon = {
-                    Icon(Icons.Filled.Email, contentDescription = null)
+                    Icon(Icons.Filled.Email, contentDescription = "Email Icon", tint = textGray)
                 },
+                isError = loginError?.contains("Email", ignoreCase = true) == true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(16.dp)),
@@ -149,8 +163,9 @@ fun LoginScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = whiteCard,
                     unfocusedContainerColor = whiteCard,
-                    focusedBorderColor = borderColor,
-                    unfocusedBorderColor = borderColor
+                    focusedBorderColor = purple,
+                    unfocusedBorderColor = borderColor,
+                    errorBorderColor = MaterialTheme.colorScheme.error
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -161,28 +176,28 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Password Input
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    loginError = null // Clear error when typing
+                },
                 placeholder = { Text("Password") },
                 leadingIcon = {
-                    Icon(Icons.Filled.Lock, contentDescription = null)
+                    Icon(Icons.Filled.Lock, contentDescription = "Password Icon", tint = textGray)
                 },
                 trailingIcon = {
-                    IconButton(onClick = {
-                        passwordVisible = !passwordVisible
-                    }) {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible)
-                                Icons.Filled.Visibility
-                            else Icons.Filled.VisibilityOff,
-                            contentDescription = null
+                            imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                            tint = textGray
                         )
                     }
                 },
-                visualTransformation =
-                    if (passwordVisible) VisualTransformation.None
-                    else PasswordVisualTransformation(),
+                isError = loginError?.contains("Password", ignoreCase = true) == true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(16.dp)),
@@ -190,8 +205,9 @@ fun LoginScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = whiteCard,
                     unfocusedContainerColor = whiteCard,
-                    focusedBorderColor = borderColor,
-                    unfocusedBorderColor = borderColor
+                    focusedBorderColor = purple,
+                    unfocusedBorderColor = borderColor,
+                    errorBorderColor = MaterialTheme.colorScheme.error
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -207,82 +223,88 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(
-                    onClick = {
-                        resetEmail = email.trim()
-                        resetEmailError = null
-                        showForgotPasswordDialog = true
-                    }
-                ) {
+                TextButton(onClick = {
+                    resetEmail = email.trim()
+                    resetEmailError = null
+                    showForgotPasswordDialog = true
+                }) {
                     Text("Forgot Password?", color = purple)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Box(
-                contentAlignment = Alignment.Center,
+            // Login Button (Semantically correct structure for gradient buttons)
+            Button(
+                onClick = performLogin,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .shadow(6.dp, RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                purpleDark,
-                                purple,
-                                purpleLight
-                            )
-                        ),
-                        RoundedCornerShape(16.dp)
-                    )
-                    .clickable { performLogin() }
+                    .shadow(6.dp, RoundedCornerShape(16.dp)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    "Login",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.horizontalGradient(listOf(purpleDark, purple, purpleLight)),
+                            RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Login",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f))
-                Text(" OR ", color = textGray)
-                HorizontalDivider(modifier = Modifier.weight(1f))
+            // Divider
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = borderColor)
+                Text(" OR ", color = textGray, modifier = Modifier.padding(horizontal = 8.dp))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = borderColor)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(
+            // Google Button
+            Surface(
+                onClick = onGoogleClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .background(whiteCard, RoundedCornerShape(16.dp))
-                    .border(1.dp, borderColor, RoundedCornerShape(16.dp))
-                    .clickable { onGoogleClick() },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = whiteCard,
+                border = BorderStroke(1.dp, borderColor)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.google_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Continue with Google", fontWeight = FontWeight.Bold)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.google_logo),
+                        contentDescription = "Google Logo",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Continue with Google", fontWeight = FontWeight.Bold, color = darkText)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Sign Up Text
             Row {
                 Text("Don't have an account? ", color = textGray)
                 Text(
-                    "Sign Up",
+                    text = "Sign Up",
                     color = purple,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { onGoToRegister() }
@@ -293,6 +315,7 @@ fun LoginScreen(
         }
     }
 
+    // Forgot Password Dialog
     if (showForgotPasswordDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -300,18 +323,9 @@ fun LoginScreen(
                 resetEmailError = null
             },
             icon = {
-                Icon(
-                    imageVector = Icons.Filled.LockReset,
-                    contentDescription = null,
-                    tint = purple
-                )
+                Icon(Icons.Filled.LockReset, contentDescription = "Reset Password Icon", tint = purple)
             },
-            title = {
-                Text(
-                    text = "Reset Password",
-                    fontWeight = FontWeight.Bold
-                )
-            },
+            title = { Text(text = "Reset Password", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
@@ -328,17 +342,13 @@ fun LoginScreen(
                             resetEmail = it
                             resetEmailError = null
                         },
-                        placeholder = {
-                            Text("Email address")
-                        },
+                        placeholder = { Text("Email address") },
                         leadingIcon = {
-                            Icon(Icons.Filled.Email, contentDescription = null)
+                            Icon(Icons.Filled.Email, contentDescription = "Email Icon")
                         },
                         isError = resetEmailError != null,
                         supportingText = {
-                            resetEmailError?.let {
-                                Text(text = it)
-                            }
+                            resetEmailError?.let { Text(text = it) }
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
@@ -351,7 +361,8 @@ fun LoginScreen(
                             focusedContainerColor = whiteCard,
                             unfocusedContainerColor = whiteCard,
                             focusedBorderColor = purple,
-                            unfocusedBorderColor = borderColor
+                            unfocusedBorderColor = borderColor,
+                            errorBorderColor = MaterialTheme.colorScheme.error
                         )
                     )
                 }
@@ -360,16 +371,9 @@ fun LoginScreen(
                 Button(
                     onClick = {
                         val finalEmail = resetEmail.trim()
-
                         when {
-                            finalEmail.isBlank() -> {
-                                resetEmailError = "Please enter your email address"
-                            }
-
-                            !Patterns.EMAIL_ADDRESS.matcher(finalEmail).matches() -> {
-                                resetEmailError = "Please enter a valid email address"
-                            }
-
+                            finalEmail.isBlank() -> resetEmailError = "Please enter your email address"
+                            !Patterns.EMAIL_ADDRESS.matcher(finalEmail).matches() -> resetEmailError = "Please enter a valid email address"
                             else -> {
                                 onForgotPasswordClick(finalEmail)
                                 showForgotPasswordDialog = false
@@ -377,25 +381,22 @@ fun LoginScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = purple
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = purple),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Send Reset Link")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        showForgotPasswordDialog = false
-                        resetEmailError = null
-                    }
-                ) {
+                TextButton(onClick = {
+                    showForgotPasswordDialog = false
+                    resetEmailError = null
+                }) {
                     Text("Cancel", color = textGray)
                 }
             },
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(20.dp),
+            containerColor = whiteCard
         )
     }
 }
