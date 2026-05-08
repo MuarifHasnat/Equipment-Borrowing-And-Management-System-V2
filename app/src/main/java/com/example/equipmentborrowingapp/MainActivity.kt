@@ -318,7 +318,27 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                fun loadRoomsAndOpenAddEquipment() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
 
+                    roomViewModel.loadRooms(
+                        institutionId = currentInstitutionId
+                    ) {
+                        runOnUiThread {
+                            roomList = roomViewModel.roomList
+
+                            if (roomList.isEmpty()) {
+                                showMessage("Please add a room/lab first")
+                                currentScreen = AppScreen.ManageRooms
+                            } else {
+                                currentScreen = AppScreen.AddEquipment
+                            }
+                        }
+                    }
+                }
                 fun openAdminDashboardWithFreshData() {
                     refreshEquipmentForAdmin()
                     refreshRequestsForAdmin(AppScreen.AdminDashboard)
@@ -1306,7 +1326,7 @@ class MainActivity : ComponentActivity() {
                                             loadRoomsAndOpenManage()
                                         },
                                         onAddEquipmentClick = {
-                                            currentScreen = AppScreen.AddEquipment
+                                            loadRoomsAndOpenAddEquipment()
                                         },
                                         onViewPendingRequestsClick = {
                                             loadPendingRequestsAndOpen()
@@ -1399,7 +1419,8 @@ class MainActivity : ComponentActivity() {
                                     redirectUnauthorized(AppScreen.AddEquipment)
                                 } else {
                                     AddEquipmentScreen(
-                                        onAddClick = { name, description, condition, totalQuantity, availableQuantity, category, imageName, imageUrl, isBorrowable ->
+                                        roomList = roomList,
+                                        onAddClick = { name, description, condition, totalQuantity, availableQuantity, category, imageName, imageUrl, isBorrowable, roomId ->
                                             if (
                                                 name.isBlank() ||
                                                 description.isBlank() ||
@@ -1407,6 +1428,7 @@ class MainActivity : ComponentActivity() {
                                                 totalQuantity.isBlank() ||
                                                 availableQuantity.isBlank() ||
                                                 category.isBlank() ||
+                                                roomId.isBlank() ||
                                                 (imageName.isBlank() && imageUrl.isBlank())
                                             ) {
                                                 showMessage(UiMessages.REQUIRED_FIELDS)
@@ -1430,7 +1452,7 @@ class MainActivity : ComponentActivity() {
                                                     else -> {
                                                         equipmentRepository.addEquipment(
                                                             institutionId = currentInstitutionId,
-                                                            roomId = "",
+                                                            roomId = roomId,
                                                             name = name,
                                                             description = description,
                                                             condition = condition,

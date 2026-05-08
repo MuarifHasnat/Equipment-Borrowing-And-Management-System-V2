@@ -27,7 +27,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
-
+import com.example.equipmentborrowingapp.data.model.Room
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.Box
 
 private object AddEquipColors {
     val ModernBg = Color(0xFFF4F7FB)
@@ -40,10 +44,21 @@ private object AddEquipColors {
     val RedText = Color(0xFFDC2626)
 }
 
+
 @Composable
 fun AddEquipmentScreen(
+    roomList: List<Room>,
     onAddClick: (
-        String, String, String, String, String, String, String, String, Boolean
+        name: String,
+        description: String,
+        condition: String,
+        totalQuantity: String,
+        availableQuantity: String,
+        category: String,
+        imageName: String,
+        imageUrl: String,
+        isBorrowable: Boolean,
+        roomId: String
     ) -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -57,7 +72,8 @@ fun AddEquipmentScreen(
     var imageUrl by remember { mutableStateOf("") }
     var isBorrowable by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
-
+    var selectedRoom by remember { mutableStateOf<Room?>(null) }
+    var roomMenuExpanded by remember { mutableStateOf(false) }
     Surface(modifier = Modifier.fillMaxSize(), color = AddEquipColors.ModernBg) {
         Column(
             modifier = Modifier
@@ -258,9 +274,16 @@ fun AddEquipmentScreen(
 
                     if (errorMessage.isBlank()) {
                         onAddClick(
-                            name.trim(), description.trim(), condition.trim(),
-                            totalQuantity.trim(), availableQuantity.trim(),
-                            category.trim(), imageName.trim(), imageUrl.trim(), isBorrowable
+                            name,
+                            description,
+                            condition,
+                            totalQuantity,
+                            availableQuantity,
+                            category,
+                            imageName,
+                            imageUrl,
+                            isBorrowable,
+                            selectedRoom?.id ?: ""
                         )
                     }
                 },
