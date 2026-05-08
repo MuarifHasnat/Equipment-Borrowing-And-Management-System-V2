@@ -95,7 +95,7 @@ fun EquipmentListScreen(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            //  Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

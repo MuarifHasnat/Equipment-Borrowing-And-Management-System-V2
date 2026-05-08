@@ -16,16 +16,22 @@ class RequestViewModel(
     var myRequestsUiState by mutableStateOf<UiState<List<BorrowRequest>>>(UiState.Idle)
         private set
 
-    fun loadUserRequests(userId: String, onLoaded: (() -> Unit)? = null) {
+    fun loadUserRequests(
+        institutionId: String,
+        userId: String,
+        onLoaded: (() -> Unit)? = null
+    ) {
         myRequestsUiState = UiState.Loading
 
-        requestRepository.getUserRequests(userId) { list ->
+        requestRepository.getUserRequests(
+            institutionId = institutionId,
+            userId = userId
+        ) { list ->
             myRequests = list
             myRequestsUiState = UiState.Success(list)
             onLoaded?.invoke()
         }
     }
-
     fun clearMyRequests() {
         myRequests = emptyList()
         myRequestsUiState = UiState.Idle

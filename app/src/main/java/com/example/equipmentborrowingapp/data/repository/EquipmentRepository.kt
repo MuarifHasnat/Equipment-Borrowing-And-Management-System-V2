@@ -8,6 +8,8 @@ class EquipmentRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     fun addEquipment(
+        institutionId: String,
+        roomId: String = "",
         name: String,
         description: String,
         condition: String,
@@ -19,38 +21,8 @@ class EquipmentRepository {
         isBorrowable: Boolean,
         onResult: (Boolean, String) -> Unit
     ) {
-        if (name.isBlank()) {
-            onResult(false, "Equipment name is required")
-            return
-        }
-
-        if (description.isBlank()) {
-            onResult(false, "Description is required")
-            return
-        }
-
-        if (condition.isBlank()) {
-            onResult(false, "Condition is required")
-            return
-        }
-
-        if (category.isBlank()) {
-            onResult(false, "Category is required")
-            return
-        }
-
-        if (imageName.isBlank() && imageUrl.isBlank()) {
-            onResult(false, "Provide either image name or image URL")
-            return
-        }
-
-        if (totalQuantity < 0 || availableQuantity < 0) {
-            onResult(false, "Quantity cannot be negative")
-            return
-        }
-
-        if (availableQuantity > totalQuantity) {
-            onResult(false, "Available quantity cannot be greater than total quantity")
+        if (institutionId.isBlank()) {
+            onResult(false, "Institution not found")
             return
         }
 
@@ -58,15 +30,20 @@ class EquipmentRepository {
 
         val equipment = Equipment(
             id = docRef.id,
+            institutionId = institutionId,
+            roomId = roomId,
             name = name.trim(),
             description = description.trim(),
-            category = category.trim(),
             condition = condition.trim(),
             totalQuantity = totalQuantity,
             availableQuantity = availableQuantity,
-            isBorrowable = isBorrowable,
+            category = category.trim(),
             imageName = imageName.trim(),
-            imageUrl = imageUrl.trim()
+            imageUrl = imageUrl.trim(),
+            isBorrowable = isBorrowable,
+            addedBy = "",
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
         )
 
         docRef.set(equipment)
@@ -79,10 +56,23 @@ class EquipmentRepository {
     }
 
     fun getEquipmentList(
+        institutionId: String,
+        roomId: String? = null,
         onResult: (List<Equipment>) -> Unit
     ) {
-        firestore.collection("equipment")
-            .get()
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
+        var query = firestore.collection("equipment")
+            .whereEqualTo("institutionId", institutionId)
+
+        if (!roomId.isNullOrBlank()) {
+            query = query.whereEqualTo("roomId", roomId)
+        }
+
+        query.get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull { document ->
                     document.toObject(Equipment::class.java)
@@ -93,7 +83,6 @@ class EquipmentRepository {
                 onResult(emptyList())
             }
     }
-
     fun decreaseAvailableQuantity(
         equipmentId: String,
         onResult: (Boolean, String) -> Unit

@@ -89,7 +89,7 @@ fun PendingRequestsScreen(
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
 
-    // 🔥 Modern DIALOG
+    //  Modern DIALOG
     selectedRequest?.let { request ->
         val isApprove = dialogType == "approve"
 
@@ -187,7 +187,7 @@ fun PendingRequestsScreen(
                     .padding(padding)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                // 🔙 Modern Top Bar
+                //  Modern Top Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

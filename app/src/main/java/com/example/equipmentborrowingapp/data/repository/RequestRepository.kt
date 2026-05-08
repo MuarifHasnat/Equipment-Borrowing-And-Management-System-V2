@@ -9,6 +9,8 @@ class RequestRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     fun submitBorrowRequest(
+        institutionId: String,
+        roomId: String,
         userId: String,
         userName: String,
         equipmentId: String,
@@ -21,6 +23,10 @@ class RequestRepository {
         dueDate: String,
         onResult: (Boolean, String) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(false, "Institution not found")
+            return
+        }
         if (borrowDate.isBlank() || dueDate.isBlank()) {
             onResult(false, "Please select borrow date and due date")
             return
@@ -61,6 +67,7 @@ class RequestRepository {
                 }
 
                 firestore.collection("borrow_requests")
+                    .whereEqualTo("institutionId", institutionId)
                     .whereEqualTo("userId", userId)
                     .get()
                     .addOnSuccessListener { requestResult ->
@@ -83,6 +90,8 @@ class RequestRepository {
                         val docRef = firestore.collection("borrow_requests").document()
                         val request = BorrowRequest(
                             requestId = docRef.id,
+                            institutionId = institutionId,
+                            roomId = roomId,
                             userId = userId,
                             userName = userName,
                             equipmentId = equipmentId,
@@ -116,9 +125,16 @@ class RequestRepository {
     }
 
     fun getPendingRequests(
+        institutionId: String,
         onResult: (List<BorrowRequest>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("borrow_requests")
+            .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
                 val allList = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
@@ -136,9 +152,16 @@ class RequestRepository {
     }
 
     fun getApprovedRequests(
+        institutionId: String,
         onResult: (List<BorrowRequest>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("borrow_requests")
+            .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
                 val allList = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
@@ -159,13 +182,21 @@ class RequestRepository {
     }
 
     fun getAllRequests(
+        institutionId: String,
         onResult: (List<BorrowRequest>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("borrow_requests")
+            .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
                 syncOverdueStatuses(list)
+
                 val normalizedList = list
                     .map { normalizeRequestStatus(it) }
                     .sortedByDescending { it.requestTimestamp }
@@ -176,17 +207,24 @@ class RequestRepository {
                 onResult(emptyList())
             }
     }
-
     fun getUserRequests(
+        institutionId: String,
         userId: String,
         onResult: (List<BorrowRequest>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("borrow_requests")
+            .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("userId", userId)
             .get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
                 syncOverdueStatuses(list)
+
                 val normalizedList = list
                     .map { normalizeRequestStatus(it) }
                     .sortedByDescending { it.requestTimestamp }
@@ -197,7 +235,6 @@ class RequestRepository {
                 onResult(emptyList())
             }
     }
-
     fun approveRequest(
         request: BorrowRequest,
         onResult: (Boolean, String) -> Unit

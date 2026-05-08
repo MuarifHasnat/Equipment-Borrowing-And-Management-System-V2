@@ -16,15 +16,22 @@ class AdminEquipmentViewModel(
     var equipmentUiState by mutableStateOf<UiState<List<Equipment>>>(UiState.Idle)
         private set
 
-    fun loadEquipment(onLoaded: (() -> Unit)? = null) {
+    fun loadEquipment(
+        institutionId: String,
+        roomId: String? = null,
+        onLoaded: (() -> Unit)? = null
+    ) {
         equipmentUiState = UiState.Loading
-        equipmentRepository.getEquipmentList { list ->
+
+        equipmentRepository.getEquipmentList(
+            institutionId = institutionId,
+            roomId = roomId
+        ) { list ->
             equipmentList = list
             equipmentUiState = UiState.Success(list)
             onLoaded?.invoke()
         }
     }
-
     fun clearEquipment() {
         equipmentList = emptyList()
         equipmentUiState = UiState.Idle

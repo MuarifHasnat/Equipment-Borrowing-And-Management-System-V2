@@ -2,11 +2,12 @@ package com.example.equipmentborrowingapp.data.model
 
 data class AppNotification(
     val id: String = "",
+    val institutionId: String = "",
     val userId: String = "",
-    val role: String = "", // student / admin / all
+    val role: String = "",
     val title: String = "",
     val message: String = "",
-    val type: String = "info", // info / success / warning / error
+    val type: String = "info",
     val isRead: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )

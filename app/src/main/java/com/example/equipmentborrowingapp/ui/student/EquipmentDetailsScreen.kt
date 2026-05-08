@@ -70,7 +70,7 @@ fun EquipmentDetailsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            // Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,7 +97,7 @@ fun EquipmentDetailsScreen(
                 }
             }
 
-            // 🔥 Title & Availability
+            //  Title & Availability
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = equipment.name.ifBlank { "Unknown Equipment" },
@@ -146,7 +146,7 @@ fun EquipmentDetailsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🔥 Modern Image Display
+            //  Modern Image Display
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,7 +177,7 @@ fun EquipmentDetailsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🔥 Chips Row
+            //  Chips Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -189,7 +189,7 @@ fun EquipmentDetailsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🔥 Description Section
+            //  Description Section
             Text(
                 text = "Description",
                 style = MaterialTheme.typography.titleMedium,
@@ -210,7 +210,7 @@ fun EquipmentDetailsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 🔥 Premium Borrow Button
+            //  Premium Borrow Button
             Button(
                 onClick = { onBorrowClick(equipment) },
                 enabled = equipment.isBorrowable && equipment.availableQuantity > 0,

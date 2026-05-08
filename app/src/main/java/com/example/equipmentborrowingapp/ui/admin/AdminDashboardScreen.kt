@@ -223,7 +223,7 @@ private fun ModernHeroCard() {
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Equipment Borrowing System",
+                text = "Equipment Borrowing and Software Monitoring System",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold

@@ -37,7 +37,7 @@ import com.example.equipmentborrowingapp.R
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
-// Modern Colors
+// Colors
 private object SuccessColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -79,7 +79,7 @@ fun RequestSubmittedScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🔥 Premium Success Icon
+            // Success Icon
             Box(
                 modifier = Modifier
                     .size(90.dp)
@@ -116,7 +116,7 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // 🔥 Equipment Details Card
+            //  Equipment Details Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -182,7 +182,7 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🔥 Request Details Group
+            // Request Details Group
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,7 +211,7 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 🔥 Guidelines Card
+            // Guidelines Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -231,7 +231,7 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 🔥 Action Buttons
+            // Action Buttons
             Button(
                 onClick = onViewRequestClick,
                 modifier = Modifier

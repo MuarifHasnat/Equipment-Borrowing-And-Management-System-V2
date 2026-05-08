@@ -49,7 +49,7 @@ fun StudentProfileScreen(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            //  Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -77,7 +77,7 @@ fun StudentProfileScreen(
                 )
             }
 
-            // 🔥 Premium Hero Section
+            //   Hero Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

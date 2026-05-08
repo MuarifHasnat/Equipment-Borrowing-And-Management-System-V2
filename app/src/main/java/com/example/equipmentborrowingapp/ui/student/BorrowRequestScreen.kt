@@ -89,7 +89,7 @@ fun BorrowRequestScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            //  Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,7 +124,7 @@ fun BorrowRequestScreen(
                 }
             }
 
-            // 🔥 Equipment Preview Card
+            //  Equipment Preview Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -216,7 +216,7 @@ fun BorrowRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🔥 Borrow Details Form
+            //  Borrow Details Form
             Text(
                 text = "Borrow Details",
                 style = MaterialTheme.typography.titleMedium,
@@ -276,7 +276,7 @@ fun BorrowRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🔥 Guidelines
+            //  Guidelines
             Text(
                 text = "Important Guidelines",
                 style = MaterialTheme.typography.titleMedium,
@@ -321,7 +321,7 @@ fun BorrowRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 🔥 Submit Button
+            //  Submit Button
             Button(
                 onClick = {
                     val quantity = quantityText.toIntOrNull()

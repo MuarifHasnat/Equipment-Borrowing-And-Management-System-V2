@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-// Modern Colors (অন্য ফাইলের সাথে যেন conflict না করে তাই object এর ভেতর রাখা হয়েছে)
+
 private object ProfileColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -49,7 +49,7 @@ fun AdminProfileScreen(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            // Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -77,7 +77,7 @@ fun AdminProfileScreen(
                 )
             }
 
-            // 🔥 Premium Hero Section
+            //  Premium Hero Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

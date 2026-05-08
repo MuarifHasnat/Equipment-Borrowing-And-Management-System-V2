@@ -80,7 +80,7 @@ fun ApprovedRequestsScreen(
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
 
-    // 🔥 Modern DIALOG
+    //  Modern DIALOG
     selectedRequest?.let { request ->
         AlertDialog(
             onDismissRequest = { selectedRequest = null },
@@ -151,7 +151,7 @@ fun ApprovedRequestsScreen(
                     .padding(padding)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                // 🔙 Modern Top Bar
+                //  Modern Top Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

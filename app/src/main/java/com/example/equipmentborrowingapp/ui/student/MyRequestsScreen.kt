@@ -75,7 +75,7 @@ fun MyRequestsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            //  Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -110,7 +110,7 @@ fun MyRequestsScreen(
                 }
             }
 
-            // 🔥 Modern Filter Chips
+            //  Modern Filter Chips
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -135,7 +135,7 @@ fun MyRequestsScreen(
                 }
             }
 
-            // 🔥 Request List
+            //  Request List
             if (filteredList.isEmpty()) {
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),

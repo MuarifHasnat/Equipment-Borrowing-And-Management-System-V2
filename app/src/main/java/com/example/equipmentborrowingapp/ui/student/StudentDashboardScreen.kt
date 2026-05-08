@@ -63,7 +63,7 @@ fun StudentDashboardScreen(
         ) {
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 🔥 Modern Hero Card
+            //  Hero Card
             StudentHeroCard()
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -77,7 +77,7 @@ fun StudentDashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🔥 Modern Stats
+            //  Stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -106,7 +106,7 @@ fun StudentDashboardScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🔥 Modern Alert Card
+            //  Modern Alert Card
             ModernAlertCard(
                 title = "Reminder",
                 message = "Check your request status regularly and return approved equipment before the due date.",
@@ -124,7 +124,7 @@ fun StudentDashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🔥 Modern Action List (Settings Style)
+            //  Action List (Settings Style)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -188,7 +188,7 @@ fun StudentDashboardScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 🔥 Modern Logout Button
+            // Logout Button
             Button(
                 onClick = onLogout,
                 modifier = Modifier

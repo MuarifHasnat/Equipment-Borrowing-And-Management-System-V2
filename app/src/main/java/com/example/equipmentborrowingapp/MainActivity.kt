@@ -94,6 +94,8 @@ class MainActivity : ComponentActivity() {
                 var currentUserRole by remember { mutableStateOf<String?>(null) }
                 var currentUserName by remember { mutableStateOf("") }
                 var currentUserEmail by remember { mutableStateOf("") }
+                var currentInstitutionId by remember { mutableStateOf("") }
+                var currentVerificationStatus by remember { mutableStateOf("") }
                 val equipmentViewModel = remember { EquipmentViewModel() }
                 val requestViewModel = remember { RequestViewModel() }
                 val labComputerViewModel = remember { LabComputerViewModel() }
@@ -120,6 +122,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     notificationRepository.sendNotification(
                         AppNotification(
+                            institutionId = currentInstitutionId,
                             userId = userId,
                             role = role,
                             title = title,
@@ -190,6 +193,8 @@ class MainActivity : ComponentActivity() {
 
                     currentUserName = ""
                     currentUserEmail = ""
+                    currentInstitutionId = ""
+                    currentVerificationStatus = ""
                 }
 
                 fun isAdmin(): Boolean = currentUserRole == "admin"
@@ -241,6 +246,8 @@ class MainActivity : ComponentActivity() {
                             currentUserName = user.name
                             currentUserEmail = user.email
                             currentUserRole = user.role.trim().lowercase()
+                            currentInstitutionId = user.institutionId
+                            currentVerificationStatus = user.verificationStatus
 
                             when (currentUserRole) {
                                 "admin", "student" -> onReady?.invoke()
@@ -261,13 +268,20 @@ class MainActivity : ComponentActivity() {
                 fun refreshRequestsForAdmin(
                     openScreen: AppScreen? = null
                 ) {
-                    requestRepository.getAllRequests { allRequestsList ->
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    requestRepository.getAllRequests(
+                        institutionId = currentInstitutionId
+                    ) { allRequestsList ->
                         runOnUiThread {
                             adminAllRequests = allRequestsList
                             recalculateAdminCounts()
 
-                            adminRequestViewModel.loadPendingRequests()
-                            adminRequestViewModel.loadApprovedRequests()
+                            adminRequestViewModel.loadPendingRequests(currentInstitutionId)
+                            adminRequestViewModel.loadApprovedRequests(currentInstitutionId)
 
                             openScreen?.let {
                                 currentScreen = it
@@ -279,7 +293,14 @@ class MainActivity : ComponentActivity() {
                 fun refreshEquipmentForAdmin(
                     openScreen: AppScreen? = null
                 ) {
-                    adminEquipmentViewModel.loadEquipment {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    adminEquipmentViewModel.loadEquipment(
+                        institutionId = currentInstitutionId
+                    ) {
                         runOnUiThread {
                             recalculateAdminCounts()
 
@@ -307,18 +328,27 @@ class MainActivity : ComponentActivity() {
                     refreshApproved: Boolean = false,
                     onComplete: (() -> Unit)? = null
                 ) {
-                    adminEquipmentViewModel.loadEquipment {
-                        requestRepository.getAllRequests { allRequestsResult ->
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    adminEquipmentViewModel.loadEquipment(
+                        institutionId = currentInstitutionId
+                    ) {
+                        requestRepository.getAllRequests(
+                            institutionId = currentInstitutionId
+                        ) { allRequestsResult ->
                             runOnUiThread {
                                 adminAllRequests = allRequestsResult
                                 recalculateAdminCounts()
 
                                 if (refreshPending) {
-                                    adminRequestViewModel.loadPendingRequests()
+                                    adminRequestViewModel.loadPendingRequests(currentInstitutionId)
                                 }
 
                                 if (refreshApproved) {
-                                    adminRequestViewModel.loadApprovedRequests()
+                                    adminRequestViewModel.loadApprovedRequests(currentInstitutionId)
                                 }
 
                                 onComplete?.invoke()
@@ -403,21 +433,35 @@ class MainActivity : ComponentActivity() {
                     refreshEquipmentForAdmin(AppScreen.ManageEquipment)
                 }
 
-                fun loadPendingRequestsAndOpen() {
-                    adminRequestViewModel.loadPendingRequests {
-                        runOnUiThread {
-                            currentScreen = AppScreen.PendingRequests
+                    fun loadPendingRequestsAndOpen() {
+                        if (currentInstitutionId.isBlank()) {
+                            showMessage("Institution not found. Please login again.")
+                            return
                         }
-                    }
-                }
 
-                fun loadApprovedRequestsAndOpen() {
-                    adminRequestViewModel.loadApprovedRequests {
-                        runOnUiThread {
-                            currentScreen = AppScreen.ApprovedRequests
+                        adminRequestViewModel.loadPendingRequests(
+                            institutionId = currentInstitutionId
+                        ) {
+                            runOnUiThread {
+                                currentScreen = AppScreen.PendingRequests
+                            }
                         }
                     }
-                }
+
+                    fun loadApprovedRequestsAndOpen() {
+                        if (currentInstitutionId.isBlank()) {
+                            showMessage("Institution not found. Please login again.")
+                            return
+                        }
+
+                        adminRequestViewModel.loadApprovedRequests(
+                            institutionId = currentInstitutionId
+                        ) {
+                            runOnUiThread {
+                                currentScreen = AppScreen.ApprovedRequests
+                            }
+                        }
+                    }
 
                 fun loadLabComputersForAdmin() {
                     labComputerRepository.getLabComputers { list ->
@@ -503,22 +547,39 @@ class MainActivity : ComponentActivity() {
                 }
 // Student helpers
 
-                fun loadStudentRequestsAndOpenMyRequests() {
-                    val uid = authRepository.getCurrentUserUid()
-                    if (uid != null) {
-                        requestViewModel.loadUserRequests(uid) {
+                    fun loadStudentRequestsAndOpenMyRequests() {
+                        val uid = authRepository.getCurrentUserUid()
+
+                        if (uid == null) {
+                            showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                            safeLogoutToLogin()
+                            return
+                        }
+
+                        if (currentInstitutionId.isBlank()) {
+                            showMessage("Institution not found. Please login again.")
+                            return
+                        }
+
+                        requestViewModel.loadUserRequests(
+                            institutionId = currentInstitutionId,
+                            userId = uid
+                        ) {
                             runOnUiThread {
                                 currentScreen = AppScreen.MyRequests
                             }
                         }
-                    } else {
-                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
-                        safeLogoutToLogin()
                     }
-                }
 
                 fun loadStudentEquipmentAndOpenList() {
-                    equipmentViewModel.loadEquipment {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    equipmentViewModel.loadEquipment(
+                        institutionId = currentInstitutionId
+                    ) {
                         runOnUiThread {
                             currentScreen = AppScreen.EquipmentList
                         }
@@ -674,6 +735,9 @@ class MainActivity : ComponentActivity() {
                                         equipment = equipment,
                                         onSubmitClick = { quantity, borrowDate, dueDate ->
                                             when {
+                                                currentVerificationStatus != "Verified" -> {
+                                                    showMessage("Your account is not verified yet")
+                                                }
                                                 equipment.id.isBlank() -> {
                                                     showMessage(UiMessages.EQUIPMENT_NOT_FOUND)
                                                 }
@@ -709,10 +773,11 @@ class MainActivity : ComponentActivity() {
                                                             runOnUiThread {
                                                                 if (userName.isNullOrBlank()) {
                                                                     showMessage(UiMessages.USER_NAME_NOT_FOUND)
-                                                                } else {
-                                                                    requestRepository.submitBorrowRequest(
-                                                                        userId = uid,
-                                                                        userName = userName,
+                                                                } else {requestRepository.submitBorrowRequest(
+                                                                    institutionId = currentInstitutionId,
+                                                                    roomId = equipment.roomId,
+                                                                    userId = uid,
+                                                                    userName = userName,
                                                                         equipmentId = equipment.id,
                                                                         equipmentName = equipment.name.ifBlank {
                                                                             UiMessages.UNKNOWN_EQUIPMENT
@@ -738,7 +803,9 @@ class MainActivity : ComponentActivity() {
                                                                                     type = "warning"
                                                                                 )
 
-                                                                                equipmentViewModel.loadEquipment {
+                                                                                equipmentViewModel.loadEquipment(
+                                                                                    institutionId = currentInstitutionId
+                                                                                ) {
                                                                                     runOnUiThread {
                                                                                         submittedQuantity = quantity
                                                                                         submittedBorrowDate = borrowDate
@@ -1255,6 +1322,8 @@ class MainActivity : ComponentActivity() {
 
                                                     else -> {
                                                         equipmentRepository.addEquipment(
+                                                            institutionId = currentInstitutionId,
+                                                            roomId = "",
                                                             name = name,
                                                             description = description,
                                                             condition = condition,

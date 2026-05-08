@@ -66,7 +66,7 @@ fun ManageSoftwareStatusScreen(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            //  Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -108,7 +108,7 @@ fun ManageSoftwareStatusScreen(
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
 
-                // 🔥 ADD SOFTWARE FORM CARD
+                //  ADD SOFTWARE FORM CARD
                 item {
                     Card(
                         modifier = Modifier
@@ -220,7 +220,7 @@ fun ManageSoftwareStatusScreen(
                     }
                 }
 
-                // 🔥 TRACKED SOFTWARE LIST
+                //  TRACKED SOFTWARE LIST
                 item {
                     Text(
                         text = "Tracked Software",

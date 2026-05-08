@@ -22,18 +22,30 @@ class AdminRequestViewModel(
     var approvedUiState by mutableStateOf<UiState<List<BorrowRequest>>>(UiState.Idle)
         private set
 
-    fun loadPendingRequests(onLoaded: (() -> Unit)? = null) {
+    fun loadPendingRequests(
+        institutionId: String,
+        onLoaded: (() -> Unit)? = null
+    ) {
         pendingUiState = UiState.Loading
-        requestRepository.getPendingRequests { list ->
+
+        requestRepository.getPendingRequests(
+            institutionId = institutionId
+        ) { list ->
             pendingRequests = list
             pendingUiState = UiState.Success(list)
             onLoaded?.invoke()
         }
     }
 
-    fun loadApprovedRequests(onLoaded: (() -> Unit)? = null) {
+    fun loadApprovedRequests(
+        institutionId: String,
+        onLoaded: (() -> Unit)? = null
+    ) {
         approvedUiState = UiState.Loading
-        requestRepository.getApprovedRequests { list ->
+
+        requestRepository.getApprovedRequests(
+            institutionId = institutionId
+        ) { list ->
             approvedRequests = list
             approvedUiState = UiState.Success(list)
             onLoaded?.invoke()

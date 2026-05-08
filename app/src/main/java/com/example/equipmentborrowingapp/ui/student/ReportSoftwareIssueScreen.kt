@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.equipmentborrowingapp.data.model.LabComputer
 
-// Modern Colors
+//  Colors
 private object ReportColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -75,7 +75,7 @@ fun ReportSoftwareIssueScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
+            //  Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -110,7 +110,7 @@ fun ReportSoftwareIssueScreen(
                 }
             }
 
-            // 🔥 Target PC Info Card
+            //  Target PC Info Card
             Surface(
                 color = ReportColors.BlueLight,
                 shape = RoundedCornerShape(16.dp),
@@ -144,7 +144,7 @@ fun ReportSoftwareIssueScreen(
                 }
             }
 
-            // 🔥 Form Card
+            //  Form Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -167,7 +167,7 @@ fun ReportSoftwareIssueScreen(
                         label = "Software Name (e.g. Android Studio)"
                     )
 
-                    // 🔥 Issue Type Dropdown
+                    //  Issue Type Dropdown
                     ExposedDropdownMenuBox(
                         expanded = issueExpanded,
                         onExpandedChange = { issueExpanded = !issueExpanded }
@@ -199,7 +199,7 @@ fun ReportSoftwareIssueScreen(
                         }
                     }
 
-                    // 🔥 Severity Dropdown
+                    // Severity Dropdown
                     ExposedDropdownMenuBox(
                         expanded = severityExpanded,
                         onExpandedChange = { severityExpanded = !severityExpanded }
@@ -258,7 +258,7 @@ fun ReportSoftwareIssueScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 🔥 Submit Button
+                    //  Submit Button
                     Button(
                         onClick = {
                             errorMessage = when {

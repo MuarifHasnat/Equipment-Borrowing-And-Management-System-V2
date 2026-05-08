@@ -2,6 +2,8 @@ package com.example.equipmentborrowingapp.data.model
 
 data class ComputerSoftwareStatus(
     val id: String = "",
+    val institutionId: String = "",
+    val roomId: String = "",
     val computerId: String = "",
     val softwareName: String = "",
     val version: String = "",
