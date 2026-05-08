@@ -74,6 +74,7 @@ import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import androidx.compose.runtime.mutableIntStateOf
+import com.example.equipmentborrowingapp.data.repository.RoomRepository
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -81,7 +82,7 @@ class MainActivity : ComponentActivity() {
     private val requestRepository = RequestRepository()
     private val labComputerRepository = LabComputerRepository()
     private val notificationRepository = NotificationRepository()
-
+    private val roomRepository = RoomRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
