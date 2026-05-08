@@ -16,10 +16,15 @@ class LabComputerViewModel(
     var studentLabComputerUiState by mutableStateOf<UiState<List<LabComputer>>>(UiState.Idle)
         private set
 
-    fun loadStudentLabComputers(onLoaded: (() -> Unit)? = null) {
+    fun loadStudentLabComputers(
+        institutionId: String,
+        onLoaded: (() -> Unit)? = null
+    ) {
         studentLabComputerUiState = UiState.Loading
 
-        labComputerRepository.getLabComputers { list ->
+        labComputerRepository.getLabComputers(
+            institutionId = institutionId
+        ) { list ->
             studentLabComputerList = list
             studentLabComputerUiState = UiState.Success(list)
             onLoaded?.invoke()

@@ -316,7 +316,14 @@ class MainActivity : ComponentActivity() {
                     refreshRequestsForAdmin(AppScreen.AdminDashboard)
                 }
                 fun refreshLabComputersAndOpenManage() {
-                    labComputerRepository.getLabComputers { list ->
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    labComputerRepository.getLabComputers(
+                        institutionId = currentInstitutionId
+                    ) { list ->
                         runOnUiThread {
                             labComputerList = list
                             currentScreen = AppScreen.ManageLabComputers
@@ -464,7 +471,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                 fun loadLabComputersForAdmin() {
-                    labComputerRepository.getLabComputers { list ->
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    labComputerRepository.getLabComputers(
+                        institutionId = currentInstitutionId
+                    ) { list ->
                         runOnUiThread {
                             labComputerList = list
                             currentScreen = AppScreen.ManageLabComputers
@@ -472,7 +486,14 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 fun loadAllSoftwareReportsAndOpen() {
-                    labComputerRepository.getSoftwareIssueReports { list ->
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    labComputerRepository.getSoftwareIssueReports(
+                        institutionId = currentInstitutionId
+                    ) { list ->
                         runOnUiThread {
                             selectedLabComputer = null
                             softwareIssueReports = list
@@ -587,7 +608,14 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun loadLabComputersForStudent() {
-                    labComputerViewModel.loadStudentLabComputers {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    labComputerViewModel.loadStudentLabComputers(
+                        institutionId = currentInstitutionId
+                    ) {
                         runOnUiThread {
                             currentScreen = AppScreen.LabComputerList
                         }
@@ -952,32 +980,33 @@ class MainActivity : ComponentActivity() {
                                                     runOnUiThread {
                                                         if (userName.isNullOrBlank()) {
                                                             showMessage(UiMessages.USER_NAME_NOT_FOUND)
-                                                        } else {
-                                                            labComputerRepository.submitSoftwareIssueReport(
-                                                                computerId = computer.id,
-                                                                computerName = computer.pcName,
-                                                                softwareName = softwareName,
-                                                                reportedByUserId = uid,
-                                                                reportedByUserName = userName,
-                                                                issueType = issueType,
-                                                                description = description,
-                                                                severity = severity
-                                                            ) { success, message ->
-                                                                runOnUiThread {
-                                                                    showMessage(message)
-                                                                    if (success) {
-                                                                        sendNotification(
-                                                                            userId = "",
-                                                                            role = "admin",
-                                                                            title = "New Software Issue",
-                                                                            message = "$userName reported issue in $softwareName on ${computer.pcName}",
-                                                                            type = "warning"
-                                                                        )
+                                                        } else {labComputerRepository.submitSoftwareIssueReport(
+                                                            institutionId = currentInstitutionId,
+                                                            roomId = computer.roomId,
+                                                            computerId = computer.id,
+                                                            computerName = computer.pcName,
+                                                            softwareName = softwareName,
+                                                            reportedByUserId = uid,
+                                                            reportedByUserName = userName,
+                                                            issueType = issueType,
+                                                            description = description,
+                                                            severity = severity
+                                                        ) { success, message ->
+                                                            runOnUiThread {
+                                                                showMessage(message)
+                                                                if (success) {
+                                                                    sendNotification(
+                                                                        userId = "",
+                                                                        role = "admin",
+                                                                        title = "New Software Issue",
+                                                                        message = "$userName reported issue in $softwareName on ${computer.pcName}",
+                                                                        type = "warning"
+                                                                    )
 
-                                                                        currentScreen = AppScreen.LabComputerList
-                                                                    }
+                                                                    currentScreen = AppScreen.LabComputerList
                                                                 }
                                                             }
+                                                        }
                                                         }
                                                     }
                                                 }
@@ -1527,8 +1556,10 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onOpenSoftwareClick = { computer ->
                                             selectedLabComputer = computer
+
                                             labComputerRepository.getSoftwareStatusForComputer(
-                                                computer.id
+                                                institutionId = currentInstitutionId,
+                                                computerId = computer.id
                                             ) { list ->
                                                 runOnUiThread {
                                                     computerSoftwareList = list
@@ -1538,7 +1569,10 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onViewReportsClick = { computer ->
                                             selectedLabComputer = computer
-                                            labComputerRepository.getSoftwareIssueReports { list ->
+
+                                            labComputerRepository.getSoftwareIssueReports(
+                                                institutionId = currentInstitutionId
+                                            ) { list ->
                                                 runOnUiThread {
                                                     softwareIssueReports = list.filter {
                                                         it.computerId == computer.id
@@ -1561,6 +1595,8 @@ class MainActivity : ComponentActivity() {
                                     AddLabComputerScreen(
                                         onAddClick = { pcName, labRoom, locationNote, ipAddress, status, remarks ->
                                             labComputerRepository.addLabComputer(
+                                                institutionId = currentInstitutionId,
+                                                roomId = "",
                                                 pcName = pcName,
                                                 labRoom = labRoom,
                                                 locationNote = locationNote,
@@ -1640,6 +1676,8 @@ class MainActivity : ComponentActivity() {
                                             softwareList = computerSoftwareList,
                                             onAddSoftwareClick = { softwareName, version, installed, launchesProperly, compileWorks, runWorks, remarks ->
                                                 labComputerRepository.addSoftwareStatus(
+                                                    institutionId = currentInstitutionId,
+                                                    roomId = computer.roomId,
                                                     computerId = computer.id,
                                                     softwareName = softwareName,
                                                     version = version,
@@ -1653,7 +1691,8 @@ class MainActivity : ComponentActivity() {
                                                         showMessage(message)
                                                         if (success) {
                                                             labComputerRepository.getSoftwareStatusForComputer(
-                                                                computer.id
+                                                                institutionId = currentInstitutionId,
+                                                                computerId = computer.id
                                                             ) { list ->
                                                                 runOnUiThread {
                                                                     computerSoftwareList = list
@@ -1692,7 +1731,9 @@ class MainActivity : ComponentActivity() {
                                                     showMessage(message)
                                                     if (success) {
                                                         val selectedComputerId = selectedLabComputer?.id
-                                                        labComputerRepository.getSoftwareIssueReports { list ->
+                                                        labComputerRepository.getSoftwareIssueReports(
+                                                            institutionId = currentInstitutionId
+                                                        ) { list ->
                                                             runOnUiThread {
                                                                 softwareIssueReports =
                                                                     if (selectedComputerId.isNullOrBlank()) {

@@ -10,6 +10,8 @@ class LabComputerRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     fun addLabComputer(
+        institutionId: String,
+        roomId: String = "",
         pcName: String,
         labRoom: String,
         locationNote: String,
@@ -18,13 +20,8 @@ class LabComputerRepository {
         remarks: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        if (pcName.isBlank()) {
-            onResult(false, "PC name is required")
-            return
-        }
-
-        if (labRoom.isBlank()) {
-            onResult(false, "Lab room is required")
+        if (institutionId.isBlank()) {
+            onResult(false, "Institution not found")
             return
         }
 
@@ -32,11 +29,13 @@ class LabComputerRepository {
 
         val computer = LabComputer(
             id = docRef.id,
+            institutionId = institutionId,
+            roomId = roomId,
             pcName = pcName.trim(),
             labRoom = labRoom.trim(),
             locationNote = locationNote.trim(),
             ipAddress = ipAddress.trim(),
-            status = status.trim().ifBlank { "Active" },
+            status = status.trim(),
             remarks = remarks.trim(),
             lastCheckedAt = System.currentTimeMillis()
         )
@@ -51,13 +50,21 @@ class LabComputerRepository {
     }
 
     fun getLabComputers(
+        institutionId: String,
         onResult: (List<LabComputer>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("lab_computers")
+            .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
-                val list = result.documents.mapNotNull { it.toObject(LabComputer::class.java) }
-                    .sortedBy { it.pcName.lowercase() }
+                val list = result.documents.mapNotNull {
+                    it.toObject(LabComputer::class.java)
+                }
                 onResult(list)
             }
             .addOnFailureListener {
@@ -70,33 +77,22 @@ class LabComputerRepository {
         onResult: (Boolean, String) -> Unit
     ) {
         if (computer.id.isBlank()) {
-            onResult(false, "Invalid computer id")
+            onResult(false, "Lab computer not found")
             return
         }
 
-        if (computer.pcName.isBlank()) {
-            onResult(false, "PC name is required")
+        if (computer.institutionId.isBlank()) {
+            onResult(false, "Institution not found")
             return
         }
 
-        if (computer.labRoom.isBlank()) {
-            onResult(false, "Lab room is required")
-            return
-        }
+        val updatedComputer = computer.copy(
+            lastCheckedAt = System.currentTimeMillis()
+        )
 
         firestore.collection("lab_computers")
             .document(computer.id)
-            .set(
-                computer.copy(
-                    pcName = computer.pcName.trim(),
-                    labRoom = computer.labRoom.trim(),
-                    locationNote = computer.locationNote.trim(),
-                    ipAddress = computer.ipAddress.trim(),
-                    status = computer.status.trim().ifBlank { "Active" },
-                    remarks = computer.remarks.trim(),
-                    lastCheckedAt = System.currentTimeMillis()
-                )
-            )
+            .set(updatedComputer)
             .addOnSuccessListener {
                 onResult(true, "Lab computer updated successfully")
             }
@@ -157,6 +153,8 @@ class LabComputerRepository {
     }
 
     fun addSoftwareStatus(
+        institutionId: String,
+        roomId: String = "",
         computerId: String,
         softwareName: String,
         version: String,
@@ -167,20 +165,17 @@ class LabComputerRepository {
         remarks: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        if (computerId.isBlank()) {
-            onResult(false, "Computer id is required")
-            return
-        }
-
-        if (softwareName.isBlank()) {
-            onResult(false, "Software name is required")
+        if (institutionId.isBlank()) {
+            onResult(false, "Institution not found")
             return
         }
 
         val docRef = firestore.collection("computer_software_status").document()
 
-        val item = ComputerSoftwareStatus(
+        val softwareStatus = ComputerSoftwareStatus(
             id = docRef.id,
+            institutionId = institutionId,
+            roomId = roomId,
             computerId = computerId,
             softwareName = softwareName.trim(),
             version = version.trim(),
@@ -192,7 +187,7 @@ class LabComputerRepository {
             checkedAt = System.currentTimeMillis()
         )
 
-        docRef.set(item)
+        docRef.set(softwareStatus)
             .addOnSuccessListener {
                 onResult(true, "Software status added successfully")
             }
@@ -202,16 +197,23 @@ class LabComputerRepository {
     }
 
     fun getSoftwareStatusForComputer(
+        institutionId: String,
         computerId: String,
         onResult: (List<ComputerSoftwareStatus>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("computer_software_status")
+            .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("computerId", computerId)
             .get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull {
                     it.toObject(ComputerSoftwareStatus::class.java)
-                }.sortedBy { it.softwareName.lowercase() }
+                }
                 onResult(list)
             }
             .addOnFailureListener {
@@ -220,6 +222,8 @@ class LabComputerRepository {
     }
 
     fun submitSoftwareIssueReport(
+        institutionId: String,
+        roomId: String = "",
         computerId: String,
         computerName: String,
         softwareName: String,
@@ -230,33 +234,8 @@ class LabComputerRepository {
         severity: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        if (computerId.isBlank()) {
-            onResult(false, "Computer id is required")
-            return
-        }
-
-        if (computerName.isBlank()) {
-            onResult(false, "Computer name is required")
-            return
-        }
-
-        if (softwareName.isBlank()) {
-            onResult(false, "Software name is required")
-            return
-        }
-
-        if (reportedByUserId.isBlank() || reportedByUserName.isBlank()) {
-            onResult(false, "Reporter information is required")
-            return
-        }
-
-        if (issueType.isBlank()) {
-            onResult(false, "Issue type is required")
-            return
-        }
-
-        if (description.isBlank()) {
-            onResult(false, "Issue description is required")
+        if (institutionId.isBlank()) {
+            onResult(false, "Institution not found")
             return
         }
 
@@ -264,21 +243,23 @@ class LabComputerRepository {
 
         val report = SoftwareIssueReport(
             id = docRef.id,
+            institutionId = institutionId,
+            roomId = roomId,
             computerId = computerId,
-            computerName = computerName.trim(),
+            computerName = computerName,
             softwareName = softwareName.trim(),
-            reportedByUserId = reportedByUserId.trim(),
-            reportedByUserName = reportedByUserName.trim(),
+            reportedByUserId = reportedByUserId,
+            reportedByUserName = reportedByUserName,
             issueType = issueType.trim(),
             description = description.trim(),
+            severity = severity.trim(),
             status = "Open",
-            severity = severity.trim().ifBlank { "Medium" },
             timestamp = System.currentTimeMillis()
         )
 
         docRef.set(report)
             .addOnSuccessListener {
-                onResult(true, "Issue report submitted successfully")
+                onResult(true, "Issue reported successfully")
             }
             .addOnFailureListener { e ->
                 onResult(false, e.message ?: "Failed to submit issue report")
@@ -286,14 +267,21 @@ class LabComputerRepository {
     }
 
     fun getSoftwareIssueReports(
+        institutionId: String,
         onResult: (List<SoftwareIssueReport>) -> Unit
     ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
         firestore.collection("software_issue_reports")
+            .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull {
                     it.toObject(SoftwareIssueReport::class.java)
-                }.sortedByDescending { it.timestamp }
+                }
                 onResult(list)
             }
             .addOnFailureListener {
