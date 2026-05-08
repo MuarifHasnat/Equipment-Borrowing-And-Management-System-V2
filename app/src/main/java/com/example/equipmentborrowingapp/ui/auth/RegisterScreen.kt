@@ -3,7 +3,6 @@ package com.example.equipmentborrowingapp.ui.auth
 import android.util.Patterns
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,8 +17,20 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +41,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.R
@@ -40,15 +54,12 @@ fun RegisterScreen(
     onRegisterClick: (String, String, String, String) -> Unit,
     onGoToLogin: () -> Unit
 ) {
-    // States
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var role by remember { mutableStateOf("student") }
     var registerError by remember { mutableStateOf<String?>(null) }
 
-    // Colors
     val screenBg = Color(0xFFF7F4FF)
     val whiteCard = Color(0xFFFFFFFF)
     val borderColor = Color(0xFFE2DDF0)
@@ -58,20 +69,43 @@ fun RegisterScreen(
     val purple = Color(0xFF7A19FF)
     val purpleLight = Color(0xFF9B5CFF)
 
-    // Validation Logic
     val registerAction = {
         val finalName = name.trim()
         val finalEmail = email.trim()
 
         when {
-            finalName.isBlank() -> registerError = "Full Name cannot be empty"
-            finalEmail.isBlank() -> registerError = "Email cannot be empty"
-            !Patterns.EMAIL_ADDRESS.matcher(finalEmail).matches() -> registerError = "Please enter a valid email address"
-            password.isBlank() -> registerError = "Password cannot be empty"
-            password.length < 6 -> registerError = "Password must be at least 6 characters"
+            finalName.isBlank() -> {
+                registerError = "Full Name cannot be empty"
+            }
+
+            finalEmail.isBlank() -> {
+                registerError = "Email cannot be empty"
+            }
+
+            !Patterns.EMAIL_ADDRESS.matcher(finalEmail).matches() -> {
+                registerError = "Please enter a valid email address"
+            }
+
+            password.isBlank() -> {
+                registerError = "Password cannot be empty"
+            }
+
+            password.length < 6 -> {
+                registerError = "Password must be at least 6 characters"
+            }
+
             else -> {
                 registerError = null
-                onRegisterClick(finalName, finalEmail, password, role)
+
+                // Real-world rule:
+                // New users can only register as student.
+                // Admin role should be assigned later by Super Admin / Institution Admin.
+                onRegisterClick(
+                    finalName,
+                    finalEmail,
+                    password,
+                    "student"
+                )
             }
         }
     }
@@ -85,7 +119,11 @@ fun RegisterScreen(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFFF6F1FF), Color(0xFFFFFFFF), Color(0xFFF3EEFF))
+                        listOf(
+                            Color(0xFFF6F1FF),
+                            Color(0xFFFFFFFF),
+                            Color(0xFFF3EEFF)
+                        )
                     )
                 )
                 .verticalScroll(rememberScrollState())
@@ -101,7 +139,11 @@ fun RegisterScreen(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            listOf(Color(0xFFE9E2FF), Color(0xFFF3EEFF), Color.White)
+                            listOf(
+                                Color(0xFFE9E2FF),
+                                Color(0xFFF3EEFF),
+                                Color.White
+                            )
                         )
                     )
             ) {
@@ -133,7 +175,7 @@ fun RegisterScreen(
             )
 
             Text(
-                text = "Join the platform to continue",
+                text = "Register as a student to continue",
                 color = textGray,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
@@ -141,7 +183,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Main Error Message Display
             if (registerError != null) {
                 Text(
                     text = registerError!!,
@@ -158,7 +199,7 @@ fun RegisterScreen(
                 value = name,
                 onValueChange = {
                     name = it
-                    registerError = null // Clear error when typing
+                    registerError = null
                 },
                 placeholder = "Full Name",
                 icon = Icons.Filled.Person,
@@ -176,7 +217,7 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = {
                     email = it
-                    registerError = null // Clear error when typing
+                    registerError = null
                 },
                 placeholder = "Email",
                 icon = Icons.Filled.Email,
@@ -194,23 +235,48 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = {
                     password = it
-                    registerError = null // Clear error when typing
+                    registerError = null
                 },
-                placeholder = { Text("Password", color = textGray) },
+                placeholder = {
+                    Text(
+                        text = "Password",
+                        color = textGray
+                    )
+                },
                 leadingIcon = {
-                    Icon(Icons.Filled.Lock, contentDescription = "Password Icon", tint = darkText)
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = "Password Icon",
+                        tint = darkText
+                    )
                 },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = {
+                            passwordVisible = !passwordVisible
+                        }
+                    ) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                            imageVector = if (passwordVisible) {
+                                Icons.Filled.Visibility
+                            } else {
+                                Icons.Filled.VisibilityOff
+                            },
+                            contentDescription = if (passwordVisible) {
+                                "Hide Password"
+                            } else {
+                                "Show Password"
+                            },
                             tint = darkText
                         )
                     }
                 },
                 isError = registerError?.contains("Password", ignoreCase = true) == true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(16.dp)),
@@ -227,61 +293,25 @@ fun RegisterScreen(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
-                keyboardActions = KeyboardActions(onDone = { registerAction() }),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        registerAction()
+                    }
+                ),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Select Role",
-                modifier = Modifier.fillMaxWidth(),
-                color = textGray,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                RoleOptionCard(
-                    text = "Student",
-                    selected = role == "student",
-                    onClick = { role = "student" },
-                    modifier = Modifier.weight(1f),
-                    purple = purple,
-                    purpleLight = purpleLight,
-                    whiteCard = whiteCard,
-                    borderColor = borderColor,
-                    textGray = textGray
-                )
-
-                RoleOptionCard(
-                    text = "Admin",
-                    selected = role == "admin",
-                    onClick = { role = "admin" },
-                    modifier = Modifier.weight(1f),
-                    purple = purple,
-                    purpleLight = purpleLight,
-                    whiteCard = whiteCard,
-                    borderColor = borderColor,
-                    textGray = textGray
-                )
-            }
-
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Semantically correct Register Button
             Button(
                 onClick = registerAction,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
                     .shadow(6.dp, RoundedCornerShape(16.dp)),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent
+                ),
                 contentPadding = PaddingValues(),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -289,8 +319,14 @@ fun RegisterScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            Brush.horizontalGradient(listOf(purpleDark, purple, purpleLight)),
-                            RoundedCornerShape(16.dp)
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    purpleDark,
+                                    purple,
+                                    purpleLight
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -305,7 +341,9 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "Already have an account? ",
                     color = textGray,
@@ -316,7 +354,9 @@ fun RegisterScreen(
                     text = "Login",
                     color = purple,
                     fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.clickable { onGoToLogin() }
+                    modifier = Modifier.clickable {
+                        onGoToLogin()
+                    }
                 )
             }
 
@@ -341,9 +381,18 @@ private fun AuthField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = Color(0xFF7B728A)) },
+        placeholder = {
+            Text(
+                text = placeholder,
+                color = Color(0xFF7B728A)
+            )
+        },
         leadingIcon = {
-            Icon(icon, contentDescription = contentDescription, tint = Color(0xFF1F1B2D))
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = Color(0xFF1F1B2D)
+            )
         },
         isError = isError,
         modifier = Modifier
@@ -363,51 +412,4 @@ private fun AuthField(
         ),
         singleLine = true
     )
-}
-
-@Composable
-private fun RoleOptionCard(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    purple: Color,
-    purpleLight: Color,
-    whiteCard: Color,
-    borderColor: Color,
-    textGray: Color
-) {
-    // Replaced Box with Surface for proper semantics and automatic clipping/shadow
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = Color.Transparent,
-        shadowElevation = if (selected) 5.dp else 2.dp,
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = if (selected) {
-                        Brush.horizontalGradient(listOf(purple, purpleLight))
-                    } else {
-                        Brush.horizontalGradient(listOf(whiteCard, whiteCard))
-                    }
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (selected) purple else borderColor,
-                    shape = RoundedCornerShape(16.dp)
-                )
-        ) {
-            Text(
-                text = text,
-                color = if (selected) Color.White else textGray,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-    }
 }

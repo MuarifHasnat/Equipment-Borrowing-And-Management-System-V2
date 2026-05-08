@@ -64,7 +64,10 @@ fun AdminDashboardScreen(
     onProfileClick: () -> Unit,
     onLogout: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = ModernBg) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = ModernBg
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -88,40 +91,109 @@ fun AdminDashboardScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Modern Stats Grid
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                ModernStatCard("Total", totalEquipmentCount.toString(), Icons.Filled.Widgets, BlueLight, BlueText, Modifier.weight(1f))
-                ModernStatCard("Available", availableItemsCount.toString(), Icons.Filled.CheckCircle, GreenLight, GreenText, Modifier.weight(1f))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ModernStatCard(
+                    title = "Total",
+                    value = totalEquipmentCount.toString(),
+                    icon = Icons.Filled.Widgets,
+                    bgColor = BlueLight,
+                    contentColor = BlueText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernStatCard(
+                    title = "Available",
+                    value = availableItemsCount.toString(),
+                    icon = Icons.Filled.CheckCircle,
+                    bgColor = GreenLight,
+                    contentColor = GreenText,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                ModernStatCard("Low Stock", lowStockCount.toString(), Icons.Filled.TrendingDown, OrangeLight, OrangeText, Modifier.weight(1f))
-                ModernStatCard("Pending", pendingRequestsCount.toString(), Icons.Filled.HourglassTop, OrangeLight, OrangeText, Modifier.weight(1f))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ModernStatCard(
+                    title = "Low Stock",
+                    value = lowStockCount.toString(),
+                    icon = Icons.Filled.TrendingDown,
+                    bgColor = OrangeLight,
+                    contentColor = OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernStatCard(
+                    title = "Pending",
+                    value = pendingRequestsCount.toString(),
+                    icon = Icons.Filled.HourglassTop,
+                    bgColor = OrangeLight,
+                    contentColor = OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                ModernStatCard("Approved", approvedRequestsCount.toString(), Icons.Filled.ThumbUp, GreenLight, GreenText, Modifier.weight(1f))
-                ModernStatCard("Overdue", overdueItemsCount.toString(), Icons.Filled.Warning, RedLight, RedText, Modifier.weight(1f))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ModernStatCard(
+                    title = "Approved",
+                    value = approvedRequestsCount.toString(),
+                    icon = Icons.Filled.ThumbUp,
+                    bgColor = GreenLight,
+                    contentColor = GreenText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernStatCard(
+                    title = "Overdue",
+                    value = overdueItemsCount.toString(),
+                    icon = Icons.Filled.Warning,
+                    bgColor = RedLight,
+                    contentColor = RedText,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Notifications
             if (pendingRequestsCount > 0) {
-                NotificationCard(title = "Pending Requests", message = "$pendingRequestsCount request(s) need admin approval.", type = "warning")
+                NotificationCard(
+                    title = "Pending Requests",
+                    message = "$pendingRequestsCount request(s) need admin approval.",
+                    type = "warning"
+                )
+
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
             if (lowStockCount > 0) {
-                NotificationCard(title = "Low Stock Alert", message = "$lowStockCount equipment item(s) are low in stock.", type = "warning")
+                NotificationCard(
+                    title = "Low Stock Alert",
+                    message = "$lowStockCount equipment item(s) are low in stock.",
+                    type = "warning"
+                )
+
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
             if (overdueItemsCount > 0) {
-                NotificationCard(title = "Overdue Items", message = "$overdueItemsCount item(s) are overdue and need follow-up.", type = "error")
+                NotificationCard(
+                    title = "Overdue Items",
+                    message = "$overdueItemsCount item(s) are overdue and need follow-up.",
+                    type = "error"
+                )
+
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
@@ -133,30 +205,140 @@ fun AdminDashboardScreen(
                 color = TextDark,
                 fontWeight = FontWeight.ExtraBold
             )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Modern Action List
             Column(
                 modifier = Modifier
-                    .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    )
                     .background(CardWhite, RoundedCornerShape(24.dp))
                     .padding(8.dp)
             ) {
-                ModernActionRow("My Profile", "View your details", Icons.Filled.Person, BlueLight, BlueText, onProfileClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Notifications", "System alerts", Icons.Filled.Notifications, OrangeLight, OrangeText, onNotificationClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Add Equipment", "Create new item", Icons.Filled.AddCircle, GreenLight, GreenText, onAddEquipmentClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Pending Requests", "Review & approve", Icons.Filled.HourglassEmpty, OrangeLight, OrangeText, onViewPendingRequestsClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Approved Requests", "Track items", Icons.Filled.CheckCircleOutline, GreenLight, GreenText, onViewApprovedRequestsClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Manage Equipment", "Stock & condition", Icons.Filled.Inventory, BlueLight, BlueText, onManageEquipmentClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Manage Lab PCs", "Monitor computers", Icons.Filled.Computer, PurpleAccent.copy(alpha=0.1f), PurpleAccent, onManageLabComputersClick)
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = ModernBg)
-                ModernActionRow("Issue Reports", "Software problems", Icons.Filled.ReportProblem, RedLight, RedText, onViewSoftwareReportsClick)
+                ModernActionRow(
+                    title = "My Profile",
+                    subtitle = "View your details",
+                    icon = Icons.Filled.Person,
+                    iconBgColor = BlueLight,
+                    iconColor = BlueText,
+                    onClick = onProfileClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Notifications",
+                    subtitle = "System alerts",
+                    icon = Icons.Filled.Notifications,
+                    iconBgColor = OrangeLight,
+                    iconColor = OrangeText,
+                    onClick = onNotificationClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Manage Rooms / Labs",
+                    subtitle = "Create and organize labs",
+                    icon = Icons.Filled.MeetingRoom,
+                    iconBgColor = BlueLight,
+                    iconColor = BlueText,
+                    onClick = onManageRoomsClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Add Equipment",
+                    subtitle = "Create new item",
+                    icon = Icons.Filled.AddCircle,
+                    iconBgColor = GreenLight,
+                    iconColor = GreenText,
+                    onClick = onAddEquipmentClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Pending Requests",
+                    subtitle = "Review & approve",
+                    icon = Icons.Filled.HourglassEmpty,
+                    iconBgColor = OrangeLight,
+                    iconColor = OrangeText,
+                    onClick = onViewPendingRequestsClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Approved Requests",
+                    subtitle = "Track items",
+                    icon = Icons.Filled.CheckCircleOutline,
+                    iconBgColor = GreenLight,
+                    iconColor = GreenText,
+                    onClick = onViewApprovedRequestsClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Manage Equipment",
+                    subtitle = "Stock & condition",
+                    icon = Icons.Filled.Inventory,
+                    iconBgColor = BlueLight,
+                    iconColor = BlueText,
+                    onClick = onManageEquipmentClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Manage Lab PCs",
+                    subtitle = "Monitor computers",
+                    icon = Icons.Filled.Computer,
+                    iconBgColor = PurpleAccent.copy(alpha = 0.1f),
+                    iconColor = PurpleAccent,
+                    onClick = onManageLabComputersClick
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
+
+                ModernActionRow(
+                    title = "Issue Reports",
+                    subtitle = "Software problems",
+                    icon = Icons.Filled.ReportProblem,
+                    iconBgColor = RedLight,
+                    iconColor = RedText,
+                    onClick = onViewSoftwareReportsClick
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -167,22 +349,32 @@ fun AdminDashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = RedText.copy(alpha = 0.3f)),
-                colors = ButtonDefaults.buttonColors(containerColor = RedLight, contentColor = RedText),
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = RedText.copy(alpha = 0.3f)
+                    ),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = RedLight,
+                    contentColor = RedText
+                ),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Filled.Logout, contentDescription = "Logout")
+                Icon(
+                    imageVector = Icons.Filled.Logout,
+                    contentDescription = "Logout"
+                )
+
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout Account", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+
+                Text(
+                    text = "Logout Account",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-        }
-        Button(
-            onClick = onManageRoomsClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Manage Rooms / Labs")
         }
     }
 }
@@ -192,7 +384,11 @@ private fun ModernHeroCard() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = PrimaryIndigo.copy(alpha = 0.4f))
+            .shadow(
+                elevation = 16.dp,
+                shape = RoundedCornerShape(28.dp),
+                spotColor = PrimaryIndigo.copy(alpha = 0.4f)
+            )
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(PrimaryIndigo, PurpleAccent)
@@ -219,8 +415,9 @@ private fun ModernHeroCard() {
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
+
                 Icon(
-                    Icons.Filled.Dashboard,
+                    imageVector = Icons.Filled.Dashboard,
                     contentDescription = null,
                     tint = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.size(28.dp)
@@ -235,7 +432,9 @@ private fun ModernHeroCard() {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = "Monitor equipment, manage requests, and control lab resources efficiently.",
                 color = Color.White.copy(alpha = 0.85f),
@@ -259,7 +458,10 @@ private fun ModernStatCard(
         modifier = modifier.height(110.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp, pressedElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 2.dp
+        )
     ) {
         Column(
             modifier = Modifier
@@ -279,8 +481,14 @@ private fun ModernStatCard(
                         .background(bgColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
+
                 Text(
                     text = value,
                     color = TextDark,
@@ -323,7 +531,12 @@ private fun ModernActionRow(
                 .background(iconBgColor),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
+            )
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -335,7 +548,9 @@ private fun ModernActionRow(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(modifier = Modifier.height(2.dp))
+
             Text(
                 text = subtitle,
                 color = TextMuted,
@@ -344,7 +559,7 @@ private fun ModernActionRow(
         }
 
         Icon(
-            Icons.Rounded.KeyboardArrowRight,
+            imageVector = Icons.Rounded.KeyboardArrowRight,
             contentDescription = "Go",
             tint = Color(0xFFCBD5E1),
             modifier = Modifier.size(28.dp)

@@ -26,7 +26,7 @@ class RoomRepository {
             return
         }
 
-        val docRef = firestore.collection("rooms").document()
+        val docRef = firestore.collection("Room").document()
 
         val room = Room(
             id = docRef.id,
@@ -36,7 +36,7 @@ class RoomRepository {
             floor = floor.trim(),
             roomType = roomType.trim(),
             department = department.trim(),
-            isActive = true,
+            active = true,
             createdAt = System.currentTimeMillis()
         )
 
@@ -58,13 +58,15 @@ class RoomRepository {
             return
         }
 
-        firestore.collection("rooms")
+        firestore.collection("Room")
             .whereEqualTo("institutionId", institutionId)
-            .whereEqualTo("isActive", true)
+            .whereEqualTo("active", true)
             .get()
             .addOnSuccessListener { result ->
-                val list = result.documents.mapNotNull {
-                    it.toObject(Room::class.java)
+                val list = result.documents.mapNotNull { document ->
+                    document.toObject(Room::class.java)?.copy(
+                        id = document.id
+                    )
                 }
 
                 onResult(list.sortedBy { it.name })
@@ -83,7 +85,7 @@ class RoomRepository {
             return
         }
 
-        firestore.collection("rooms")
+        firestore.collection("Room")
             .document(room.id)
             .set(room)
             .addOnSuccessListener {
@@ -103,7 +105,7 @@ class RoomRepository {
             return
         }
 
-        firestore.collection("rooms")
+        firestore.collection("Room")
             .document(roomId)
             .update("active", false)
             .addOnSuccessListener {

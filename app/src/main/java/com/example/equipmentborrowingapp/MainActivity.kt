@@ -79,6 +79,7 @@ import com.example.equipmentborrowingapp.data.model.Room
 import com.example.equipmentborrowingapp.viewmodel.RoomViewModel
 import com.example.equipmentborrowingapp.ui.admin.AddRoomScreen
 import com.example.equipmentborrowingapp.ui.admin.ManageRoomsScreen
+import com.example.equipmentborrowingapp.ui.student.RoomSelectionScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -157,7 +158,7 @@ class MainActivity : ComponentActivity() {
                 var submittedDueDate by remember { mutableStateOf("") }
                 var submittedPurpose by remember { mutableStateOf("Lab Project") }
                 var selectedLabComputer by remember { mutableStateOf<LabComputer?>(null) }
-
+                var selectedRoom by remember { mutableStateOf<Room?>(null) }
                 // Dashboard state
                 var adminCounts by remember { mutableStateOf(AdminDashboardCounts()) }
 
@@ -185,7 +186,7 @@ class MainActivity : ComponentActivity() {
                     currentUserRole = null
                     selectedEquipment = null
                     selectedLabComputer = null
-
+                    selectedRoom = null
                     equipmentViewModel.clearEquipment()
                     adminRequestViewModel.clearAdminRequests()
                     requestViewModel.clearMyRequests()
@@ -634,15 +635,42 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-
-                fun loadStudentEquipmentAndOpenList() {
+                fun loadRoomsAndOpenStudentRoomSelection() {
                     if (currentInstitutionId.isBlank()) {
                         showMessage("Institution not found. Please login again.")
                         return
                     }
 
-                    equipmentViewModel.loadEquipment(
+                    roomViewModel.loadRooms(
                         institutionId = currentInstitutionId
+                    ) {
+                        runOnUiThread {
+                            roomList = roomViewModel.roomList
+
+                            if (roomList.isEmpty()) {
+                                showMessage("No room/lab found")
+                            } else {
+                                currentScreen = AppScreen.RoomSelection
+                            }
+                        }
+                    }
+                }
+                fun loadStudentEquipmentAndOpenList(room: Room) {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    if (room.id.isBlank()) {
+                        showMessage("Room ID missing. Please update RoomRepository getRooms()")
+                        return
+                    }
+
+                    selectedRoom = room
+
+                    equipmentViewModel.loadEquipment(
+                        institutionId = currentInstitutionId,
+                        roomId = room.id
                     ) {
                         runOnUiThread {
                             currentScreen = AppScreen.EquipmentList
@@ -705,7 +733,7 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 StudentDashboardScreen(
                                     onViewEquipmentClick = {
-                                        loadStudentEquipmentAndOpenList()
+                                        loadRoomsAndOpenStudentRoomSelection()
                                     },
                                     onMyRequestsClick = {
                                         loadStudentRequestsAndOpenMyRequests()
@@ -721,6 +749,21 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onLogout = {
                                         safeLogoutToLogin()
+                                    }
+                                )
+                            }
+                        }
+                        AppScreen.RoomSelection -> {
+                            if (!isStudent()) {
+                                redirectUnauthorized(AppScreen.RoomSelection)
+                            } else {
+                                RoomSelectionScreen(
+                                    roomList = roomList,
+                                    onRoomClick = { room ->
+                                        loadStudentEquipmentAndOpenList(room)
+                                    },
+                                    onBackClick = {
+                                        currentScreen = AppScreen.StudentDashboard
                                     }
                                 )
                             }
@@ -753,7 +796,11 @@ class MainActivity : ComponentActivity() {
                                             title = "Failed to load equipment",
                                             message = (equipmentViewModel.equipmentUiState as UiState.Error).message,
                                             onRetryClick = {
-                                                loadStudentEquipmentAndOpenList()
+                                                selectedRoom?.let { room ->
+                                                    loadStudentEquipmentAndOpenList(room)
+                                                } ?: run {
+                                                    loadRoomsAndOpenStudentRoomSelection()
+                                                }
                                             }
                                         )
                                     }
@@ -772,7 +819,7 @@ class MainActivity : ComponentActivity() {
                                                     currentScreen = AppScreen.EquipmentDetails
                                                 },
                                                 onBackClick = {
-                                                    currentScreen = AppScreen.StudentDashboard
+                                                    currentScreen = AppScreen.RoomSelection
                                                 }
                                             )
                                         }
@@ -844,11 +891,22 @@ class MainActivity : ComponentActivity() {
                                                             runOnUiThread {
                                                                 if (userName.isNullOrBlank()) {
                                                                     showMessage(UiMessages.USER_NAME_NOT_FOUND)
-                                                                } else {requestRepository.submitBorrowRequest(
-                                                                    institutionId = currentInstitutionId,
-                                                                    roomId = equipment.roomId,
-                                                                    userId = uid,
-                                                                    userName = userName,
+                                                                }
+                                                                else {
+                                                                    val selectedRoomId = selectedRoom?.id
+                                                                        ?.takeIf { it.isNotBlank() }
+                                                                        ?: equipment.roomId
+
+                                                                    if (selectedRoomId.isBlank()) {
+                                                                        showMessage("No lab room selected. Please select a room/lab again.")
+                                                                        currentScreen = AppScreen.RoomSelection
+                                                                        return@runOnUiThread
+                                                                    }
+                                                                    requestRepository.submitBorrowRequest(
+                                                                        institutionId = currentInstitutionId,
+                                                                        roomId = selectedRoomId,
+                                                                        userId = uid,
+                                                                        userName = userName,
                                                                         equipmentId = equipment.id,
                                                                         equipmentName = equipment.name.ifBlank {
                                                                             UiMessages.UNKNOWN_EQUIPMENT
@@ -873,9 +931,9 @@ class MainActivity : ComponentActivity() {
                                                                                     message = "$userName requested ${equipment.name}",
                                                                                     type = "warning"
                                                                                 )
-
                                                                                 equipmentViewModel.loadEquipment(
-                                                                                    institutionId = currentInstitutionId
+                                                                                    institutionId = currentInstitutionId,
+                                                                                    roomId = selectedRoomId
                                                                                 ) {
                                                                                     runOnUiThread {
                                                                                         submittedQuantity = quantity
@@ -1142,8 +1200,13 @@ class MainActivity : ComponentActivity() {
                             // Dashboard e back dile logout hoye login e jabe
                             safeLogoutToLogin()
                         }
+                        AppScreen.RoomSelection -> {
+                            currentScreen = AppScreen.StudentDashboard
+                        }
+                        AppScreen.EquipmentList -> {
+                            currentScreen = AppScreen.RoomSelection
+                        }
 
-                        AppScreen.EquipmentList,
                         AppScreen.RequestSubmitted -> {
                             currentScreen = AppScreen.StudentDashboard
                         }
@@ -1209,6 +1272,7 @@ class MainActivity : ComponentActivity() {
                             in listOf(
                                 AppScreen.StudentProfile,
                                 AppScreen.StudentDashboard,
+                                AppScreen.RoomSelection,
                                 AppScreen.EquipmentList,
                                 AppScreen.EquipmentDetails,
                                 AppScreen.BorrowRequest,
