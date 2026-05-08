@@ -6,10 +6,10 @@ sealed class AppScreen(val route: String) {
     object Login : AppScreen("login")
     object Register : AppScreen("register")
     object Notifications : AppScreen("notifications")
+
     object StudentDashboard : AppScreen("student_dashboard")
     object EquipmentList : AppScreen("equipment_list")
     object EquipmentDetails : AppScreen("equipment_details")
-    
     object BorrowRequest : AppScreen("borrow_request")
     object RequestSubmitted : AppScreen("request_submitted")
     object MyRequests : AppScreen("my_requests")
@@ -22,6 +22,11 @@ sealed class AppScreen(val route: String) {
     object ManageEquipment : AppScreen("manage_equipment")
     object PendingRequests : AppScreen("pending_requests")
     object ApprovedRequests : AppScreen("approved_requests")
+
+    // New Room / Lab screens
+    object ManageRooms : AppScreen("manage_rooms")
+    object AddRoom : AppScreen("add_room")
+
     object ManageLabComputers : AppScreen("manage_lab_computers")
     object AddLabComputer : AppScreen("add_lab_computer")
     object EditLabComputer : AppScreen("edit_lab_computer")

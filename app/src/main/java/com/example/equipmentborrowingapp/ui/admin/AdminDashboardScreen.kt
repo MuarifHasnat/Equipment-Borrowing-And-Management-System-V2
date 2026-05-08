@@ -53,6 +53,7 @@ fun AdminDashboardScreen(
     approvedRequestsCount: Int,
     returnedItemsCount: Int,
     onNotificationClick: () -> Unit,
+    onManageRoomsClick: () -> Unit,
     overdueItemsCount: Int,
     onAddEquipmentClick: () -> Unit,
     onViewPendingRequestsClick: () -> Unit,
@@ -176,6 +177,12 @@ fun AdminDashboardScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+        }
+        Button(
+            onClick = onManageRoomsClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Manage Rooms / Labs")
         }
     }
 }

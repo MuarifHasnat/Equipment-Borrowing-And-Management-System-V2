@@ -75,6 +75,10 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import androidx.compose.runtime.mutableIntStateOf
 import com.example.equipmentborrowingapp.data.repository.RoomRepository
+import com.example.equipmentborrowingapp.data.model.Room
+import com.example.equipmentborrowingapp.viewmodel.RoomViewModel
+import com.example.equipmentborrowingapp.ui.admin.AddRoomScreen
+import com.example.equipmentborrowingapp.ui.admin.ManageRoomsScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -97,6 +101,7 @@ class MainActivity : ComponentActivity() {
                 var currentUserEmail by remember { mutableStateOf("") }
                 var currentInstitutionId by remember { mutableStateOf("") }
                 var currentVerificationStatus by remember { mutableStateOf("") }
+                var roomList by remember { mutableStateOf<List<Room>>(emptyList()) }
                 val equipmentViewModel = remember { EquipmentViewModel() }
                 val requestViewModel = remember { RequestViewModel() }
                 val labComputerViewModel = remember { LabComputerViewModel() }
@@ -105,6 +110,7 @@ class MainActivity : ComponentActivity() {
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
                 val notificationViewModel = remember { NotificationViewModel() }
+                val roomViewModel = remember { RoomViewModel() }
                 fun showMessage(message: String) {
                     scope.launch {
                         snackbarHostState.showSnackbar(message)
@@ -191,7 +197,8 @@ class MainActivity : ComponentActivity() {
 
                     adminCounts = AdminDashboardCounts()
                     labComputerViewModel.clearStudentLabComputers()
-
+                    roomViewModel.clearRooms()
+                    roomList = emptyList()
                     currentUserName = ""
                     currentUserEmail = ""
                     currentInstitutionId = ""
@@ -564,6 +571,21 @@ class MainActivity : ComponentActivity() {
 
                                 refreshRequestsForAdmin()
                             }
+                        }
+                    }
+                }
+                fun loadRoomsAndOpenManage() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    roomViewModel.loadRooms(
+                        institutionId = currentInstitutionId
+                    ) {
+                        runOnUiThread {
+                            roomList = roomViewModel.roomList
+                            currentScreen = AppScreen.ManageRooms
                         }
                     }
                 }
@@ -1086,6 +1108,13 @@ class MainActivity : ComponentActivity() {
                             // future use
                             currentScreen = AppScreen.AdminDashboard
                         }
+                        AppScreen.ManageRooms -> {
+                            currentScreen = AppScreen.AdminDashboard
+                        }
+
+                        AppScreen.AddRoom -> {
+                            currentScreen = AppScreen.ManageRooms
+                        }
                         AppScreen.StudentProfile -> {
                             currentScreen = AppScreen.StudentDashboard
                         }
@@ -1273,6 +1302,9 @@ class MainActivity : ComponentActivity() {
                                         approvedRequestsCount = adminCounts.approvedRequestsCount,
                                         returnedItemsCount = adminCounts.returnedItemsCount,
                                         overdueItemsCount = adminCounts.overdueItemsCount,
+                                        onManageRoomsClick = {
+                                            loadRoomsAndOpenManage()
+                                        },
                                         onAddEquipmentClick = {
                                             currentScreen = AppScreen.AddEquipment
                                         },
@@ -1313,6 +1345,51 @@ class MainActivity : ComponentActivity() {
                                         role = currentUserRole ?: "admin",
                                         onBackClick = {
                                             currentScreen = AppScreen.AdminDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.ManageRooms -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.ManageRooms)
+                                } else {
+                                    ManageRoomsScreen(
+                                        roomList = roomList,
+                                        onAddRoomClick = {
+                                            currentScreen = AppScreen.AddRoom
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.AdminDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+                            AppScreen.AddRoom -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.AddRoom)
+                                } else {
+                                    AddRoomScreen(
+                                        onAddClick = { name, building, floor, roomType, department ->
+                                            roomRepository.addRoom(
+                                                institutionId = currentInstitutionId,
+                                                name = name,
+                                                building = building,
+                                                floor = floor,
+                                                roomType = roomType,
+                                                department = department
+                                            ) { success, message ->
+                                                runOnUiThread {
+                                                    showMessage(message)
+
+                                                    if (success) {
+                                                        loadRoomsAndOpenManage()
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ManageRooms
                                         }
                                     )
                                 }
