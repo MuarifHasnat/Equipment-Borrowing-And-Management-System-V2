@@ -8,55 +8,60 @@ class NotificationRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
 
-    // 🔔 Send notification
     fun sendNotification(notification: AppNotification) {
-        val id = firestore.collection("notifications").document().id
+        val docRef = firestore.collection("notifications").document()
 
-        val newNotification = notification.copy(id = id)
+        val newNotification = notification.copy(
+            id = docRef.id
+        )
 
-        firestore.collection("notifications")
-            .document(id)
-            .set(newNotification)
+        docRef.set(newNotification)
     }
 
-    // 🔴 Listen to user notifications (REAL-TIME)
     fun listenToNotifications(
         userId: String,
         role: String,
         onChange: (List<AppNotification>) -> Unit
     ): ListenerRegistration {
-
         return firestore.collection("notifications")
             .whereIn("role", listOf(role, "all"))
             .addSnapshotListener { snapshot, _ ->
-
                 if (snapshot != null) {
-                    val list = snapshot.documents.mapNotNull {
-                        it.toObject(AppNotification::class.java)
+                    val list = snapshot.documents.mapNotNull { document ->
+                        document.toObject(AppNotification::class.java)?.copy(
+                            id = document.id
+                        )
                     }
-                        .filter {
-                            it.userId == userId || it.role == role || it.role == "all"
+                        .filter { notification ->
+                            notification.userId == userId ||
+                                    notification.role == role ||
+                                    notification.role == "all"
                         }
-                        .sortedByDescending { it.timestamp }
+                        .sortedByDescending { notification ->
+                            notification.timestamp
+                        }
 
                     onChange(list)
                 }
             }
     }
 
-    // ✅ Mark notification as read
     fun markAsRead(notificationId: String) {
+        if (notificationId.isBlank()) return
+
         firestore.collection("notifications")
             .document(notificationId)
-            .update("isRead", true)
+            .update("read", true)
     }
 
-    // 🧹 Delete notification
     fun deleteNotification(notificationId: String) {
+        if (notificationId.isBlank()) return
+
         firestore.collection("notifications")
             .document(notificationId)
             .delete()
     }
+
     fun createTestNotification(
         userId: String,
         role: String
@@ -70,7 +75,7 @@ class NotificationRepository {
             title = "Test Notification",
             message = "Your notification system is working successfully.",
             type = "info",
-            isRead = false,
+            read = false,
             timestamp = System.currentTimeMillis()
         )
 

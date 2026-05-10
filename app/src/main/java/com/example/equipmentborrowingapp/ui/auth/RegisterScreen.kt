@@ -19,9 +19,12 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -48,10 +51,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.R
+import com.example.equipmentborrowingapp.data.model.Institution
 
 @Composable
 fun RegisterScreen(
-    onRegisterClick: (String, String, String, String) -> Unit,
+    institutionList: List<Institution>,
+    onRegisterClick: (
+        name: String,
+        email: String,
+        password: String,
+        institutionId: String
+    ) -> Unit,
     onGoToLogin: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -59,6 +69,9 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var registerError by remember { mutableStateOf<String?>(null) }
+
+    var selectedInstitution by remember { mutableStateOf<Institution?>(null) }
+    var institutionMenuExpanded by remember { mutableStateOf(false) }
 
     val screenBg = Color(0xFFF7F4FF)
     val whiteCard = Color(0xFFFFFFFF)
@@ -94,17 +107,18 @@ fun RegisterScreen(
                 registerError = "Password must be at least 6 characters"
             }
 
+            selectedInstitution == null -> {
+                registerError = "Please select your institution"
+            }
+
             else -> {
                 registerError = null
 
-                // Real-world rule:
-                // New users can only register as student.
-                // Admin role should be assigned later by Super Admin / Institution Admin.
                 onRegisterClick(
                     finalName,
                     finalEmail,
                     password,
-                    "student"
+                    selectedInstitution?.id ?: ""
                 )
             }
         }
@@ -300,6 +314,78 @@ fun RegisterScreen(
                 ),
                 singleLine = true
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Select Institution",
+                color = darkText,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        institutionMenuExpanded = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = selectedInstitution?.let { institution ->
+                            if (institution.shortName.isNotBlank()) {
+                                "${institution.name} (${institution.shortName})"
+                            } else {
+                                institution.name
+                            }
+                        } ?: "Choose your institution"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = institutionMenuExpanded,
+                    onDismissRequest = {
+                        institutionMenuExpanded = false
+                    }
+                ) {
+                    if (institutionList.isEmpty()) {
+                        DropdownMenuItem(
+                            text = {
+                                Text("No approved institution found")
+                            },
+                            onClick = {
+                                institutionMenuExpanded = false
+                            }
+                        )
+                    } else {
+                        institutionList.forEach { institution ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = if (institution.shortName.isNotBlank()) {
+                                            "${institution.name} (${institution.shortName})"
+                                        } else {
+                                            institution.name
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    selectedInstitution = institution
+                                    institutionMenuExpanded = false
+                                    registerError = null
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
 

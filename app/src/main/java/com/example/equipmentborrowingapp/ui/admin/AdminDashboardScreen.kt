@@ -62,7 +62,8 @@ fun AdminDashboardScreen(
     onManageLabComputersClick: () -> Unit,
     onViewSoftwareReportsClick: () -> Unit,
     onProfileClick: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onVerifyStudentsClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -260,7 +261,19 @@ fun AdminDashboardScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = ModernBg
                 )
+                ModernActionRow(
+                    title = "Verify Students",
+                    subtitle = "Approve pending students",
+                    icon = Icons.Filled.VerifiedUser,
+                    iconBgColor = GreenLight,
+                    iconColor = GreenText,
+                    onClick = onVerifyStudentsClick
+                )
 
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
                 ModernActionRow(
                     title = "Add Equipment",
                     subtitle = "Create new item",

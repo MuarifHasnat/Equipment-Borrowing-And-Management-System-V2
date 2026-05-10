@@ -9,7 +9,7 @@ class EquipmentRepository {
 
     fun addEquipment(
         institutionId: String,
-        roomId: String = "",
+        roomId: String,
         name: String,
         description: String,
         condition: String,
@@ -20,12 +20,17 @@ class EquipmentRepository {
         imageUrl: String,
         isBorrowable: Boolean,
         onResult: (Boolean, String) -> Unit
-    ) {
+    )
+
+    {
         if (institutionId.isBlank()) {
             onResult(false, "Institution not found")
             return
         }
-
+        if (roomId.isBlank()) {
+            onResult(false, "Room/Lab not selected")
+            return
+        }
         val docRef = firestore.collection("equipment").document()
 
         val equipment = Equipment(
@@ -75,7 +80,9 @@ class EquipmentRepository {
         query.get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull { document ->
-                    document.toObject(Equipment::class.java)
+                    document.toObject(Equipment::class.java)?.copy(
+                        id = document.id
+                    )
                 }
                 onResult(list)
             }

@@ -170,13 +170,13 @@ private fun ModernNotificationCard(
         else -> Triple(NotifColors.BlueLight, NotifColors.BlueText, Icons.Rounded.Info)
     }
 
-    val cardBackgroundColor = if (notification.isRead) NotifColors.CardWhite else NotifColors.UnreadBg
+    val cardBackgroundColor = if (notification.read) NotifColors.CardWhite else NotifColors.UnreadBg
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = if (notification.isRead) 2.dp else 6.dp,
+                elevation = if (notification.read) 2.dp else 6.dp,
                 shape = RoundedCornerShape(20.dp),
                 spotColor = Color.Black.copy(alpha = 0.05f)
             ),
@@ -217,7 +217,7 @@ private fun ModernNotificationCard(
                         text = notification.title,
                         color = NotifColors.TextDark,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (notification.isRead) FontWeight.SemiBold else FontWeight.ExtraBold,
+                        fontWeight = if (notification.read) FontWeight.SemiBold else FontWeight.ExtraBold,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -243,7 +243,7 @@ private fun ModernNotificationCard(
                     lineHeight = 20.sp
                 )
 
-                if (!notification.isRead) {
+                if (!notification.read) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         onClick = onMarkReadClick,

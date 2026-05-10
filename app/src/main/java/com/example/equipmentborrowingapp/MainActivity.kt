@@ -80,15 +80,21 @@ import com.example.equipmentborrowingapp.viewmodel.RoomViewModel
 import com.example.equipmentborrowingapp.ui.admin.AddRoomScreen
 import com.example.equipmentborrowingapp.ui.admin.ManageRoomsScreen
 import com.example.equipmentborrowingapp.ui.student.RoomSelectionScreen
+import com.example.equipmentborrowingapp.data.model.AppUser
+import com.example.equipmentborrowingapp.data.repository.UserRepository
+import com.example.equipmentborrowingapp.ui.admin.PendingStudentsScreen
+import com.example.equipmentborrowingapp.data.model.Institution
+import com.example.equipmentborrowingapp.data.repository.InstitutionRepository
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
+    private val institutionRepository = InstitutionRepository()
     private val equipmentRepository = EquipmentRepository()
     private val requestRepository = RequestRepository()
     private val labComputerRepository = LabComputerRepository()
     private val notificationRepository = NotificationRepository()
     private val roomRepository = RoomRepository()
-
+    private val userRepository = UserRepository()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -112,6 +118,7 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val notificationViewModel = remember { NotificationViewModel() }
                 val roomViewModel = remember { RoomViewModel() }
+                var institutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
                 fun showMessage(message: String) {
                     scope.launch {
                         snackbarHostState.showSnackbar(message)
@@ -136,7 +143,7 @@ class MainActivity : ComponentActivity() {
                             title = title,
                             message = message,
                             type = type,
-                            isRead = false,
+                            read = false,
                             timestamp = System.currentTimeMillis()
                         )
                     )
@@ -150,7 +157,7 @@ class MainActivity : ComponentActivity() {
                 var softwareIssueReports by remember {
                     mutableStateOf<List<SoftwareIssueReport>>(emptyList())
                 }
-
+                var pendingStudentList by remember { mutableStateOf<List<AppUser>>(emptyList()) }
                 // Selected item state
                 var selectedEquipment by remember { mutableStateOf<Equipment?>(null) }
                 var submittedQuantity by remember { mutableIntStateOf(1) }
@@ -195,11 +202,12 @@ class MainActivity : ComponentActivity() {
                     labComputerList = emptyList()
                     computerSoftwareList = emptyList()
                     softwareIssueReports = emptyList()
-
+                    pendingStudentList = emptyList()
                     adminCounts = AdminDashboardCounts()
                     labComputerViewModel.clearStudentLabComputers()
                     roomViewModel.clearRooms()
                     roomList = emptyList()
+                    institutionList = emptyList()
                     currentUserName = ""
                     currentUserEmail = ""
                     currentInstitutionId = ""
@@ -270,6 +278,19 @@ class MainActivity : ComponentActivity() {
                                 userId = uid,
                                 role = currentUserRole ?: "student"
                             )
+                        }
+                    }
+                }
+                fun loadInstitutionsAndOpenRegister() {
+                    institutionRepository.getApprovedInstitutions { list ->
+                        runOnUiThread {
+                            institutionList = list
+
+                            if (institutionList.isEmpty()) {
+                                showMessage("No approved institution found. Please contact admin.")
+                            } else {
+                                currentScreen = AppScreen.Register
+                            }
                         }
                     }
                 }
@@ -530,6 +551,61 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                fun loadPendingStudentsAndOpen() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    userRepository.getPendingStudents(
+                        institutionId = currentInstitutionId
+                    ) { list ->
+                        runOnUiThread {
+                            pendingStudentList = list
+                            currentScreen = AppScreen.PendingStudents
+                        }
+                    }
+                }
+
+                fun approveStudent(student: AppUser) {
+                    userRepository.approveStudent(student.uid) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                sendNotification(
+                                    userId = student.uid,
+                                    role = "student",
+                                    title = "Account Verified",
+                                    message = "Your student account has been verified. You can now borrow equipment.",
+                                    type = "success"
+                                )
+
+                                loadPendingStudentsAndOpen()
+                            }
+                        }
+                    }
+                }
+
+                fun rejectStudent(student: AppUser) {
+                    userRepository.rejectStudent(student.uid) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                sendNotification(
+                                    userId = student.uid,
+                                    role = "student",
+                                    title = "Account Rejected",
+                                    message = "Your student verification request has been rejected.",
+                                    type = "error"
+                                )
+
+                                loadPendingStudentsAndOpen()
+                            }
+                        }
+                    }
+                }
                 // Request action helpers
                 fun handleApproveRequest(request: BorrowRequest) {
                     requestRepository.approveRequest(request) { success, message ->
@@ -607,6 +683,27 @@ class MainActivity : ComponentActivity() {
                         runOnUiThread {
                             roomList = roomViewModel.roomList
                             currentScreen = AppScreen.ManageRooms
+                        }
+                    }
+                }
+                fun loadRoomsAndOpenAddLabComputer() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    roomViewModel.loadRooms(
+                        institutionId = currentInstitutionId
+                    ) {
+                        runOnUiThread {
+                            roomList = roomViewModel.roomList
+
+                            if (roomList.isEmpty()) {
+                                showMessage("Please add a room/lab first")
+                                currentScreen = AppScreen.ManageRooms
+                            } else {
+                                currentScreen = AppScreen.AddLabComputer
+                            }
                         }
                     }
                 }
@@ -853,7 +950,7 @@ class MainActivity : ComponentActivity() {
                                         equipment = equipment,
                                         onSubmitClick = { quantity, borrowDate, dueDate ->
                                             when {
-                                                currentVerificationStatus != "Verified" -> {
+                                                !currentVerificationStatus.equals("verified", ignoreCase = true) ->  {
                                                     showMessage("Your account is not verified yet")
                                                 }
                                                 equipment.id.isBlank() -> {
@@ -1189,7 +1286,9 @@ class MainActivity : ComponentActivity() {
                         AppScreen.ManageRooms -> {
                             currentScreen = AppScreen.AdminDashboard
                         }
-
+                        AppScreen.PendingStudents -> {
+                            currentScreen = AppScreen.AdminDashboard
+                        }
                         AppScreen.AddRoom -> {
                             currentScreen = AppScreen.ManageRooms
                         }
@@ -1303,7 +1402,7 @@ class MainActivity : ComponentActivity() {
                                     },
 
                                     onGoToRegister = {
-                                        currentScreen = AppScreen.Register
+                                        loadInstitutionsAndOpenRegister()
                                     },
 
                                     // ✅ FORGOT PASSWORD
@@ -1325,26 +1424,20 @@ class MainActivity : ComponentActivity() {
 
                             AppScreen.Register -> {
                                 RegisterScreen(
-                                    onRegisterClick = { name, email, password, role ->
-                                        if (
-                                            name.isBlank() ||
-                                            email.isBlank() ||
-                                            password.isBlank() ||
-                                            role.isBlank()
-                                        ) {
-                                            showMessage(UiMessages.REQUIRED_FIELDS)
-                                        } else {
-                                            authRepository.registerUser(
-                                                name = name,
-                                                email = email,
-                                                password = password,
-                                                role = role.lowercase()
-                                            ) { success, message ->
-                                                runOnUiThread {
-                                                    showMessage(message)
-                                                    if (success) {
-                                                        currentScreen = AppScreen.Login
-                                                    }
+                                    institutionList = institutionList,
+                                    onRegisterClick = { name, email, password, institutionId ->
+                                        authRepository.registerUser(
+                                            name = name,
+                                            email = email,
+                                            password = password,
+                                            role = "student",
+                                            institutionId = institutionId
+                                        ) { success, message ->
+                                            runOnUiThread {
+                                                showMessage(message)
+
+                                                if (success) {
+                                                    currentScreen = AppScreen.Login
                                                 }
                                             }
                                         }
@@ -1389,6 +1482,9 @@ class MainActivity : ComponentActivity() {
                                         onManageRoomsClick = {
                                             loadRoomsAndOpenManage()
                                         },
+                                        onVerifyStudentsClick = {
+                                            loadPendingStudentsAndOpen()
+                                        },
                                         onAddEquipmentClick = {
                                             loadRoomsAndOpenAddEquipment()
                                         },
@@ -1415,6 +1511,24 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onLogout = {
                                             safeLogoutToLogin()
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.PendingStudents -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.PendingStudents)
+                                } else {
+                                    PendingStudentsScreen(
+                                        studentList = pendingStudentList,
+                                        onApproveClick = { student ->
+                                            approveStudent(student)
+                                        },
+                                        onRejectClick = { student ->
+                                            rejectStudent(student)
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.AdminDashboard
                                         }
                                     )
                                 }
@@ -1712,7 +1826,7 @@ class MainActivity : ComponentActivity() {
                                     ManageLabComputersScreen(
                                         computerList = labComputerList,
                                         onAddComputerClick = {
-                                            currentScreen = AppScreen.AddLabComputer
+                                            loadRoomsAndOpenAddLabComputer()
                                         },
                                         onEditComputerClick = { computer ->
                                             selectedLabComputer = computer
@@ -1757,21 +1871,32 @@ class MainActivity : ComponentActivity() {
                                     redirectUnauthorized(AppScreen.AddLabComputer)
                                 } else {
                                     AddLabComputerScreen(
-                                        onAddClick = { pcName, labRoom, locationNote, ipAddress, status, remarks ->
-                                            labComputerRepository.addLabComputer(
-                                                institutionId = currentInstitutionId,
-                                                roomId = "",
-                                                pcName = pcName,
-                                                labRoom = labRoom,
-                                                locationNote = locationNote,
-                                                ipAddress = ipAddress,
-                                                status = status,
-                                                remarks = remarks
-                                            ) { success, message ->
-                                                runOnUiThread {
-                                                    showMessage(message)
-                                                    if (success) {
-                                                        refreshLabComputersAndOpenManage()
+                                        roomList = roomList,
+                                        onAddClick = { roomId, pcName, labRoom, locationNote, ipAddress, status, remarks ->
+                                            if (
+                                                roomId.isBlank() ||
+                                                pcName.isBlank() ||
+                                                labRoom.isBlank() ||
+                                                status.isBlank()
+                                            ) {
+                                                showMessage(UiMessages.REQUIRED_FIELDS)
+                                            } else {
+                                                labComputerRepository.addLabComputer(
+                                                    institutionId = currentInstitutionId,
+                                                    roomId = roomId,
+                                                    pcName = pcName,
+                                                    labRoom = labRoom,
+                                                    locationNote = locationNote,
+                                                    ipAddress = ipAddress,
+                                                    status = status,
+                                                    remarks = remarks
+                                                ) { success, message ->
+                                                    runOnUiThread {
+                                                        showMessage(message)
+
+                                                        if (success) {
+                                                            refreshLabComputersAndOpenManage()
+                                                        }
                                                     }
                                                 }
                                             }

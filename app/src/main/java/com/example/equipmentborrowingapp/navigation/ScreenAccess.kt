@@ -3,6 +3,7 @@ package com.example.equipmentborrowingapp.navigation
 fun isAdminScreen(screen: AppScreen): Boolean {
     return screen in listOf(
         AppScreen.AdminDashboard,
+        AppScreen.PendingStudents,
         AppScreen.AdminProfile,
         AppScreen.AddEquipment,
         AppScreen.ManageEquipment,

@@ -26,7 +26,7 @@ class NotificationViewModel(
             role = role
         ) { list ->
             notificationList = list
-            unreadCount = list.count { !it.isRead }
+            unreadCount = list.count { !it.read }
         }
     }
 

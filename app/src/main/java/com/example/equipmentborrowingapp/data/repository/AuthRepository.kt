@@ -15,28 +15,56 @@ class AuthRepository {
         email: String,
         password: String,
         role: String,
+        institutionId: String,
         onResult: (Boolean, String) -> Unit
     ) {
         val normalizedName = name.trim()
         val normalizedEmail = email.trim()
         val normalizedRole = role.trim().lowercase()
+        val normalizedInstitutionId = institutionId.trim()
+
+        if (
+            normalizedName.isBlank() ||
+            normalizedEmail.isBlank() ||
+            password.isBlank() ||
+            normalizedRole.isBlank() ||
+            normalizedInstitutionId.isBlank()
+        ) {
+            onResult(false, "Required fields are missing")
+            return
+        }
 
         auth.createUserWithEmailAndPassword(normalizedEmail, password)
             .addOnSuccessListener { authResult ->
                 val uid = authResult.user?.uid ?: ""
 
-                val user = User(
-                    uid = uid,
-                    name = normalizedName,
-                    email = normalizedEmail,
-                    role = normalizedRole
+                if (uid.isBlank()) {
+                    onResult(false, "User ID not found")
+                    return@addOnSuccessListener
+                }
+
+                val userMap = hashMapOf(
+                    "uid" to uid,
+                    "name" to normalizedName,
+                    "email" to normalizedEmail,
+                    "role" to normalizedRole,
+                    "institutionId" to normalizedInstitutionId,
+                    "verificationStatus" to "pending",
+                    "studentId" to "",
+                    "department" to "",
+                    "semester" to "",
+                    "phone" to "",
+                    "createdAt" to System.currentTimeMillis()
                 )
 
                 firestore.collection("users")
                     .document(uid)
-                    .set(user)
+                    .set(userMap)
                     .addOnSuccessListener {
-                        onResult(true, "Registration successful")
+                        onResult(
+                            true,
+                            "Registration successful. Please wait for admin verification."
+                        )
                     }
                     .addOnFailureListener { e ->
                         onResult(false, e.message ?: "Failed to save user data")
