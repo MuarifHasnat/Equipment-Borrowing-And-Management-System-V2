@@ -1,12 +1,16 @@
 package com.example.equipmentborrowingapp.navigation
 
 sealed class AppScreen(val route: String) {
+
     object StudentProfile : AppScreen("student_profile")
     object AdminProfile : AppScreen("admin_profile")
     object Login : AppScreen("login")
     object Register : AppScreen("register")
     object Notifications : AppScreen("notifications")
-
+    object SuperAdminDashboard : AppScreen("super_admin_dashboard")
+    object ManageInstitutions : AppScreen("manage_institutions")
+    object CreateInstitution : AppScreen("create_institution")
+    object CreateInstitutionAdmin : AppScreen("create_institution_admin")
     object StudentDashboard : AppScreen("student_dashboard")
     object RoomSelection : AppScreen("room_selection")
     object EquipmentList : AppScreen("equipment_list")

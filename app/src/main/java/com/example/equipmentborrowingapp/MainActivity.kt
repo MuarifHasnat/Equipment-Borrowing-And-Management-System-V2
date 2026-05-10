@@ -85,6 +85,8 @@ import com.example.equipmentborrowingapp.data.repository.UserRepository
 import com.example.equipmentborrowingapp.ui.admin.PendingStudentsScreen
 import com.example.equipmentborrowingapp.data.model.Institution
 import com.example.equipmentborrowingapp.data.repository.InstitutionRepository
+import com.example.equipmentborrowingapp.navigation.isSuperAdminScreen
+import com.example.equipmentborrowingapp.ui.superadmin.SuperAdminDashboardScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -213,7 +215,7 @@ class MainActivity : ComponentActivity() {
                     currentInstitutionId = ""
                     currentVerificationStatus = ""
                 }
-
+                fun isSuperAdmin(): Boolean = currentUserRole == "super_admin"
                 fun isAdmin(): Boolean = currentUserRole == "admin"
                 fun isStudent(): Boolean = currentUserRole == "student"
 
@@ -267,13 +269,18 @@ class MainActivity : ComponentActivity() {
                             currentVerificationStatus = user.verificationStatus
 
                             when (currentUserRole) {
-                                "admin", "student" -> onReady?.invoke()
+                                "super_admin", "admin", "student" -> {
+                                    onReady?.invoke()
+                                }
+
                                 else -> {
                                     showMessage(UiMessages.UNKNOWN_ROLE)
                                     safeLogoutToLogin()
                                     notificationViewModel.clearNotifications()
+                                    return@runOnUiThread
                                 }
                             }
+
                             notificationViewModel.startListening(
                                 userId = uid,
                                 role = currentUserRole ?: "student"
@@ -417,6 +424,10 @@ class MainActivity : ComponentActivity() {
                 fun openDashboardAfterLogin() {
                     loadLoggedInUserRole {
                         when (currentUserRole) {
+                            "super_admin" -> {
+                                currentScreen = AppScreen.SuperAdminDashboard
+                            }
+
                             "student" -> {
                                 currentScreen = AppScreen.StudentDashboard
                             }
@@ -1228,6 +1239,7 @@ class MainActivity : ComponentActivity() {
                     if (authRepository.isUserLoggedIn()) {
                         loadLoggedInUserRole {
                             currentScreen = when (currentUserRole) {
+                                "super_admin" -> AppScreen.SuperAdminDashboard
                                 "admin" -> AppScreen.AdminDashboard
                                 "student" -> AppScreen.StudentDashboard
                                 else -> AppScreen.Login
@@ -1240,6 +1252,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(currentScreen, currentUserRole) {
+
                     if (currentScreen == AppScreen.Login || currentScreen == AppScreen.Register) return@LaunchedEffect
 
                     if (!authRepository.isUserLoggedIn()) {
@@ -1247,7 +1260,17 @@ class MainActivity : ComponentActivity() {
                         safeLogoutToLogin()
                         return@LaunchedEffect
                     }
+                    if (isSuperAdminScreen(currentScreen) && !isSuperAdmin()) {
+                        showMessage(UiMessages.ACCESS_DENIED)
 
+                        currentScreen = when {
+                            isAdmin() -> AppScreen.AdminDashboard
+                            isStudent() -> AppScreen.StudentDashboard
+                            else -> AppScreen.Login
+                        }
+
+                        return@LaunchedEffect
+                    }
                     if (isAdminScreen(currentScreen) && !isAdmin()) {
                         redirectUnauthorized(currentScreen)
                         return@LaunchedEffect
@@ -1273,11 +1296,20 @@ class MainActivity : ComponentActivity() {
                             currentScreen = AppScreen.Login
                         }
                         AppScreen.Notifications -> {
-                            if (isAdmin()) {
-                                currentScreen = AppScreen.AdminDashboard
-                            } else {
-                                currentScreen = AppScreen.StudentDashboard
+                            currentScreen = when {
+                                isSuperAdmin() -> AppScreen.SuperAdminDashboard
+                                isAdmin() -> AppScreen.AdminDashboard
+                                else -> AppScreen.StudentDashboard
                             }
+                        }
+                        AppScreen.SuperAdminDashboard -> {
+                            safeLogoutToLogin()
+                        }
+
+                        AppScreen.ManageInstitutions,
+                        AppScreen.CreateInstitution,
+                        AppScreen.CreateInstitutionAdmin -> {
+                            currentScreen = AppScreen.SuperAdminDashboard
                         }
                         AppScreen.AdminProfile -> {
                             // future use
@@ -1458,15 +1490,43 @@ class MainActivity : ComponentActivity() {
                                         notificationViewModel.deleteNotification(notification.id)
                                     },
                                     onBackClick = {
-                                        if (isAdmin()) {
-                                            currentScreen = AppScreen.AdminDashboard
-                                        } else {
-                                            currentScreen = AppScreen.StudentDashboard
+                                        currentScreen = when {
+                                            isSuperAdmin() -> AppScreen.SuperAdminDashboard
+                                            isAdmin() -> AppScreen.AdminDashboard
+                                            else -> AppScreen.StudentDashboard
                                         }
                                     }
                                 )
                             }
+                            AppScreen.SuperAdminDashboard -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
 
+                                    currentScreen = when {
+                                        isAdmin() -> AppScreen.AdminDashboard
+                                        isStudent() -> AppScreen.StudentDashboard
+                                        else -> AppScreen.Login
+                                    }
+                                } else {
+                                    SuperAdminDashboardScreen(
+                                        onManageInstitutionsClick = {
+                                            currentScreen = AppScreen.ManageInstitutions
+                                        },
+                                        onCreateInstitutionClick = {
+                                            currentScreen = AppScreen.CreateInstitution
+                                        },
+                                        onCreateInstitutionAdminClick = {
+                                            currentScreen = AppScreen.CreateInstitutionAdmin
+                                        },
+                                        onNotificationClick = {
+                                            currentScreen = AppScreen.Notifications
+                                        },
+                                        onLogout = {
+                                            safeLogoutToLogin()
+                                        }
+                                    )
+                                }
+                            }
                             AppScreen.AdminDashboard -> {
                                 if (!isAdmin()) {
                                     redirectUnauthorized(AppScreen.AdminDashboard)
@@ -1530,6 +1590,41 @@ class MainActivity : ComponentActivity() {
                                         onBackClick = {
                                             currentScreen = AppScreen.AdminDashboard
                                         }
+                                    )
+                                }
+                            }
+                            AppScreen.ManageInstitutions -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    EmptyStateView(
+                                        title = "Manage Institutions",
+                                        subtitle = "This screen will be added next."
+                                    )
+                                }
+                            }
+
+                            AppScreen.CreateInstitution -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    EmptyStateView(
+                                        title = "Create Institution",
+                                        subtitle = "This screen will be added next."
+                                    )
+                                }
+                            }
+
+                            AppScreen.CreateInstitutionAdmin -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    EmptyStateView(
+                                        title = "Create Institution Admin",
+                                        subtitle = "This screen will be added next."
                                     )
                                 }
                             }

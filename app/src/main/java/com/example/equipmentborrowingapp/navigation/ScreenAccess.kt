@@ -1,10 +1,19 @@
 package com.example.equipmentborrowingapp.navigation
 
+fun isSuperAdminScreen(screen: AppScreen): Boolean {
+    return screen in listOf(
+        AppScreen.SuperAdminDashboard,
+        AppScreen.ManageInstitutions,
+        AppScreen.CreateInstitution,
+        AppScreen.CreateInstitutionAdmin
+    )
+}
+
 fun isAdminScreen(screen: AppScreen): Boolean {
     return screen in listOf(
         AppScreen.AdminDashboard,
-        AppScreen.PendingStudents,
         AppScreen.AdminProfile,
+        AppScreen.PendingStudents,
         AppScreen.AddEquipment,
         AppScreen.ManageEquipment,
         AppScreen.EditEquipment,
@@ -19,6 +28,7 @@ fun isAdminScreen(screen: AppScreen): Boolean {
         AppScreen.SoftwareIssueReports
     )
 }
+
 fun isStudentScreen(screen: AppScreen): Boolean {
     return screen in listOf(
         AppScreen.StudentDashboard,
