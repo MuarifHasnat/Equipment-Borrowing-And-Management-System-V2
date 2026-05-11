@@ -7,6 +7,68 @@ class InstitutionRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
 
+    fun createInstitution(
+        institutionId: String,
+        name: String,
+        shortName: String,
+        emailDomain: String,
+        type: String,
+        status: String,
+        createdBy: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val normalizedInstitutionId = institutionId.trim()
+        val normalizedName = name.trim()
+        val normalizedShortName = shortName.trim()
+        val normalizedEmailDomain = emailDomain.trim().lowercase()
+        val normalizedType = type.trim().lowercase()
+        val normalizedStatus = status.trim()
+
+        if (
+            normalizedInstitutionId.isBlank() ||
+            normalizedName.isBlank() ||
+            normalizedShortName.isBlank() ||
+            normalizedEmailDomain.isBlank() ||
+            normalizedType.isBlank() ||
+            normalizedStatus.isBlank()
+        ) {
+            onResult(false, "Required fields are missing")
+            return
+        }
+
+        val docRef = firestore.collection("institutions")
+            .document(normalizedInstitutionId)
+
+        docRef.get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    onResult(false, "Institution ID already exists")
+                    return@addOnSuccessListener
+                }
+
+                val institution = Institution(
+                    id = normalizedInstitutionId,
+                    name = normalizedName,
+                    shortName = normalizedShortName,
+                    emailDomain = normalizedEmailDomain,
+                    type = normalizedType,
+                    status = normalizedStatus,
+                    createdBy = createdBy,
+                    createdAt = System.currentTimeMillis()
+                )
+
+                docRef.set(institution)
+                    .addOnSuccessListener {
+                        onResult(true, "Institution created successfully")
+                    }
+                    .addOnFailureListener { e ->
+                        onResult(false, e.message ?: "Failed to create institution")
+                    }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to check institution")
+            }
+    }
     fun getApprovedInstitutions(
         onResult: (List<Institution>) -> Unit
     ) {

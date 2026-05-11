@@ -88,6 +88,7 @@ import com.example.equipmentborrowingapp.data.repository.InstitutionRepository
 import com.example.equipmentborrowingapp.navigation.isSuperAdminScreen
 import com.example.equipmentborrowingapp.ui.superadmin.SuperAdminDashboardScreen
 import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionsScreen
+import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -320,6 +321,34 @@ class MainActivity : ComponentActivity() {
                     institutionRepository.updateInstitutionStatus(
                         institutionId = institution.id,
                         status = status
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                loadAllInstitutionsAndOpenManage()
+                            }
+                        }
+                    }
+                }
+                fun createInstitution(
+                    institutionId: String,
+                    name: String,
+                    shortName: String,
+                    emailDomain: String,
+                    type: String,
+                    status: String
+                ) {
+                    val createdByUid = authRepository.getCurrentUserUid().orEmpty()
+
+                    institutionRepository.createInstitution(
+                        institutionId = institutionId,
+                        name = name,
+                        shortName = shortName,
+                        emailDomain = emailDomain,
+                        type = type,
+                        status = status,
+                        createdBy = createdByUid
                     ) { success, message ->
                         runOnUiThread {
                             showMessage(message)
@@ -1555,6 +1584,76 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                            AppScreen.ManageInstitutions -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    ManageInstitutionsScreen(
+                                        institutionList = allInstitutionList,
+                                        onCreateInstitutionClick = {
+                                            currentScreen = AppScreen.CreateInstitution
+                                        },
+                                        onApproveClick = { institution ->
+                                            updateInstitutionStatus(
+                                                institution = institution,
+                                                status = "Approved"
+                                            )
+                                        },
+                                        onRejectClick = { institution ->
+                                            updateInstitutionStatus(
+                                                institution = institution,
+                                                status = "Rejected"
+                                            )
+                                        },
+                                        onSuspendClick = { institution ->
+                                            updateInstitutionStatus(
+                                                institution = institution,
+                                                status = "Suspended"
+                                            )
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.SuperAdminDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+
+
+                            AppScreen.CreateInstitution -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    CreateInstitutionScreen(
+                                        onCreateClick = { institutionId, name, shortName, emailDomain, type, status ->
+                                            createInstitution(
+                                                institutionId = institutionId,
+                                                name = name,
+                                                shortName = shortName,
+                                                emailDomain = emailDomain,
+                                                type = type,
+                                                status = status
+                                            )
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ManageInstitutions
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.CreateInstitutionAdmin -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    EmptyStateView(
+                                        title = "Create Institution Admin",
+                                        subtitle = "This screen will be added next."
+                                    )
+                                }
+                            }
                             AppScreen.AdminDashboard -> {
                                 if (!isAdmin()) {
                                     redirectUnauthorized(AppScreen.AdminDashboard)
@@ -1621,64 +1720,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-                            AppScreen.ManageInstitutions -> {
-                                if (!isSuperAdmin()) {
-                                    showMessage(UiMessages.ACCESS_DENIED)
-                                    currentScreen = AppScreen.Login
-                                } else {
-                                    ManageInstitutionsScreen(
-                                        institutionList = allInstitutionList,
-                                        onCreateInstitutionClick = {
-                                            currentScreen = AppScreen.CreateInstitution
-                                        },
-                                        onApproveClick = { institution ->
-                                            updateInstitutionStatus(
-                                                institution = institution,
-                                                status = "Approved"
-                                            )
-                                        },
-                                        onRejectClick = { institution ->
-                                            updateInstitutionStatus(
-                                                institution = institution,
-                                                status = "Rejected"
-                                            )
-                                        },
-                                        onSuspendClick = { institution ->
-                                            updateInstitutionStatus(
-                                                institution = institution,
-                                                status = "Suspended"
-                                            )
-                                        },
-                                        onBackClick = {
-                                            currentScreen = AppScreen.SuperAdminDashboard
-                                        }
-                                    )
-                                }
-                            }
 
-                            AppScreen.CreateInstitution -> {
-                                if (!isSuperAdmin()) {
-                                    showMessage(UiMessages.ACCESS_DENIED)
-                                    currentScreen = AppScreen.Login
-                                } else {
-                                    EmptyStateView(
-                                        title = "Create Institution",
-                                        subtitle = "This screen will be added next."
-                                    )
-                                }
-                            }
-
-                            AppScreen.CreateInstitutionAdmin -> {
-                                if (!isSuperAdmin()) {
-                                    showMessage(UiMessages.ACCESS_DENIED)
-                                    currentScreen = AppScreen.Login
-                                } else {
-                                    EmptyStateView(
-                                        title = "Create Institution Admin",
-                                        subtitle = "This screen will be added next."
-                                    )
-                                }
-                            }
                             AppScreen.AdminProfile -> {
                                 if (!isAdmin()) {
                                     redirectUnauthorized(AppScreen.AdminProfile)
