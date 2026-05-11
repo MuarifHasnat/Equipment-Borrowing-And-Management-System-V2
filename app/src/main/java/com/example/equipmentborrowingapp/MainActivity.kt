@@ -87,6 +87,7 @@ import com.example.equipmentborrowingapp.data.model.Institution
 import com.example.equipmentborrowingapp.data.repository.InstitutionRepository
 import com.example.equipmentborrowingapp.navigation.isSuperAdminScreen
 import com.example.equipmentborrowingapp.ui.superadmin.SuperAdminDashboardScreen
+import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionsScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -121,6 +122,7 @@ class MainActivity : ComponentActivity() {
                 val notificationViewModel = remember { NotificationViewModel() }
                 val roomViewModel = remember { RoomViewModel() }
                 var institutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
+                var allInstitutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
                 fun showMessage(message: String) {
                     scope.launch {
                         snackbarHostState.showSnackbar(message)
@@ -210,6 +212,7 @@ class MainActivity : ComponentActivity() {
                     roomViewModel.clearRooms()
                     roomList = emptyList()
                     institutionList = emptyList()
+                    allInstitutionList = emptyList()
                     currentUserName = ""
                     currentUserEmail = ""
                     currentInstitutionId = ""
@@ -297,6 +300,32 @@ class MainActivity : ComponentActivity() {
                                 showMessage("No approved institution found. Please contact admin.")
                             } else {
                                 currentScreen = AppScreen.Register
+                            }
+                        }
+                    }
+                }
+                fun loadAllInstitutionsAndOpenManage() {
+                    institutionRepository.getAllInstitutions { list ->
+                        runOnUiThread {
+                            allInstitutionList = list
+                            currentScreen = AppScreen.ManageInstitutions
+                        }
+                    }
+                }
+
+                fun updateInstitutionStatus(
+                    institution: Institution,
+                    status: String
+                ) {
+                    institutionRepository.updateInstitutionStatus(
+                        institutionId = institution.id,
+                        status = status
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                loadAllInstitutionsAndOpenManage()
                             }
                         }
                     }
@@ -1411,7 +1440,6 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.MyRequests,
                                 AppScreen.LabComputerList,
                                 AppScreen.ReportSoftwareIssue
-
                             ) -> {
                                 renderStudentScreens()
                             }
@@ -1510,7 +1538,7 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     SuperAdminDashboardScreen(
                                         onManageInstitutionsClick = {
-                                            currentScreen = AppScreen.ManageInstitutions
+                                            loadAllInstitutionsAndOpenManage()
                                         },
                                         onCreateInstitutionClick = {
                                             currentScreen = AppScreen.CreateInstitution
@@ -1598,9 +1626,32 @@ class MainActivity : ComponentActivity() {
                                     showMessage(UiMessages.ACCESS_DENIED)
                                     currentScreen = AppScreen.Login
                                 } else {
-                                    EmptyStateView(
-                                        title = "Manage Institutions",
-                                        subtitle = "This screen will be added next."
+                                    ManageInstitutionsScreen(
+                                        institutionList = allInstitutionList,
+                                        onCreateInstitutionClick = {
+                                            currentScreen = AppScreen.CreateInstitution
+                                        },
+                                        onApproveClick = { institution ->
+                                            updateInstitutionStatus(
+                                                institution = institution,
+                                                status = "Approved"
+                                            )
+                                        },
+                                        onRejectClick = { institution ->
+                                            updateInstitutionStatus(
+                                                institution = institution,
+                                                status = "Rejected"
+                                            )
+                                        },
+                                        onSuspendClick = { institution ->
+                                            updateInstitutionStatus(
+                                                institution = institution,
+                                                status = "Suspended"
+                                            )
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.SuperAdminDashboard
+                                        }
                                     )
                                 }
                             }
