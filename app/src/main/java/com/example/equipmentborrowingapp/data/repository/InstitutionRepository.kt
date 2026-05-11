@@ -6,7 +6,51 @@ import com.google.firebase.firestore.FirebaseFirestore
 class InstitutionRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
+    fun createInstitutionAdminRequest(
+        institutionId: String,
+        institutionName: String,
+        adminName: String,
+        adminEmail: String,
+        createdBy: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val normalizedInstitutionId = institutionId.trim()
+        val normalizedInstitutionName = institutionName.trim()
+        val normalizedAdminName = adminName.trim()
+        val normalizedAdminEmail = adminEmail.trim().lowercase()
 
+        if (
+            normalizedInstitutionId.isBlank() ||
+            normalizedInstitutionName.isBlank() ||
+            normalizedAdminName.isBlank() ||
+            normalizedAdminEmail.isBlank() ||
+            createdBy.isBlank()
+        ) {
+            onResult(false, "Required fields are missing")
+            return
+        }
+
+        val docRef = firestore.collection("institution_admin_requests").document()
+
+        val request = mapOf(
+            "id" to docRef.id,
+            "institutionId" to normalizedInstitutionId,
+            "institutionName" to normalizedInstitutionName,
+            "adminName" to normalizedAdminName,
+            "adminEmail" to normalizedAdminEmail,
+            "status" to "Pending",
+            "createdBy" to createdBy,
+            "createdAt" to System.currentTimeMillis()
+        )
+
+        docRef.set(request)
+            .addOnSuccessListener {
+                onResult(true, "Institution admin request saved successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to save admin request")
+            }
+    }
     fun createInstitution(
         institutionId: String,
         name: String,

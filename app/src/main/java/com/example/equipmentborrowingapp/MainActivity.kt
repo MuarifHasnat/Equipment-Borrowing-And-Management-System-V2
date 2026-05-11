@@ -89,6 +89,7 @@ import com.example.equipmentborrowingapp.navigation.isSuperAdminScreen
 import com.example.equipmentborrowingapp.ui.superadmin.SuperAdminDashboardScreen
 import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionsScreen
 import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionScreen
+import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionAdminScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -355,6 +356,30 @@ class MainActivity : ComponentActivity() {
 
                             if (success) {
                                 loadAllInstitutionsAndOpenManage()
+                            }
+                        }
+                    }
+                }
+                fun createInstitutionAdminRequest(
+                    institutionId: String,
+                    institutionName: String,
+                    adminName: String,
+                    adminEmail: String
+                ) {
+                    val createdByUid = authRepository.getCurrentUserUid().orEmpty()
+
+                    institutionRepository.createInstitutionAdminRequest(
+                        institutionId = institutionId,
+                        institutionName = institutionName,
+                        adminName = adminName,
+                        adminEmail = adminEmail,
+                        createdBy = createdByUid
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                currentScreen = AppScreen.SuperAdminDashboard
                             }
                         }
                     }
@@ -1573,7 +1598,17 @@ class MainActivity : ComponentActivity() {
                                             currentScreen = AppScreen.CreateInstitution
                                         },
                                         onCreateInstitutionAdminClick = {
-                                            currentScreen = AppScreen.CreateInstitutionAdmin
+                                            institutionRepository.getApprovedInstitutions { list ->
+                                                runOnUiThread {
+                                                    institutionList = list
+
+                                                    if (institutionList.isEmpty()) {
+                                                        showMessage("No approved institution found")
+                                                    } else {
+                                                        currentScreen = AppScreen.CreateInstitutionAdmin
+                                                    }
+                                                }
+                                            }
                                         },
                                         onNotificationClick = {
                                             currentScreen = AppScreen.Notifications
@@ -1648,9 +1683,19 @@ class MainActivity : ComponentActivity() {
                                     showMessage(UiMessages.ACCESS_DENIED)
                                     currentScreen = AppScreen.Login
                                 } else {
-                                    EmptyStateView(
-                                        title = "Create Institution Admin",
-                                        subtitle = "This screen will be added next."
+                                    CreateInstitutionAdminScreen(
+                                        institutionList = institutionList,
+                                        onCreateRequestClick = { institutionId, institutionName, adminName, adminEmail ->
+                                            createInstitutionAdminRequest(
+                                                institutionId = institutionId,
+                                                institutionName = institutionName,
+                                                adminName = adminName,
+                                                adminEmail = adminEmail
+                                            )
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.SuperAdminDashboard
+                                        }
                                     )
                                 }
                             }
