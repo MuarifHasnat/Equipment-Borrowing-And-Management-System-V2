@@ -18,6 +18,7 @@ fun SuperAdminDashboardScreen(
     onManageInstitutionsClick: () -> Unit,
     onCreateInstitutionClick: () -> Unit,
     onCreateInstitutionAdminClick: () -> Unit,
+    onManageAdminRequestsClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -57,7 +58,12 @@ fun SuperAdminDashboardScreen(
         ) {
             Text("Create Institution Admin")
         }
-
+        Button(
+            onClick = onManageAdminRequestsClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Manage Admin Requests")
+        }
         OutlinedButton(
             onClick = onNotificationClick,
             modifier = Modifier.fillMaxWidth()

@@ -5,7 +5,8 @@ fun isSuperAdminScreen(screen: AppScreen): Boolean {
         AppScreen.SuperAdminDashboard,
         AppScreen.ManageInstitutions,
         AppScreen.CreateInstitution,
-        AppScreen.CreateInstitutionAdmin
+        AppScreen.CreateInstitutionAdmin,
+        AppScreen.ManageInstitutionAdminRequests
     )
 }
 

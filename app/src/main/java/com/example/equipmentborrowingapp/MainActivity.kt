@@ -90,6 +90,8 @@ import com.example.equipmentborrowingapp.ui.superadmin.SuperAdminDashboardScreen
 import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionsScreen
 import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionScreen
 import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionAdminScreen
+import com.example.equipmentborrowingapp.data.model.InstitutionAdminRequest
+import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionAdminRequestsScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -163,6 +165,9 @@ class MainActivity : ComponentActivity() {
                 var softwareIssueReports by remember {
                     mutableStateOf<List<SoftwareIssueReport>>(emptyList())
                 }
+                var institutionAdminRequestList by remember {
+                    mutableStateOf<List<InstitutionAdminRequest>>(emptyList())
+                }
                 var pendingStudentList by remember { mutableStateOf<List<AppUser>>(emptyList()) }
                 // Selected item state
                 var selectedEquipment by remember { mutableStateOf<Equipment?>(null) }
@@ -215,6 +220,7 @@ class MainActivity : ComponentActivity() {
                     roomList = emptyList()
                     institutionList = emptyList()
                     allInstitutionList = emptyList()
+                    institutionAdminRequestList = emptyList()
                     currentUserName = ""
                     currentUserEmail = ""
                     currentInstitutionId = ""
@@ -380,6 +386,32 @@ class MainActivity : ComponentActivity() {
 
                             if (success) {
                                 currentScreen = AppScreen.SuperAdminDashboard
+                            }
+                        }
+                    }
+                }
+                fun loadInstitutionAdminRequestsAndOpen() {
+                    institutionRepository.getInstitutionAdminRequests { list ->
+                        runOnUiThread {
+                            institutionAdminRequestList = list
+                            currentScreen = AppScreen.ManageInstitutionAdminRequests
+                        }
+                    }
+                }
+
+                fun updateInstitutionAdminRequestStatus(
+                    request: InstitutionAdminRequest,
+                    status: String
+                ) {
+                    institutionRepository.updateInstitutionAdminRequestStatus(
+                        requestId = request.id,
+                        status = status
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                loadInstitutionAdminRequestsAndOpen()
                             }
                         }
                     }
@@ -1391,7 +1423,8 @@ class MainActivity : ComponentActivity() {
 
                         AppScreen.ManageInstitutions,
                         AppScreen.CreateInstitution,
-                        AppScreen.CreateInstitutionAdmin -> {
+                        AppScreen.CreateInstitutionAdmin,
+                        AppScreen.ManageInstitutionAdminRequests -> {
                             currentScreen = AppScreen.SuperAdminDashboard
                         }
                         AppScreen.AdminProfile -> {
@@ -1610,6 +1643,9 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         },
+                                        onManageAdminRequestsClick = {
+                                            loadInstitutionAdminRequestsAndOpen()
+                                        },
                                         onNotificationClick = {
                                             currentScreen = AppScreen.Notifications
                                         },
@@ -1691,6 +1727,37 @@ class MainActivity : ComponentActivity() {
                                                 institutionName = institutionName,
                                                 adminName = adminName,
                                                 adminEmail = adminEmail
+                                            )
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.SuperAdminDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.ManageInstitutionAdminRequests -> {
+                                if (!isSuperAdmin()) {
+                                    showMessage(UiMessages.ACCESS_DENIED)
+                                    currentScreen = AppScreen.Login
+                                } else {
+                                    ManageInstitutionAdminRequestsScreen(
+                                        requestList = institutionAdminRequestList,
+                                        onApproveClick = { request ->
+                                            updateInstitutionAdminRequestStatus(
+                                                request = request,
+                                                status = "Approved"
+                                            )
+                                        },
+                                        onRejectClick = { request ->
+                                            updateInstitutionAdminRequestStatus(
+                                                request = request,
+                                                status = "Rejected"
+                                            )
+                                        },
+                                        onMarkCreatedClick = { request ->
+                                            updateInstitutionAdminRequestStatus(
+                                                request = request,
+                                                status = "Created"
                                             )
                                         },
                                         onBackClick = {

@@ -11,6 +11,7 @@ sealed class AppScreen(val route: String) {
     object ManageInstitutions : AppScreen("manage_institutions")
     object CreateInstitution : AppScreen("create_institution")
     object CreateInstitutionAdmin : AppScreen("create_institution_admin")
+    object ManageInstitutionAdminRequests : AppScreen("manage_institution_admin_requests")
     object StudentDashboard : AppScreen("student_dashboard")
     object RoomSelection : AppScreen("room_selection")
     object EquipmentList : AppScreen("equipment_list")

@@ -2,6 +2,7 @@ package com.example.equipmentborrowingapp.data.repository
 
 import com.example.equipmentborrowingapp.data.model.Institution
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.equipmentborrowingapp.data.model.InstitutionAdminRequest
 
 class InstitutionRepository {
 
@@ -170,6 +171,50 @@ class InstitutionRepository {
             }
             .addOnFailureListener { e ->
                 onResult(false, e.message ?: "Failed to update institution")
+            }
+    }
+    fun getInstitutionAdminRequests(
+        onResult: (List<InstitutionAdminRequest>) -> Unit
+    ) {
+        firestore.collection("institution_admin_requests")
+            .get()
+            .addOnSuccessListener { result ->
+                val list = result.documents.mapNotNull { document ->
+                    document.toObject(InstitutionAdminRequest::class.java)?.copy(
+                        id = document.id
+                    )
+                }
+
+                onResult(list.sortedByDescending { it.createdAt })
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+    fun updateInstitutionAdminRequestStatus(
+        requestId: String,
+        status: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (requestId.isBlank()) {
+            onResult(false, "Admin request not found")
+            return
+        }
+
+        firestore.collection("institution_admin_requests")
+            .document(requestId)
+            .update(
+                mapOf(
+                    "status" to status,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .addOnSuccessListener {
+                onResult(true, "Admin request status updated")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to update admin request")
             }
     }
 }

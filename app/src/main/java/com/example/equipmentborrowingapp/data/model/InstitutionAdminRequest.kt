@@ -6,7 +6,8 @@ data class InstitutionAdminRequest(
     val institutionName: String = "",
     val adminName: String = "",
     val adminEmail: String = "",
-    val status: String = "Pending",
+    val status: String = "Pending", // Pending / Approved / Rejected / Created
     val createdBy: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = 0L
 )
