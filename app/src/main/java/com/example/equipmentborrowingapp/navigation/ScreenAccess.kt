@@ -15,6 +15,7 @@ fun isAdminScreen(screen: AppScreen): Boolean {
         AppScreen.AdminDashboard,
         AppScreen.AdminProfile,
         AppScreen.PendingStudents,
+        AppScreen.ManageStudents,
         AppScreen.AddEquipment,
         AppScreen.ManageEquipment,
         AppScreen.EditEquipment,

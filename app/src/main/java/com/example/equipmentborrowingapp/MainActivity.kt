@@ -92,6 +92,8 @@ import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionScreen
 import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionAdminScreen
 import com.example.equipmentborrowingapp.data.model.InstitutionAdminRequest
 import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionAdminRequestsScreen
+import com.example.equipmentborrowingapp.ui.admin.ManageStudentsScreen
+
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -127,6 +129,7 @@ class MainActivity : ComponentActivity() {
                 val roomViewModel = remember { RoomViewModel() }
                 var institutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
                 var allInstitutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
+
                 fun showMessage(message: String) {
                     scope.launch {
                         snackbarHostState.showSnackbar(message)
@@ -169,6 +172,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<List<InstitutionAdminRequest>>(emptyList())
                 }
                 var pendingStudentList by remember { mutableStateOf<List<AppUser>>(emptyList()) }
+                var studentList by remember { mutableStateOf<List<AppUser>>(emptyList()) }
                 // Selected item state
                 var selectedEquipment by remember { mutableStateOf<Equipment?>(null) }
                 var submittedQuantity by remember { mutableIntStateOf(1) }
@@ -214,6 +218,7 @@ class MainActivity : ComponentActivity() {
                     computerSoftwareList = emptyList()
                     softwareIssueReports = emptyList()
                     pendingStudentList = emptyList()
+                    studentList = emptyList()
                     adminCounts = AdminDashboardCounts()
                     labComputerViewModel.clearStudentLabComputers()
                     roomViewModel.clearRooms()
@@ -692,6 +697,21 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                fun loadStudentsAndOpenManage() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    userRepository.getAllStudents(
+                        institutionId = currentInstitutionId
+                    ) { list ->
+                        runOnUiThread {
+                            studentList = list
+                            currentScreen = AppScreen.ManageStudents
+                        }
+                    }
+                }
 
                 fun approveStudent(student: AppUser) {
                     userRepository.approveStudent(student.uid) { success, message ->
@@ -728,6 +748,51 @@ class MainActivity : ComponentActivity() {
                                 )
 
                                 loadPendingStudentsAndOpen()
+                            }
+                        }
+                    }
+                }
+                fun updateStudentStatus(student: AppUser, status: String) {
+                    userRepository.updateStudentVerificationStatus(
+                        studentUid = student.uid,
+                        status = status
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                val notificationTitle = when (status.lowercase()) {
+                                    "verified" -> "Account Verified"
+                                    "rejected" -> "Account Rejected"
+                                    "suspended" -> "Account Suspended"
+                                    "pending" -> "Account Set to Pending"
+                                    else -> "Account Status Updated"
+                                }
+
+                                val notificationMessage = when (status.lowercase()) {
+                                    "verified" -> "Your student account has been verified. You can now borrow equipment."
+                                    "rejected" -> "Your student verification request has been rejected."
+                                    "suspended" -> "Your student account has been suspended. Please contact your admin."
+                                    "pending" -> "Your student account has been moved back to pending verification."
+                                    else -> "Your student account status has been updated."
+                                }
+
+                                val notificationType = when (status.lowercase()) {
+                                    "verified" -> "success"
+                                    "rejected" -> "error"
+                                    "suspended" -> "warning"
+                                    else -> "info"
+                                }
+
+                                sendNotification(
+                                    userId = student.uid,
+                                    role = "student",
+                                    title = notificationTitle,
+                                    message = notificationMessage,
+                                    type = notificationType
+                                )
+
+                                loadStudentsAndOpenManage()
                             }
                         }
                     }
@@ -1434,7 +1499,8 @@ class MainActivity : ComponentActivity() {
                         AppScreen.ManageRooms -> {
                             currentScreen = AppScreen.AdminDashboard
                         }
-                        AppScreen.PendingStudents -> {
+                        AppScreen.PendingStudents,
+                        AppScreen.ManageStudents -> {
                             currentScreen = AppScreen.AdminDashboard
                         }
                         AppScreen.AddRoom -> {
@@ -1782,7 +1848,7 @@ class MainActivity : ComponentActivity() {
                                             loadRoomsAndOpenManage()
                                         },
                                         onVerifyStudentsClick = {
-                                            loadPendingStudentsAndOpen()
+                                            loadStudentsAndOpenManage()
                                         },
                                         onAddEquipmentClick = {
                                             loadRoomsAndOpenAddEquipment()
@@ -1832,7 +1898,21 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-
+                            AppScreen.ManageStudents -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.ManageStudents)
+                                } else {
+                                    ManageStudentsScreen(
+                                        studentList = studentList,
+                                        onStatusChangeClick = { student, status ->
+                                            updateStudentStatus(student, status)
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.AdminDashboard
+                                        }
+                                    )
+                                }
+                            }
                             AppScreen.AdminProfile -> {
                                 if (!isAdmin()) {
                                     redirectUnauthorized(AppScreen.AdminProfile)

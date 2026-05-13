@@ -262,8 +262,8 @@ fun AdminDashboardScreen(
                     color = ModernBg
                 )
                 ModernActionRow(
-                    title = "Verify Students",
-                    subtitle = "Approve pending students",
+                    title = "Manage Students",
+                    subtitle = "Pending, verified, rejected and suspended students",
                     icon = Icons.Filled.VerifiedUser,
                     iconBgColor = GreenLight,
                     iconColor = GreenText,

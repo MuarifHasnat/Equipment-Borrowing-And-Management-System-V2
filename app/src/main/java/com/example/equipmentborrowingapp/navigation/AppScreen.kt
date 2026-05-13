@@ -7,11 +7,13 @@ sealed class AppScreen(val route: String) {
     object Login : AppScreen("login")
     object Register : AppScreen("register")
     object Notifications : AppScreen("notifications")
+
     object SuperAdminDashboard : AppScreen("super_admin_dashboard")
     object ManageInstitutions : AppScreen("manage_institutions")
     object CreateInstitution : AppScreen("create_institution")
     object CreateInstitutionAdmin : AppScreen("create_institution_admin")
     object ManageInstitutionAdminRequests : AppScreen("manage_institution_admin_requests")
+
     object StudentDashboard : AppScreen("student_dashboard")
     object RoomSelection : AppScreen("room_selection")
     object EquipmentList : AppScreen("equipment_list")
@@ -23,14 +25,19 @@ sealed class AppScreen(val route: String) {
     object ReportSoftwareIssue : AppScreen("report_software_issue")
 
     object AdminDashboard : AppScreen("admin_dashboard")
+
+    // Keep old PendingStudents screen for safety
     object PendingStudents : AppScreen("pending_students")
+
+    // Phase 2 new screen
+    object ManageStudents : AppScreen("manage_students")
+
     object AddEquipment : AppScreen("add_equipment")
     object EditEquipment : AppScreen("edit_equipment")
     object ManageEquipment : AppScreen("manage_equipment")
     object PendingRequests : AppScreen("pending_requests")
     object ApprovedRequests : AppScreen("approved_requests")
 
-    // New Room / Lab screens
     object ManageRooms : AppScreen("manage_rooms")
     object AddRoom : AppScreen("add_room")
 
