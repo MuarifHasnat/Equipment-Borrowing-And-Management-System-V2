@@ -25,11 +25,24 @@ data class BorrowRequest(
     val dueDate: String = "",
     val returnedDate: String = "",
 
+
     val status: String = "Pending",
 
     val approvedBy: String = "",
+    val approvedAt: Long = 0L,
+
     val issuedBy: String = "",
+    val issuedAt: Long = 0L,
+
+    val returnedBy: String = "",
+    val returnedAt: Long = 0L,
+
+    
     val returnedTo: String = "",
+
+    val rejectedReason: String = "",
+    val returnCondition: String = "",
+    val adminNote: String = "",
 
     val requestTimestamp: Long = System.currentTimeMillis()
 )

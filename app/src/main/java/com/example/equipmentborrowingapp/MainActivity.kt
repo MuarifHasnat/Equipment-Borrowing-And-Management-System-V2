@@ -186,20 +186,42 @@ class MainActivity : ComponentActivity() {
 
                 fun recalculateAdminCounts() {
                     adminCounts = AdminDashboardCounts(
+                        totalRoomsCount = roomList.size,
+
                         totalEquipmentCount = adminEquipmentViewModel.equipmentList.size,
-                        availableItemsCount = adminEquipmentViewModel.equipmentList.count { it.availableQuantity > 0 },
-                        lowStockCount = adminEquipmentViewModel.equipmentList.count { it.availableQuantity in 1..2 },
+                        availableItemsCount = adminEquipmentViewModel.equipmentList.count {
+                            it.availableQuantity > 0
+                        },
+                        lowStockCount = adminEquipmentViewModel.equipmentList.count {
+                            it.availableQuantity in 1..2
+                        },
+
                         pendingRequestsCount = adminAllRequests.count {
                             it.status.equals("Pending", ignoreCase = true)
                         },
                         approvedRequestsCount = adminAllRequests.count {
                             it.status.equals("Approved", ignoreCase = true)
                         },
+                        issuedItemsCount = adminAllRequests.count {
+                            it.status.equals("Issued", ignoreCase = true)
+                        },
                         returnedItemsCount = adminAllRequests.count {
                             it.status.equals("Returned", ignoreCase = true)
                         },
                         overdueItemsCount = adminAllRequests.count {
                             it.status.equals("Overdue", ignoreCase = true)
+                        },
+
+                        pendingStudentsCount = studentList.count {
+                            it.verificationStatus.equals("pending", ignoreCase = true)
+                        },
+                        verifiedStudentsCount = studentList.count {
+                            it.verificationStatus.equals("verified", ignoreCase = true)
+                        },
+
+                        totalLabComputersCount = labComputerList.size,
+                        openSoftwareIssuesCount = softwareIssueReports.count {
+                            it.status.equals("Open", ignoreCase = true)
                         }
                     )
                 }
@@ -523,19 +545,40 @@ class MainActivity : ComponentActivity() {
                         requestRepository.getAllRequests(
                             institutionId = currentInstitutionId
                         ) { allRequestsResult ->
-                            runOnUiThread {
-                                adminAllRequests = allRequestsResult
-                                recalculateAdminCounts()
+                            userRepository.getAllStudents(
+                                institutionId = currentInstitutionId
+                            ) { allStudentsResult ->
+                                labComputerRepository.getLabComputers(
+                                    institutionId = currentInstitutionId
+                                ) { allLabComputersResult ->
+                                    labComputerRepository.getSoftwareIssueReports(
+                                        institutionId = currentInstitutionId
+                                    ) { allSoftwareReportsResult ->
+                                        roomViewModel.loadRooms(
+                                            institutionId = currentInstitutionId
+                                        ) {
+                                            runOnUiThread {
+                                                adminAllRequests = allRequestsResult
+                                                studentList = allStudentsResult
+                                                labComputerList = allLabComputersResult
+                                                softwareIssueReports = allSoftwareReportsResult
+                                                roomList = roomViewModel.roomList
 
-                                if (refreshPending) {
-                                    adminRequestViewModel.loadPendingRequests(currentInstitutionId)
+                                                recalculateAdminCounts()
+
+                                                if (refreshPending) {
+                                                    adminRequestViewModel.loadPendingRequests(currentInstitutionId)
+                                                }
+
+                                                if (refreshApproved) {
+                                                    adminRequestViewModel.loadApprovedRequests(currentInstitutionId)
+                                                }
+
+                                                onComplete?.invoke()
+                                            }
+                                        }
+                                    }
                                 }
-
-                                if (refreshApproved) {
-                                    adminRequestViewModel.loadApprovedRequests(currentInstitutionId)
-                                }
-
-                                onComplete?.invoke()
                             }
                         }
                     }
@@ -798,12 +841,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 // Request action helpers
+                // Request action helpers
                 fun handleApproveRequest(request: BorrowRequest) {
-                    requestRepository.approveRequest(request) { success, message ->
+                    requestRepository.approveRequest(
+                        request = request,
+                        approvedBy = authRepository.getCurrentUserUid().orEmpty()
+                    ) { success, message ->
                         runOnUiThread {
                             showMessage(
                                 if (success) UiMessages.REQUEST_APPROVED else message
                             )
+
                             if (success) {
                                 sendNotification(
                                     userId = request.userId,
@@ -813,14 +861,23 @@ class MainActivity : ComponentActivity() {
                                     type = "success"
                                 )
 
-                                refreshRequestsForAdmin()
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.PendingRequests
+                                }
                             }
                         }
                     }
                 }
 
                 fun handleRejectRequest(request: BorrowRequest) {
-                    requestRepository.rejectRequest(request) { success, message ->
+                    requestRepository.rejectRequest(
+                        request = request,
+                        rejectedReason = "Rejected by admin",
+                        adminNote = ""
+                    ) { success, message ->
                         runOnUiThread {
                             showMessage(
                                 if (success) UiMessages.REQUEST_REJECTED else message
@@ -835,14 +892,55 @@ class MainActivity : ComponentActivity() {
                                     type = "error"
                                 )
 
-                                refreshRequestsForAdmin()
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.PendingRequests
+                                }
+                            }
+                        }
+                    }
+                }
+
+                fun handleIssueRequest(request: BorrowRequest) {
+                    requestRepository.markRequestIssued(
+                        request = request,
+                        issuedBy = authRepository.getCurrentUserUid().orEmpty(),
+                        adminNote = ""
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(
+                                if (success) "Request marked as issued" else message
+                            )
+
+                            if (success) {
+                                sendNotification(
+                                    userId = request.userId,
+                                    role = "student",
+                                    title = "Item Issued",
+                                    message = "${request.equipmentName} has been issued to you.",
+                                    type = "success"
+                                )
+
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.ApprovedRequests
+                                }
                             }
                         }
                     }
                 }
 
                 fun handleReturnRequest(request: BorrowRequest) {
-                    requestRepository.markRequestReturned(request) { success, message ->
+                    requestRepository.markRequestReturned(
+                        request = request,
+                        returnedBy = authRepository.getCurrentUserUid().orEmpty(),
+                        returnCondition = "Good",
+                        adminNote = ""
+                    ) { success, message ->
                         runOnUiThread {
                             showMessage(
                                 if (success) UiMessages.REQUEST_RETURNED else message
@@ -857,7 +955,72 @@ class MainActivity : ComponentActivity() {
                                     type = "info"
                                 )
 
-                                refreshRequestsForAdmin()
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.ApprovedRequests
+                                }
+                            }
+                        }
+                    }
+                }
+
+                fun handleLostRequest(request: BorrowRequest) {
+                    requestRepository.markRequestLost(
+                        request = request,
+                        adminNote = "Marked as lost by admin"
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(
+                                if (success) "Request marked as lost" else message
+                            )
+
+                            if (success) {
+                                sendNotification(
+                                    userId = request.userId,
+                                    role = "student",
+                                    title = "Item Marked as Lost",
+                                    message = "${request.equipmentName} has been marked as lost. Please contact your admin.",
+                                    type = "error"
+                                )
+
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.ApprovedRequests
+                                }
+                            }
+                        }
+                    }
+                }
+
+                fun handleDamagedRequest(request: BorrowRequest) {
+                    requestRepository.markRequestDamaged(
+                        request = request,
+                        adminNote = "Marked as damaged by admin"
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(
+                                if (success) "Request marked as damaged" else message
+                            )
+
+                            if (success) {
+                                sendNotification(
+                                    userId = request.userId,
+                                    role = "student",
+                                    title = "Item Marked as Damaged",
+                                    message = "${request.equipmentName} has been marked as damaged. Please contact your admin.",
+                                    type = "warning"
+                                )
+
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.ApprovedRequests
+                                }
                             }
                         }
                     }
@@ -1001,8 +1164,17 @@ class MainActivity : ComponentActivity() {
                 fun renderApprovedRequestsScreen() {
                     ApprovedRequestsScreen(
                         requestList = adminRequestViewModel.approvedRequests,
+                        onIssuedClick = { request ->
+                            handleIssueRequest(request)
+                        },
                         onReturnedClick = { request ->
                             handleReturnRequest(request)
+                        },
+                        onLostClick = { request ->
+                            handleLostRequest(request)
+                        },
+                        onDamagedClick = { request ->
+                            handleDamagedRequest(request)
                         },
                         onBackClick = {
                             openAdminDashboardWithFreshData()
@@ -1837,13 +2009,20 @@ class MainActivity : ComponentActivity() {
                                     redirectUnauthorized(AppScreen.AdminDashboard)
                                 } else {
                                     AdminDashboardScreen(
+                                        totalRoomsCount = adminCounts.totalRoomsCount,
                                         totalEquipmentCount = adminCounts.totalEquipmentCount,
                                         availableItemsCount = adminCounts.availableItemsCount,
                                         lowStockCount = adminCounts.lowStockCount,
                                         pendingRequestsCount = adminCounts.pendingRequestsCount,
                                         approvedRequestsCount = adminCounts.approvedRequestsCount,
+                                        issuedItemsCount = adminCounts.issuedItemsCount,
                                         returnedItemsCount = adminCounts.returnedItemsCount,
                                         overdueItemsCount = adminCounts.overdueItemsCount,
+                                        pendingStudentsCount = adminCounts.pendingStudentsCount,
+                                        verifiedStudentsCount = adminCounts.verifiedStudentsCount,
+                                        totalLabComputersCount = adminCounts.totalLabComputersCount,
+                                        openSoftwareIssuesCount = adminCounts.openSoftwareIssuesCount,
+
                                         onManageRoomsClick = {
                                             loadRoomsAndOpenManage()
                                         },

@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 class RequestRepository {
+
     private val firestore = FirebaseFirestore.getInstance()
 
     fun submitBorrowRequest(
@@ -27,6 +28,7 @@ class RequestRepository {
             onResult(false, "Institution not found")
             return
         }
+
         if (borrowDate.isBlank() || dueDate.isBlank()) {
             onResult(false, "Please select borrow date and due date")
             return
@@ -48,6 +50,7 @@ class RequestRepository {
 
                 val availableQuantity =
                     equipmentSnapshot.getLong("availableQuantity")?.toInt() ?: 0
+
                 val isBorrowable =
                     equipmentSnapshot.getBoolean("isBorrowable") ?: true
 
@@ -75,11 +78,7 @@ class RequestRepository {
                             .mapNotNull { it.toObject(BorrowRequest::class.java) }
                             .any { request ->
                                 request.equipmentId == equipmentId &&
-                                        (
-                                                request.status.equals("Pending", ignoreCase = true) ||
-                                                        request.status.equals("Approved", ignoreCase = true) ||
-                                                        request.status.equals("Overdue", ignoreCase = true)
-                                                )
+                                        isActiveRequestStatus(request.status)
                             }
 
                         if (hasDuplicateRequest) {
@@ -88,6 +87,7 @@ class RequestRepository {
                         }
 
                         val docRef = firestore.collection("borrow_requests").document()
+
                         val request = BorrowRequest(
                             requestId = docRef.id,
                             institutionId = institutionId,
@@ -137,12 +137,17 @@ class RequestRepository {
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
-                val allList = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
+                val allList = result.documents.mapNotNull {
+                    it.toObject(BorrowRequest::class.java)
+                }
+
                 syncOverdueStatuses(allList)
 
-                val pendingList = allList.filter {
-                    it.status.trim().equals("Pending", ignoreCase = true)
-                }
+                val pendingList = allList
+                    .map { normalizeRequestStatus(it) }
+                    .filter {
+                        it.status.equals("Pending", ignoreCase = true)
+                    }
 
                 onResult(pendingList.sortedByDescending { it.requestTimestamp })
             }
@@ -164,17 +169,26 @@ class RequestRepository {
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
-                val allList = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
+                val allList = result.documents.mapNotNull {
+                    it.toObject(BorrowRequest::class.java)
+                }
+
                 syncOverdueStatuses(allList)
 
                 val activeBorrowedList = allList
                     .map { normalizeRequestStatus(it) }
                     .filter {
                         it.status.equals("Approved", ignoreCase = true) ||
+                                it.status.equals("Issued", ignoreCase = true) ||
                                 it.status.equals("Overdue", ignoreCase = true)
                     }
 
-                onResult(activeBorrowedList.sortedByDescending { it.requestTimestamp })
+                onResult(
+                    activeBorrowedList.sortedWith(
+                        compareBy<BorrowRequest> { requestStatusOrder(it.status) }
+                            .thenByDescending { it.requestTimestamp }
+                    )
+                )
             }
             .addOnFailureListener {
                 onResult(emptyList())
@@ -194,7 +208,10 @@ class RequestRepository {
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
-                val list = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
+                val list = result.documents.mapNotNull {
+                    it.toObject(BorrowRequest::class.java)
+                }
+
                 syncOverdueStatuses(list)
 
                 val normalizedList = list
@@ -207,6 +224,7 @@ class RequestRepository {
                 onResult(emptyList())
             }
     }
+
     fun getUserRequests(
         institutionId: String,
         userId: String,
@@ -222,7 +240,10 @@ class RequestRepository {
             .whereEqualTo("userId", userId)
             .get()
             .addOnSuccessListener { result ->
-                val list = result.documents.mapNotNull { it.toObject(BorrowRequest::class.java) }
+                val list = result.documents.mapNotNull {
+                    it.toObject(BorrowRequest::class.java)
+                }
+
                 syncOverdueStatuses(list)
 
                 val normalizedList = list
@@ -235,8 +256,10 @@ class RequestRepository {
                 onResult(emptyList())
             }
     }
+
     fun approveRequest(
         request: BorrowRequest,
+        approvedBy: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         val requestRef = firestore.collection("borrow_requests").document(request.requestId)
@@ -255,17 +278,22 @@ class RequestRepository {
             }
 
             val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
             if (!currentStatus.equals("Pending", ignoreCase = true)) {
                 throw Exception("Only pending requests can be approved")
             }
 
             val isBorrowable = equipmentSnapshot.getBoolean("isBorrowable") ?: true
+
             if (!isBorrowable) {
                 throw Exception("This equipment is lab-use-only")
             }
 
-            val availableQuantity = equipmentSnapshot.getLong("availableQuantity")?.toInt() ?: 0
-            val requestedQuantity = requestSnapshot.getLong("quantity")?.toInt() ?: request.quantity
+            val availableQuantity =
+                equipmentSnapshot.getLong("availableQuantity")?.toInt() ?: 0
+
+            val requestedQuantity =
+                requestSnapshot.getLong("quantity")?.toInt() ?: request.quantity
 
             if (requestedQuantity <= 0) {
                 throw Exception("Invalid request quantity")
@@ -275,15 +303,25 @@ class RequestRepository {
                 throw Exception("Not enough stock available")
             }
 
+            val newAvailableQuantity = availableQuantity - requestedQuantity
+
+            if (newAvailableQuantity < 0) {
+                throw Exception("Available quantity cannot be negative")
+            }
+
             transaction.update(
                 equipmentRef,
                 "availableQuantity",
-                availableQuantity - requestedQuantity
+                newAvailableQuantity
             )
+
             transaction.update(
                 requestRef,
-                "status",
-                "Approved"
+                mapOf(
+                    "status" to "Approved",
+                    "approvedBy" to approvedBy,
+                    "approvedAt" to System.currentTimeMillis()
+                )
             )
         }.addOnSuccessListener {
             onResult(true, "Request approved successfully")
@@ -294,6 +332,8 @@ class RequestRepository {
 
     fun rejectRequest(
         request: BorrowRequest,
+        rejectedReason: String = "",
+        adminNote: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         val requestRef = firestore.collection("borrow_requests").document(request.requestId)
@@ -306,11 +346,19 @@ class RequestRepository {
             }
 
             val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
             if (!currentStatus.equals("Pending", ignoreCase = true)) {
                 throw Exception("Only pending requests can be rejected")
             }
 
-            transaction.update(requestRef, "status", "Rejected")
+            transaction.update(
+                requestRef,
+                mapOf(
+                    "status" to "Rejected",
+                    "rejectedReason" to rejectedReason,
+                    "adminNote" to adminNote
+                )
+            )
         }.addOnSuccessListener {
             onResult(true, "Request rejected successfully")
         }.addOnFailureListener { e ->
@@ -318,8 +366,48 @@ class RequestRepository {
         }
     }
 
+    fun markRequestIssued(
+        request: BorrowRequest,
+        issuedBy: String = "",
+        adminNote: String = "",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+
+        firestore.runTransaction { transaction ->
+            val requestSnapshot = transaction.get(requestRef)
+
+            if (!requestSnapshot.exists()) {
+                throw Exception("Request not found")
+            }
+
+            val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
+            if (!currentStatus.equals("Approved", ignoreCase = true)) {
+                throw Exception("Only approved requests can be issued")
+            }
+
+            transaction.update(
+                requestRef,
+                mapOf(
+                    "status" to "Issued",
+                    "issuedBy" to issuedBy,
+                    "issuedAt" to System.currentTimeMillis(),
+                    "adminNote" to adminNote
+                )
+            )
+        }.addOnSuccessListener {
+            onResult(true, "Request marked as issued")
+        }.addOnFailureListener { e ->
+            onResult(false, e.message ?: "Failed to mark as issued")
+        }
+    }
+
     fun markRequestReturned(
         request: BorrowRequest,
+        returnedBy: String = "",
+        returnCondition: String = "",
+        adminNote: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         val requestRef = firestore.collection("borrow_requests").document(request.requestId)
@@ -338,41 +426,56 @@ class RequestRepository {
             }
 
             val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
             if (
                 !currentStatus.equals("Approved", ignoreCase = true) &&
+                !currentStatus.equals("Issued", ignoreCase = true) &&
                 !currentStatus.equals("Overdue", ignoreCase = true)
             ) {
-                throw Exception("Only approved or overdue requests can be returned")
+                throw Exception("Only approved, issued or overdue requests can be returned")
             }
 
-            val currentAvailable = equipmentSnapshot.getLong("availableQuantity")?.toInt() ?: 0
-            val totalQuantity = equipmentSnapshot.getLong("totalQuantity")?.toInt() ?: 0
-            val requestQuantity = requestSnapshot.getLong("quantity")?.toInt() ?: request.quantity
+            val currentAvailable =
+                equipmentSnapshot.getLong("availableQuantity")?.toInt() ?: 0
+
+            val totalQuantity =
+                equipmentSnapshot.getLong("totalQuantity")?.toInt() ?: 0
+
+            val requestQuantity =
+                requestSnapshot.getLong("quantity")?.toInt() ?: request.quantity
 
             if (requestQuantity <= 0) {
                 throw Exception("Invalid request quantity")
             }
 
             val newAvailable = currentAvailable + requestQuantity
+
+            if (newAvailable < 0) {
+                throw Exception("Available quantity cannot be negative")
+            }
+
             if (newAvailable > totalQuantity) {
                 throw Exception("Available quantity cannot exceed total quantity")
             }
 
-            val today = SimpleDateFormat(
-                "yyyy-MM-dd",
-                Locale.getDefault()
-            ).format(System.currentTimeMillis())
+            val today = todayString()
 
             transaction.update(
                 equipmentRef,
                 "availableQuantity",
                 newAvailable
             )
+
             transaction.update(
                 requestRef,
                 mapOf(
                     "status" to "Returned",
-                    "returnedDate" to today
+                    "returnedDate" to today,
+                    "returnedBy" to returnedBy,
+                    "returnedTo" to returnedBy,
+                    "returnedAt" to System.currentTimeMillis(),
+                    "returnCondition" to returnCondition,
+                    "adminNote" to adminNote
                 )
             )
         }.addOnSuccessListener {
@@ -382,12 +485,80 @@ class RequestRepository {
         }
     }
 
+    fun markRequestLost(
+        request: BorrowRequest,
+        adminNote: String = "",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        updateFinalNoQuantityReturnStatus(
+            request = request,
+            newStatus = "Lost",
+            returnCondition = "Lost",
+            adminNote = adminNote,
+            successMessage = "Request marked as lost",
+            onResult = onResult
+        )
+    }
+
+    fun markRequestDamaged(
+        request: BorrowRequest,
+        adminNote: String = "",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        updateFinalNoQuantityReturnStatus(
+            request = request,
+            newStatus = "Damaged",
+            returnCondition = "Damaged",
+            adminNote = adminNote,
+            successMessage = "Request marked as damaged",
+            onResult = onResult
+        )
+    }
+
+    fun cancelRequest(
+        request: BorrowRequest,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+
+        firestore.runTransaction { transaction ->
+            val requestSnapshot = transaction.get(requestRef)
+
+            if (!requestSnapshot.exists()) {
+                throw Exception("Request not found")
+            }
+
+            val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
+            if (!currentStatus.equals("Pending", ignoreCase = true)) {
+                throw Exception("Only pending requests can be cancelled")
+            }
+
+            transaction.update(requestRef, "status", "Cancelled")
+        }.addOnSuccessListener {
+            onResult(true, "Request cancelled successfully")
+        }.addOnFailureListener { e ->
+            onResult(false, e.message ?: "Failed to cancel request")
+        }
+    }
+
     fun updateRequestStatus(
         requestId: String,
         newStatus: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        val validStatuses = listOf("Pending", "Approved", "Rejected", "Returned", "Overdue")
+        val validStatuses = listOf(
+            "Pending",
+            "Approved",
+            "Issued",
+            "Returned",
+            "Rejected",
+            "Cancelled",
+            "Overdue",
+            "Lost",
+            "Damaged"
+        )
+
         if (newStatus !in validStatuses) {
             onResult(false, "Invalid status")
             return
@@ -402,56 +573,111 @@ class RequestRepository {
                     return@addOnSuccessListener
                 }
 
+                val request = snapshot.toObject(BorrowRequest::class.java)?.copy(
+                    requestId = snapshot.id
+                )
+
+                if (request == null) {
+                    onResult(false, "Failed to read request")
+                    return@addOnSuccessListener
+                }
+
                 val currentStatus = snapshot.getString("status") ?: "Pending"
-                if (currentStatus == newStatus) {
+
+                if (currentStatus.equals(newStatus, ignoreCase = true)) {
                     onResult(false, "Request is already $newStatus")
                     return@addOnSuccessListener
                 }
 
-                val isValidTransition = when (currentStatus) {
-                    "Pending" -> newStatus == "Approved" || newStatus == "Rejected"
-                    "Approved" -> newStatus == "Returned" || newStatus == "Overdue"
-                    "Overdue" -> newStatus == "Returned"
-                    "Rejected" -> false
-                    "Returned" -> false
-                    else -> false
+                when (newStatus) {
+                    "Approved" -> approveRequest(request, onResult = onResult)
+                    "Issued" -> markRequestIssued(request, onResult = onResult)
+                    "Returned" -> markRequestReturned(request, onResult = onResult)
+                    "Rejected" -> rejectRequest(request, onResult = onResult)
+                    "Cancelled" -> cancelRequest(request, onResult = onResult)
+                    "Lost" -> markRequestLost(request, onResult = onResult)
+                    "Damaged" -> markRequestDamaged(request, onResult = onResult)
+                    "Overdue" -> forceOverdue(request, onResult)
+                    else -> onResult(false, "Invalid status change")
                 }
-
-                if (!isValidTransition) {
-                    onResult(false, "Invalid status change from $currentStatus to $newStatus")
-                    return@addOnSuccessListener
-                }
-
-                val updates = mutableMapOf<String, Any>(
-                    "status" to newStatus
-                )
-
-                if (newStatus == "Returned") {
-                    val today = SimpleDateFormat(
-                        "yyyy-MM-dd",
-                        Locale.getDefault()
-                    ).format(System.currentTimeMillis())
-                    updates["returnedDate"] = today
-                }
-
-                firestore.collection("borrow_requests")
-                    .document(requestId)
-                    .update(updates)
-                    .addOnSuccessListener {
-                        onResult(true, "Request $newStatus")
-                    }
-                    .addOnFailureListener { e ->
-                        onResult(false, e.message ?: "Failed to update request")
-                    }
             }
             .addOnFailureListener { e ->
                 onResult(false, e.message ?: "Failed to load request")
             }
     }
 
+    private fun updateFinalNoQuantityReturnStatus(
+        request: BorrowRequest,
+        newStatus: String,
+        returnCondition: String,
+        adminNote: String,
+        successMessage: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+
+        firestore.runTransaction { transaction ->
+            val requestSnapshot = transaction.get(requestRef)
+
+            if (!requestSnapshot.exists()) {
+                throw Exception("Request not found")
+            }
+
+            val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
+            if (
+                !currentStatus.equals("Approved", ignoreCase = true) &&
+                !currentStatus.equals("Issued", ignoreCase = true) &&
+                !currentStatus.equals("Overdue", ignoreCase = true)
+            ) {
+                throw Exception("Only approved, issued or overdue requests can be marked as $newStatus")
+            }
+
+            transaction.update(
+                requestRef,
+                mapOf(
+                    "status" to newStatus,
+                    "returnCondition" to returnCondition,
+                    "adminNote" to adminNote
+                )
+            )
+        }.addOnSuccessListener {
+            onResult(true, successMessage)
+        }.addOnFailureListener { e ->
+            onResult(false, e.message ?: "Failed to update request")
+        }
+    }
+
+    private fun forceOverdue(
+        request: BorrowRequest,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+
+        firestore.runTransaction { transaction ->
+            val requestSnapshot = transaction.get(requestRef)
+
+            if (!requestSnapshot.exists()) {
+                throw Exception("Request not found")
+            }
+
+            val currentStatus = requestSnapshot.getString("status") ?: "Pending"
+
+            if (!currentStatus.equals("Issued", ignoreCase = true)) {
+                throw Exception("Only issued requests can be marked as overdue")
+            }
+
+            transaction.update(requestRef, "status", "Overdue")
+        }.addOnSuccessListener {
+            onResult(true, "Request marked as overdue")
+        }.addOnFailureListener { e ->
+            onResult(false, e.message ?: "Failed to mark overdue")
+        }
+    }
+
     private fun normalizeRequestStatus(request: BorrowRequest): BorrowRequest {
         return if (
-            request.status.equals("Approved", ignoreCase = true) &&
+            request.status.equals("Issued", ignoreCase = true) &&
             isDueDatePast(request.dueDate)
         ) {
             request.copy(status = "Overdue")
@@ -463,7 +689,7 @@ class RequestRepository {
     private fun syncOverdueStatuses(requests: List<BorrowRequest>) {
         requests.forEach { request ->
             if (
-                request.status.equals("Approved", ignoreCase = true) &&
+                request.status.equals("Issued", ignoreCase = true) &&
                 isDueDatePast(request.dueDate) &&
                 request.requestId.isNotBlank()
             ) {
@@ -472,6 +698,29 @@ class RequestRepository {
                     .update("status", "Overdue")
             }
         }
+    }
+
+    private fun isActiveRequestStatus(status: String): Boolean {
+        return status.equals("Pending", ignoreCase = true) ||
+                status.equals("Approved", ignoreCase = true) ||
+                status.equals("Issued", ignoreCase = true) ||
+                status.equals("Overdue", ignoreCase = true)
+    }
+
+    private fun requestStatusOrder(status: String): Int {
+        return when (status.trim().lowercase()) {
+            "approved" -> 0
+            "issued" -> 1
+            "overdue" -> 2
+            else -> 3
+        }
+    }
+
+    private fun todayString(): String {
+        return SimpleDateFormat(
+            "yyyy-MM-dd",
+            Locale.getDefault()
+        ).format(System.currentTimeMillis())
     }
 
     private fun isDueDatePast(dueDate: String): Boolean {

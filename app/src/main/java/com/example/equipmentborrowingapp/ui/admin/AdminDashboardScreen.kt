@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.ui.common.NotificationCard
 
-// Modern Colors defined locally for the redesign
 val ModernBg = Color(0xFFF4F7FB)
 val CardWhite = Color(0xFFFFFFFF)
 val TextDark = Color(0xFF1E293B)
@@ -46,15 +45,21 @@ val RedText = Color(0xFFDC2626)
 
 @Composable
 fun AdminDashboardScreen(
-    totalEquipmentCount: Int,
-    availableItemsCount: Int,
-    lowStockCount: Int,
-    pendingRequestsCount: Int,
-    approvedRequestsCount: Int,
-    returnedItemsCount: Int,
-    onNotificationClick: () -> Unit,
+    totalRoomsCount: Int = 0,
+    totalEquipmentCount: Int = 0,
+    availableItemsCount: Int = 0,
+    lowStockCount: Int = 0,
+    pendingRequestsCount: Int = 0,
+    approvedRequestsCount: Int = 0,
+    issuedItemsCount: Int = 0,
+    returnedItemsCount: Int = 0,
+    overdueItemsCount: Int = 0,
+    pendingStudentsCount: Int = 0,
+    verifiedStudentsCount: Int = 0,
+    totalLabComputersCount: Int = 0,
+    openSoftwareIssuesCount: Int = 0,
     onManageRoomsClick: () -> Unit,
-    overdueItemsCount: Int,
+    onVerifyStudentsClick: () -> Unit,
     onAddEquipmentClick: () -> Unit,
     onViewPendingRequestsClick: () -> Unit,
     onViewApprovedRequestsClick: () -> Unit,
@@ -62,8 +67,8 @@ fun AdminDashboardScreen(
     onManageLabComputersClick: () -> Unit,
     onViewSoftwareReportsClick: () -> Unit,
     onProfileClick: () -> Unit,
-    onLogout: () -> Unit,
-    onVerifyStudentsClick: () -> Unit
+    onNotificationClick: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -77,7 +82,6 @@ fun AdminDashboardScreen(
         ) {
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Modern Hero Section
             ModernHeroCard()
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -91,20 +95,35 @@ fun AdminDashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Modern Stats Grid
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 ModernStatCard(
-                    title = "Total",
+                    title = "Rooms",
+                    value = totalRoomsCount.toString(),
+                    icon = Icons.Filled.MeetingRoom,
+                    bgColor = BlueLight,
+                    contentColor = BlueText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernStatCard(
+                    title = "Equipment",
                     value = totalEquipmentCount.toString(),
                     icon = Icons.Filled.Widgets,
                     bgColor = BlueLight,
                     contentColor = BlueText,
                     modifier = Modifier.weight(1f)
                 )
+            }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 ModernStatCard(
                     title = "Available",
                     value = availableItemsCount.toString(),
@@ -113,14 +132,7 @@ fun AdminDashboardScreen(
                     contentColor = GreenText,
                     modifier = Modifier.weight(1f)
                 )
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
                 ModernStatCard(
                     title = "Low Stock",
                     value = lowStockCount.toString(),
@@ -129,13 +141,29 @@ fun AdminDashboardScreen(
                     contentColor = OrangeText,
                     modifier = Modifier.weight(1f)
                 )
+            }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 ModernStatCard(
                     title = "Pending",
                     value = pendingRequestsCount.toString(),
                     icon = Icons.Filled.HourglassTop,
                     bgColor = OrangeLight,
                     contentColor = OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernStatCard(
+                    title = "Approved",
+                    value = approvedRequestsCount.toString(),
+                    icon = Icons.Filled.ThumbUp,
+                    bgColor = GreenLight,
+                    contentColor = GreenText,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -147,11 +175,11 @@ fun AdminDashboardScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 ModernStatCard(
-                    title = "Approved",
-                    value = approvedRequestsCount.toString(),
-                    icon = Icons.Filled.ThumbUp,
-                    bgColor = GreenLight,
-                    contentColor = GreenText,
+                    title = "Issued",
+                    value = issuedItemsCount.toString(),
+                    icon = Icons.Filled.AssignmentTurnedIn,
+                    bgColor = PurpleAccent.copy(alpha = 0.10f),
+                    contentColor = PurpleAccent,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -165,9 +193,33 @@ fun AdminDashboardScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ModernStatCard(
+                    title = "Students",
+                    value = verifiedStudentsCount.toString(),
+                    icon = Icons.Filled.VerifiedUser,
+                    bgColor = GreenLight,
+                    contentColor = GreenText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernStatCard(
+                    title = "Lab PCs",
+                    value = totalLabComputersCount.toString(),
+                    icon = Icons.Filled.Computer,
+                    bgColor = PurpleAccent.copy(alpha = 0.10f),
+                    contentColor = PurpleAccent,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Notifications
             if (pendingRequestsCount > 0) {
                 NotificationCard(
                     title = "Pending Requests",
@@ -198,6 +250,26 @@ fun AdminDashboardScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
+            if (pendingStudentsCount > 0) {
+                NotificationCard(
+                    title = "Pending Students",
+                    message = "$pendingStudentsCount student account(s) need verification.",
+                    type = "warning"
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (openSoftwareIssuesCount > 0) {
+                NotificationCard(
+                    title = "Software Issues",
+                    message = "$openSoftwareIssuesCount software issue(s) are still open.",
+                    type = "error"
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
@@ -209,7 +281,6 @@ fun AdminDashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Modern Action List
             Column(
                 modifier = Modifier
                     .shadow(
@@ -261,6 +332,7 @@ fun AdminDashboardScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = ModernBg
                 )
+
                 ModernActionRow(
                     title = "Manage Students",
                     subtitle = "Pending, verified, rejected and suspended students",
@@ -274,6 +346,7 @@ fun AdminDashboardScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = ModernBg
                 )
+
                 ModernActionRow(
                     title = "Add Equipment",
                     subtitle = "Create new item",
@@ -290,7 +363,7 @@ fun AdminDashboardScreen(
 
                 ModernActionRow(
                     title = "Pending Requests",
-                    subtitle = "Review & approve",
+                    subtitle = "Review and approve",
                     icon = Icons.Filled.HourglassEmpty,
                     iconBgColor = OrangeLight,
                     iconColor = OrangeText,
@@ -303,8 +376,8 @@ fun AdminDashboardScreen(
                 )
 
                 ModernActionRow(
-                    title = "Approved Requests",
-                    subtitle = "Track items",
+                    title = "Active Borrow Requests",
+                    subtitle = "Approved, issued, overdue and return flow",
                     icon = Icons.Filled.CheckCircleOutline,
                     iconBgColor = GreenLight,
                     iconColor = GreenText,
@@ -318,7 +391,7 @@ fun AdminDashboardScreen(
 
                 ModernActionRow(
                     title = "Manage Equipment",
-                    subtitle = "Stock & condition",
+                    subtitle = "Stock and condition",
                     icon = Icons.Filled.Inventory,
                     iconBgColor = BlueLight,
                     iconColor = BlueText,
@@ -356,7 +429,6 @@ fun AdminDashboardScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Modern Logout Button
             Button(
                 onClick = onLogout,
                 modifier = Modifier
@@ -418,7 +490,7 @@ private fun ModernHeroCard() {
             ) {
                 Surface(
                     color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(50)
+                    shape = RoundedCornerShape(50.dp)
                 ) {
                     Text(
                         text = "Admin Panel",
@@ -451,8 +523,7 @@ private fun ModernHeroCard() {
             Text(
                 text = "Monitor equipment, manage requests, and control lab resources efficiently.",
                 color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyMedium,
-                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.2f
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
