@@ -25,11 +25,7 @@ sealed class AppScreen(val route: String) {
     object ReportSoftwareIssue : AppScreen("report_software_issue")
 
     object AdminDashboard : AppScreen("admin_dashboard")
-
-    // Keep old PendingStudents screen for safety
     object PendingStudents : AppScreen("pending_students")
-
-    // Phase 2 new screen
     object ManageStudents : AppScreen("manage_students")
 
     object AddEquipment : AppScreen("add_equipment")
@@ -46,4 +42,17 @@ sealed class AppScreen(val route: String) {
     object EditLabComputer : AppScreen("edit_lab_computer")
     object ManageSoftwareStatus : AppScreen("manage_software_status")
     object SoftwareIssueReports : AppScreen("software_issue_reports")
+
+
+    object ReportsDashboard : AppScreen("reports_dashboard")
+    object RoomWiseEquipmentReport : AppScreen("room_wise_equipment_report")
+    object StudentBorrowHistoryReport : AppScreen("student_borrow_history_report")
+    object PendingRequestReport : AppScreen("pending_request_report")
+    object ApprovedRequestReport : AppScreen("approved_request_report")
+    object IssuedItemReport : AppScreen("issued_item_report")
+    object ReturnedItemReport : AppScreen("returned_item_report")
+    object OverdueItemReport : AppScreen("overdue_item_report")
+    object LostDamagedReport : AppScreen("lost_damaged_report")
+    object LowStockReport : AppScreen("low_stock_report")
+    object SoftwareIssueReportAdmin : AppScreen("software_issue_report_admin")
 }

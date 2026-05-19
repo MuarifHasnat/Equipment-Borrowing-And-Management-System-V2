@@ -66,6 +66,8 @@ fun AdminDashboardScreen(
     onManageEquipmentClick: () -> Unit,
     onManageLabComputersClick: () -> Unit,
     onViewSoftwareReportsClick: () -> Unit,
+    onReportsClick: () -> Unit,
+
     onProfileClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onLogout: () -> Unit
@@ -416,7 +418,19 @@ fun AdminDashboardScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = ModernBg
                 )
+                ModernActionRow(
+                    title = "Reports & History",
+                    subtitle = "Equipment, requests, students and software reports",
+                    icon = Icons.Filled.Assessment,
+                    iconBgColor = BlueLight,
+                    iconColor = BlueText,
+                    onClick = onReportsClick
+                )
 
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = ModernBg
+                )
                 ModernActionRow(
                     title = "Issue Reports",
                     subtitle = "Software problems",

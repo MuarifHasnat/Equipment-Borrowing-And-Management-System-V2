@@ -93,7 +93,12 @@ import com.example.equipmentborrowingapp.ui.superadmin.CreateInstitutionAdminScr
 import com.example.equipmentborrowingapp.data.model.InstitutionAdminRequest
 import com.example.equipmentborrowingapp.ui.superadmin.ManageInstitutionAdminRequestsScreen
 import com.example.equipmentborrowingapp.ui.admin.ManageStudentsScreen
-
+import com.example.equipmentborrowingapp.ui.admin.ReportsDashboardScreen
+import com.example.equipmentborrowingapp.ui.admin.RoomWiseEquipmentReportScreen
+import com.example.equipmentborrowingapp.ui.admin.StudentBorrowHistoryReportScreen
+import com.example.equipmentborrowingapp.ui.admin.BorrowRequestReportScreen
+import com.example.equipmentborrowingapp.ui.admin.LowStockReportScreen
+import com.example.equipmentborrowingapp.ui.admin.SoftwareIssueReportAdminScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -1061,6 +1066,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                fun openReportsDashboard() {
+                    refreshAdminDashboardData(
+                        refreshPending = true,
+                        refreshApproved = true
+                    ) {
+                        currentScreen = AppScreen.ReportsDashboard
+                    }
+                }
 // Student helpers
 
                     fun loadStudentRequestsAndOpenMyRequests() {
@@ -1641,7 +1654,7 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
 
                         AppScreen.Login -> {
-                            // Login screen e back press korle app close hobe na
+
                         }
 
                         AppScreen.Register -> {
@@ -1714,13 +1727,26 @@ class MainActivity : ComponentActivity() {
                             // Admin dashboard e back dile logout hoye login e jabe
                             safeLogoutToLogin()
                         }
-
                         AppScreen.AddEquipment,
                         AppScreen.ManageEquipment,
                         AppScreen.PendingRequests,
                         AppScreen.ApprovedRequests,
-                        AppScreen.ManageLabComputers -> {
+                        AppScreen.ManageLabComputers,
+                        AppScreen.ReportsDashboard -> {
                             currentScreen = AppScreen.AdminDashboard
+                        }
+
+                        AppScreen.RoomWiseEquipmentReport,
+                        AppScreen.StudentBorrowHistoryReport,
+                        AppScreen.PendingRequestReport,
+                        AppScreen.ApprovedRequestReport,
+                        AppScreen.IssuedItemReport,
+                        AppScreen.ReturnedItemReport,
+                        AppScreen.OverdueItemReport,
+                        AppScreen.LostDamagedReport,
+                        AppScreen.LowStockReport,
+                        AppScreen.SoftwareIssueReportAdmin -> {
+                            currentScreen = AppScreen.ReportsDashboard
                         }
 
                         AppScreen.EditEquipment -> {
@@ -2046,6 +2072,9 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onViewSoftwareReportsClick = {
                                             loadAllSoftwareReportsAndOpen()
+                                        },
+                                        onReportsClick = {
+                                            openReportsDashboard()
                                         },
                                         onProfileClick = {
                                             currentScreen = AppScreen.AdminProfile
@@ -2377,7 +2406,208 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            AppScreen.ReportsDashboard -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.ReportsDashboard)
+                                } else {
+                                    ReportsDashboardScreen(
+                                        totalRoomsCount = adminCounts.totalRoomsCount,
+                                        totalEquipmentCount = adminCounts.totalEquipmentCount,
+                                        totalStudentsCount = adminCounts.pendingStudentsCount + adminCounts.verifiedStudentsCount,
+                                        pendingRequestsCount = adminCounts.pendingRequestsCount,
+                                        approvedRequestsCount = adminCounts.approvedRequestsCount,
+                                        issuedItemsCount = adminCounts.issuedItemsCount,
+                                        returnedItemsCount = adminCounts.returnedItemsCount,
+                                        overdueItemsCount = adminCounts.overdueItemsCount,
+                                        lostDamagedItemsCount = adminAllRequests.count {
+                                            it.status.equals("Lost", ignoreCase = true) ||
+                                                    it.status.equals("Damaged", ignoreCase = true)
+                                        },
+                                        lowStockCount = adminCounts.lowStockCount,
+                                        softwareIssuesCount = softwareIssueReports.size,
 
+                                        onRoomWiseEquipmentReportClick = {
+                                            currentScreen = AppScreen.RoomWiseEquipmentReport
+                                        },
+                                        onStudentBorrowHistoryClick = {
+                                            currentScreen = AppScreen.StudentBorrowHistoryReport
+                                        },
+                                        onPendingRequestReportClick = {
+                                            currentScreen = AppScreen.PendingRequestReport
+                                        },
+                                        onApprovedRequestReportClick = {
+                                            currentScreen = AppScreen.ApprovedRequestReport
+                                        },
+                                        onIssuedItemReportClick = {
+                                            currentScreen = AppScreen.IssuedItemReport
+                                        },
+                                        onReturnedItemReportClick = {
+                                            currentScreen = AppScreen.ReturnedItemReport
+                                        },
+                                        onOverdueItemReportClick = {
+                                            currentScreen = AppScreen.OverdueItemReport
+                                        },
+                                        onLostDamagedReportClick = {
+                                            currentScreen = AppScreen.LostDamagedReport
+                                        },
+                                        onLowStockReportClick = {
+                                            currentScreen = AppScreen.LowStockReport
+                                        },
+                                        onSoftwareIssueReportClick = {
+                                            currentScreen = AppScreen.SoftwareIssueReportAdmin
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.AdminDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.RoomWiseEquipmentReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.RoomWiseEquipmentReport)
+                                } else {
+                                    RoomWiseEquipmentReportScreen(
+                                        roomList = roomList,
+                                        equipmentList = adminEquipmentViewModel.equipmentList,
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.StudentBorrowHistoryReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.StudentBorrowHistoryReport)
+                                } else {
+                                    StudentBorrowHistoryReportScreen(
+                                        studentList = studentList,
+                                        requestList = adminAllRequests,
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.PendingRequestReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.PendingRequestReport)
+                                } else {
+                                    BorrowRequestReportScreen(
+                                        title = "Pending Request Report",
+                                        subtitle = "Borrow requests waiting for admin approval",
+                                        requestList = adminAllRequests,
+                                        fixedStatus = "Pending",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+                            AppScreen.ApprovedRequestReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.ApprovedRequestReport)
+                                } else {
+                                    BorrowRequestReportScreen(
+                                        title = "Approved Request Report",
+                                        subtitle = "Approved requests waiting to be issued",
+                                        requestList = adminAllRequests,
+                                        fixedStatus = "Approved",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+                            AppScreen.IssuedItemReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.IssuedItemReport)
+                                } else {
+                                    BorrowRequestReportScreen(
+                                        title = "Issued Item Report",
+                                        subtitle = "Items currently issued to students",
+                                        requestList = adminAllRequests,
+                                        fixedStatus = "Issued",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+                            AppScreen.ReturnedItemReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.ReturnedItemReport)
+                                } else {
+                                    BorrowRequestReportScreen(
+                                        title = "Returned Item Report",
+                                        subtitle = "Completed returned borrow records",
+                                        requestList = adminAllRequests,
+                                        fixedStatus = "Returned",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+                            AppScreen.OverdueItemReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.OverdueItemReport)
+                                } else {
+                                    BorrowRequestReportScreen(
+                                        title = "Overdue Item Report",
+                                        subtitle = "Issued items that passed due date",
+                                        requestList = adminAllRequests,
+                                        fixedStatus = "Overdue",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+
+                            AppScreen.LostDamagedReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.LostDamagedReport)
+                                } else {
+                                    BorrowRequestReportScreen(
+                                        title = "Lost / Damaged Report",
+                                        subtitle = "Items marked as lost or damaged",
+                                        requestList = adminAllRequests,
+                                        fixedStatus = "Lost/Damaged",
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.LowStockReport -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.LowStockReport)
+                                } else {
+                                    LowStockReportScreen(
+                                        roomList = roomList,
+                                        equipmentList = adminEquipmentViewModel.equipmentList,
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
+                            AppScreen.SoftwareIssueReportAdmin -> {
+                                if (!isAdmin()) {
+                                    redirectUnauthorized(AppScreen.SoftwareIssueReportAdmin)
+                                } else {
+                                    SoftwareIssueReportAdminScreen(
+                                        reportList = softwareIssueReports,
+                                        onBackClick = {
+                                            currentScreen = AppScreen.ReportsDashboard
+                                        }
+                                    )
+                                }
+                            }
                             AppScreen.ManageLabComputers -> {
                                 if (!isAdmin()) {
                                     redirectUnauthorized(AppScreen.ManageLabComputers)

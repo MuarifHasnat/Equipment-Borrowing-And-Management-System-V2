@@ -14,20 +14,38 @@ fun isAdminScreen(screen: AppScreen): Boolean {
     return screen in listOf(
         AppScreen.AdminDashboard,
         AppScreen.AdminProfile,
+
         AppScreen.PendingStudents,
         AppScreen.ManageStudents,
+
         AppScreen.AddEquipment,
-        AppScreen.ManageEquipment,
         AppScreen.EditEquipment,
+        AppScreen.ManageEquipment,
+
         AppScreen.PendingRequests,
         AppScreen.ApprovedRequests,
+
         AppScreen.ManageRooms,
         AppScreen.AddRoom,
+
         AppScreen.ManageLabComputers,
         AppScreen.AddLabComputer,
         AppScreen.EditLabComputer,
         AppScreen.ManageSoftwareStatus,
-        AppScreen.SoftwareIssueReports
+        AppScreen.SoftwareIssueReports,
+
+
+        AppScreen.ReportsDashboard,
+        AppScreen.RoomWiseEquipmentReport,
+        AppScreen.StudentBorrowHistoryReport,
+        AppScreen.PendingRequestReport,
+        AppScreen.ApprovedRequestReport,
+        AppScreen.IssuedItemReport,
+        AppScreen.ReturnedItemReport,
+        AppScreen.OverdueItemReport,
+        AppScreen.LostDamagedReport,
+        AppScreen.LowStockReport,
+        AppScreen.SoftwareIssueReportAdmin
     )
 }
 
