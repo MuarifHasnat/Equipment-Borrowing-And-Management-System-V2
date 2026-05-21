@@ -47,6 +47,7 @@ fun StudentDashboardScreen(
     onViewEquipmentClick: () -> Unit,
     onMyRequestsClick: () -> Unit,
     onLabComputersClick: () -> Unit,
+    onMySoftwareIssuesClick: () -> Unit,
     onProfileClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onLogout: () -> Unit
@@ -185,7 +186,16 @@ fun StudentDashboardScreen(
                     onClick = onLabComputersClick
                 )
             }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = StudentColors.ModernBg)
 
+            ModernActionRow(
+                title = "My Software Issues",
+                subtitle = "Track issue status and submit feedback",
+                icon = Icons.Rounded.BugReport,
+                iconBgColor = StudentColors.BlueLight,
+                iconColor = StudentColors.BlueText,
+                onClick = onMySoftwareIssuesClick
+            )
             Spacer(modifier = Modifier.height(32.dp))
 
             // Logout Button

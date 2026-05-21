@@ -1,12 +1,23 @@
 package com.example.equipmentborrowingapp.ui.admin
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -15,8 +26,24 @@ import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,8 +55,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.equipmentborrowingapp.data.model.LabComputer
+import com.example.equipmentborrowingapp.data.model.Room
 
-// Modern Colors
 private object LabManageColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -49,6 +76,9 @@ private object LabManageColors {
 
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
+
+    val PurpleLight = Color(0xFFF5F3FF)
+    val PurpleText = Color(0xFF7C3AED)
 }
 
 @Composable
@@ -58,38 +88,111 @@ fun ManageLabComputersScreen(
     onEditComputerClick: (LabComputer) -> Unit,
     onOpenSoftwareClick: (LabComputer) -> Unit,
     onViewReportsClick: (LabComputer) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    roomList: List<Room> = emptyList()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All") }
+    var selectedLabRoom by remember { mutableStateOf("All") }
+    var selectedSort by remember { mutableStateOf("PC Name A-Z") }
 
-    val statusFilters = listOf("All", "Active", "Maintenance", "Problematic")
-
-    val filteredList = computerList.filter { computer ->
-        val matchesSearch =
-            searchQuery.isBlank() ||
-                    computer.pcName.contains(searchQuery, ignoreCase = true) ||
-                    computer.labRoom.contains(searchQuery, ignoreCase = true) ||
-                    computer.locationNote.contains(searchQuery, ignoreCase = true)
-
-        val matchesStatus =
-            selectedStatus == "All" ||
-                    computer.status.equals(selectedStatus, ignoreCase = true)
-
-        matchesSearch && matchesStatus
+    val roomById = remember(roomList) {
+        roomList.associateBy { it.id }
     }
+
+    val labRoomFilterList = remember(computerList, roomList) {
+        val fromComputers = computerList
+            .map { computer ->
+                val roomName = roomById[computer.roomId]?.name.orEmpty()
+                roomName.ifBlank { computer.labRoom }
+            }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+
+        listOf("All") + fromComputers
+    }
+
+    val statusFilters = listOf(
+        "All",
+        "Active",
+        "Maintenance",
+        "Problematic"
+    )
+
+    val sortFilters = listOf(
+        "PC Name A-Z",
+        "PC Name Z-A",
+        "Room A-Z",
+        "Status",
+        "Last Checked Newest",
+        "Last Checked Oldest"
+    )
+
+    val filteredList = computerList
+        .filter { computer ->
+            val query = searchQuery.trim().lowercase()
+            val roomName = roomById[computer.roomId]?.name.orEmpty()
+            val labRoomName = roomName.ifBlank { computer.labRoom }
+
+            val matchesSearch =
+                query.isBlank() ||
+                        computer.pcName.lowercase().contains(query) ||
+                        computer.labRoom.lowercase().contains(query) ||
+                        roomName.lowercase().contains(query) ||
+                        computer.locationNote.lowercase().contains(query) ||
+                        computer.ipAddress.lowercase().contains(query) ||
+                        computer.status.lowercase().contains(query) ||
+                        computer.remarks.lowercase().contains(query)
+
+            val matchesStatus =
+                selectedStatus == "All" ||
+                        computer.status.equals(selectedStatus, ignoreCase = true)
+
+            val matchesLabRoom =
+                selectedLabRoom == "All" ||
+                        labRoomName.equals(selectedLabRoom, ignoreCase = true)
+
+            matchesSearch && matchesStatus && matchesLabRoom
+        }
+        .let { list ->
+            when (selectedSort) {
+                "PC Name Z-A" -> list.sortedByDescending { it.pcName.lowercase() }
+
+                "Room A-Z" -> list.sortedWith(
+                    compareBy<LabComputer> {
+                        val roomName = roomById[it.roomId]?.name.orEmpty()
+                        roomName.ifBlank { it.labRoom }.lowercase()
+                    }.thenBy { it.pcName.lowercase() }
+                )
+
+                "Status" -> list.sortedWith(
+                    compareBy<LabComputer> { labStatusOrder(it.status) }
+                        .thenBy { it.pcName.lowercase() }
+                )
+
+                "Last Checked Newest" -> list.sortedByDescending { it.lastCheckedAt }
+
+                "Last Checked Oldest" -> list.sortedBy { it.lastCheckedAt }
+
+                else -> list.sortedBy { it.pcName.lowercase() }
+            }
+        }
 
     val totalCount = computerList.size
     val activeCount = computerList.count { it.status.equals("Active", ignoreCase = true) }
+    val maintenanceCount = computerList.count { it.status.equals("Maintenance", ignoreCase = true) }
     val problematicCount = computerList.count { it.status.equals("Problematic", ignoreCase = true) }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = LabManageColors.ModernBg) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = LabManageColors.ModernBg
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // 🔙 Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,8 +202,15 @@ fun ManageLabComputersScreen(
                 IconButton(
                     onClick = onBackClick,
                     modifier = Modifier
-                        .background(LabManageColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                        .background(
+                            color = LabManageColors.CardWhite,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .shadow(
+                            elevation = 2.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            spotColor = Color.Black.copy(alpha = 0.05f)
+                        )
                 ) {
                     Icon(
                         Icons.AutoMirrored.Rounded.ArrowBack,
@@ -108,7 +218,9 @@ fun ManageLabComputersScreen(
                         tint = LabManageColors.TextDark
                     )
                 }
+
                 Spacer(modifier = Modifier.width(16.dp))
+
                 Column {
                     Text(
                         text = "Manage Lab PCs",
@@ -116,18 +228,18 @@ fun ManageLabComputersScreen(
                         color = LabManageColors.TextDark,
                         fontWeight = FontWeight.ExtraBold
                     )
+
                     Text(
-                        text = "Lab Monitoring System",
+                        text = "Search, filter, sort and manage computers",
                         style = MaterialTheme.typography.bodyMedium,
                         color = LabManageColors.TextMuted
                     )
                 }
             }
 
-            // Summary Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ModernSummaryCard(
                     title = "Total",
@@ -136,6 +248,7 @@ fun ManageLabComputersScreen(
                     textColor = LabManageColors.BlueText,
                     modifier = Modifier.weight(1f)
                 )
+
                 ModernSummaryCard(
                     title = "Active",
                     value = activeCount.toString(),
@@ -143,6 +256,22 @@ fun ManageLabComputersScreen(
                     textColor = LabManageColors.GreenText,
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ModernSummaryCard(
+                    title = "Maintenance",
+                    value = maintenanceCount.toString(),
+                    bgColor = LabManageColors.OrangeLight,
+                    textColor = LabManageColors.OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
+
                 ModernSummaryCard(
                     title = "Issues",
                     value = problematicCount.toString(),
@@ -154,16 +283,32 @@ fun ManageLabComputersScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Modern Search Field
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = {
+                    searchQuery = it
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(14.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(14.dp),
-                placeholder = { Text("Search PC, room or location", color = LabManageColors.TextMuted) },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = "Search", tint = LabManageColors.TextMuted) },
+                placeholder = {
+                    Text(
+                        text = "Search PC, room, IP, location, status or remarks",
+                        color = LabManageColors.TextMuted
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Rounded.Search,
+                        contentDescription = "Search",
+                        tint = LabManageColors.TextMuted
+                    )
+                },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = LabManageColors.CardWhite,
@@ -175,40 +320,88 @@ fun ManageLabComputersScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Filters
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(statusFilters) { filter ->
-                    val isSelected = selectedStatus == filter
-                    Surface(
-                        onClick = { selectedStatus = filter },
-                        shape = RoundedCornerShape(50),
-                        color = if (isSelected) LabManageColors.PrimaryIndigo else LabManageColors.CardWhite,
-                        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, LabManageColors.TextMuted.copy(alpha = 0.2f)),
-                        modifier = Modifier.shadow(if (isSelected) 4.dp else 0.dp, RoundedCornerShape(50), spotColor = LabManageColors.PrimaryIndigo.copy(alpha = 0.5f))
-                    ) {
-                        Text(
-                            text = filter,
-                            color = if (isSelected) Color.White else LabManageColors.TextMuted,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
+            LabFilterTitle("Status")
+
+            LabHorizontalFilterRow {
+                statusFilters.forEach { filter ->
+                    LabFilterChip(
+                        text = filter,
+                        selected = selectedStatus == filter,
+                        onClick = {
+                            selectedStatus = filter
+                        }
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Add PC Button
+            LabFilterTitle("Room / Lab")
+
+            LabHorizontalFilterRow {
+                labRoomFilterList.forEach { labRoom ->
+                    LabFilterChip(
+                        text = labRoom,
+                        selected = selectedLabRoom == labRoom,
+                        onClick = {
+                            selectedLabRoom = labRoom
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LabFilterTitle("Sort")
+
+            LabHorizontalFilterRow {
+                sortFilters.forEach { sort ->
+                    LabFilterChip(
+                        text = sort,
+                        selected = selectedSort == sort,
+                        onClick = {
+                            selectedSort = sort
+                        }
+                    )
+                }
+            }
+
+            if (
+                searchQuery.isNotBlank() ||
+                selectedStatus != "All" ||
+                selectedLabRoom != "All" ||
+                selectedSort != "PC Name A-Z"
+            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        searchQuery = ""
+                        selectedStatus = "All"
+                        selectedLabRoom = "All"
+                        selectedSort = "PC Name A-Z"
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("Clear Search, Filters and Sort")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Button(
                 onClick = onAddComputerClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
-                    .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = LabManageColors.PrimaryIndigo.copy(alpha = 0.4f)),
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = LabManageColors.PrimaryIndigo.copy(alpha = 0.4f)
+                    ),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                 contentPadding = PaddingValues(),
                 shape = RoundedCornerShape(16.dp)
@@ -217,29 +410,59 @@ fun ManageLabComputersScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            brush = Brush.horizontalGradient(listOf(LabManageColors.PrimaryIndigo, LabManageColors.PurpleAccent)),
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    LabManageColors.PrimaryIndigo,
+                                    LabManageColors.PurpleAccent
+                                )
+                            ),
                             shape = RoundedCornerShape(16.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.AddCircle, contentDescription = null, tint = Color.White)
+                        Icon(
+                            Icons.Rounded.AddCircle,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add New Lab Computer", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                        Text(
+                            text = "Add New Lab Computer",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // PC List
+            Text(
+                text = "Showing ${filteredList.size} of ${computerList.size} lab PC(s)",
+                style = MaterialTheme.typography.titleMedium,
+                color = LabManageColors.TextDark,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             if (filteredList.isEmpty()) {
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No matching lab computers found",
+                        text = if (computerList.isEmpty()) {
+                            "No lab computers found."
+                        } else {
+                            "No matching lab computers found."
+                        },
                         color = LabManageColors.TextMuted,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -253,6 +476,7 @@ fun ManageLabComputersScreen(
                     items(filteredList, key = { it.id }) { computer ->
                         ModernComputerCard(
                             computer = computer,
+                            room = roomById[computer.roomId],
                             onEdit = onEditComputerClick,
                             onSoftware = onOpenSoftwareClick,
                             onReports = onViewReportsClick
@@ -273,31 +497,85 @@ private fun ModernSummaryCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(76.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = LabManageColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .background(bgColor)
-                .padding(vertical = 16.dp),
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
-                fontSize = 26.sp,
+                fontSize = 22.sp,
                 color = textColor,
                 fontWeight = FontWeight.Black
             )
-            Spacer(modifier = Modifier.height(2.dp))
+
             Text(
                 text = title,
                 color = textColor.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelSmall
             )
+        }
+    }
+}
+
+@Composable
+private fun LabFilterTitle(
+    text: String
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = LabManageColors.TextMuted,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+private fun LabHorizontalFilterRow(
+    content: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun LabFilterChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    if (selected) {
+        Button(
+            onClick = onClick,
+            shape = RoundedCornerShape(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = LabManageColors.PrimaryIndigo,
+                contentColor = Color.White
+            )
+        ) {
+            Text(text)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            shape = RoundedCornerShape(50.dp)
+        ) {
+            Text(text)
         }
     }
 }
@@ -305,25 +583,36 @@ private fun ModernSummaryCard(
 @Composable
 private fun ModernComputerCard(
     computer: LabComputer,
+    room: Room?,
     onEdit: (LabComputer) -> Unit,
     onSoftware: (LabComputer) -> Unit,
     onReports: (LabComputer) -> Unit
 ) {
+    val displayRoomName = room?.name.orEmpty().ifBlank {
+        computer.labRoom.ifBlank { "N/A" }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = LabManageColors.CardWhite)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(44.dp)
@@ -331,9 +620,15 @@ private fun ModernComputerCard(
                             .background(LabManageColors.ModernBg),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Rounded.Computer, contentDescription = null, tint = LabManageColors.PrimaryIndigo)
+                        Icon(
+                            Icons.Rounded.Computer,
+                            contentDescription = null,
+                            tint = LabManageColors.PrimaryIndigo
+                        )
                     }
+
                     Spacer(modifier = Modifier.width(12.dp))
+
                     Column {
                         Text(
                             text = computer.pcName.ifBlank { "Unnamed PC" },
@@ -343,8 +638,9 @@ private fun ModernComputerCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+
                         Text(
-                            text = "Room: ${computer.labRoom.ifBlank { "N/A" }}",
+                            text = "Room: $displayRoomName",
                             style = MaterialTheme.typography.bodySmall,
                             color = LabManageColors.TextMuted,
                             fontWeight = FontWeight.SemiBold
@@ -357,35 +653,54 @@ private fun ModernComputerCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Details
-            if (computer.locationNote.isNotBlank() || computer.ipAddress.isNotBlank()) {
-                Surface(
-                    color = LabManageColors.ModernBg,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+            Surface(
+                color = LabManageColors.ModernBg,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        if (computer.locationNote.isNotBlank()) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp), tint = LabManageColors.TextMuted)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = computer.locationNote, style = MaterialTheme.typography.bodySmall, color = LabManageColors.TextDark)
-                            }
-                        }
-                        if (computer.ipAddress.isNotBlank()) {
-                            if (computer.locationNote.isNotBlank()) Spacer(modifier = Modifier.height(6.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Dns, contentDescription = null, modifier = Modifier.size(14.dp), tint = LabManageColors.TextMuted)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = computer.ipAddress, style = MaterialTheme.typography.bodySmall, color = LabManageColors.TextDark)
-                            }
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = LabManageColors.TextMuted
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = computer.locationNote.ifBlank { "No location note" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LabManageColors.TextDark
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Dns,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = LabManageColors.TextMuted
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = computer.ipAddress.ifBlank { "No IP address" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LabManageColors.TextDark
+                        )
                     }
                 }
             }
 
             if (computer.remarks.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
                     text = "Remarks: ${computer.remarks}",
                     style = MaterialTheme.typography.bodySmall,
@@ -398,7 +713,6 @@ private fun ModernComputerCard(
             HorizontalDivider(color = LabManageColors.ModernBg)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -407,19 +721,27 @@ private fun ModernComputerCard(
                     text = "Edit",
                     modifier = Modifier.weight(1f),
                     isPrimary = true,
-                    onClick = { onEdit(computer) }
+                    onClick = {
+                        onEdit(computer)
+                    }
                 )
+
                 ModernActionBtn(
                     text = "Software",
                     modifier = Modifier.weight(1f),
                     isPrimary = false,
-                    onClick = { onSoftware(computer) }
+                    onClick = {
+                        onSoftware(computer)
+                    }
                 )
+
                 ModernActionBtn(
                     text = "Reports",
                     modifier = Modifier.weight(1f),
                     isPrimary = false,
-                    onClick = { onReports(computer) }
+                    onClick = {
+                        onReports(computer)
+                    }
                 )
             }
         }
@@ -461,21 +783,45 @@ private fun ModernActionBtn(
             onClick = onClick,
             modifier = modifier.height(38.dp),
             shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = LabManageColors.PrimaryIndigo),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = LabManageColors.PrimaryIndigo
+            ),
             contentPadding = PaddingValues(0.dp)
         ) {
-            Text(text = text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(
+                text = text,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+            )
         }
     } else {
         OutlinedButton(
             onClick = onClick,
             modifier = modifier.height(38.dp),
             shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = LabManageColors.TextDark),
-            border = androidx.compose.foundation.BorderStroke(1.dp, LabManageColors.ModernBg),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = LabManageColors.TextDark
+            ),
+            border = BorderStroke(
+                width = 1.dp,
+                color = LabManageColors.ModernBg
+            ),
             contentPadding = PaddingValues(0.dp)
         ) {
-            Text(text = text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(
+                text = text,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+            )
         }
+    }
+}
+
+private fun labStatusOrder(status: String): Int {
+    return when (status.trim().lowercase()) {
+        "active" -> 0
+        "maintenance" -> 1
+        "problematic" -> 2
+        else -> 3
     }
 }

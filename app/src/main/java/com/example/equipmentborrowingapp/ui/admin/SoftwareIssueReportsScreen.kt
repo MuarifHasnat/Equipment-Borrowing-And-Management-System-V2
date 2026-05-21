@@ -1,218 +1,479 @@
 package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Comment
+import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.ReportProblem
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.equipmentborrowingapp.data.model.SoftwareIssueReport
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// Modern Colors
-private object SoftwareReportColors {
+private object IssueColors {
     val ModernBg = Color(0xFFF4F7FB)
-    val CardWhite = Color(0xFFFFFFFF)
+    val CardWhite = Color.White
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
+
     val PrimaryIndigo = Color(0xFF4F46E5)
+    val PurpleAccent = Color(0xFF7C3AED)
+
+    val BlueLight = Color(0xFFEFF6FF)
+    val BlueText = Color(0xFF2563EB)
 
     val GreenLight = Color(0xFFF0FDF4)
     val GreenText = Color(0xFF16A34A)
 
-    val RedLight = Color(0xFFFEF2F2)
-    val RedText = Color(0xFFDC2626)
-
     val OrangeLight = Color(0xFFFFF7ED)
     val OrangeText = Color(0xFFEA580C)
 
-    val BlueLight = Color(0xFFEFF6FF)
-    val BlueText = Color(0xFF2563EB)
+    val RedLight = Color(0xFFFEF2F2)
+    val RedText = Color(0xFFDC2626)
+
+    val PurpleLight = Color(0xFFF5F3FF)
+    val PurpleText = Color(0xFF7C3AED)
+
+    val GrayLight = Color(0xFFF1F5F9)
+    val GrayText = Color(0xFF475569)
 }
 
 @Composable
 fun SoftwareIssueReportsScreen(
     reportList: List<SoftwareIssueReport>,
-    onStatusUpdateClick: (SoftwareIssueReport, String) -> Unit,
+    onUpdateStatusClick: (SoftwareIssueReport, String, String) -> Unit,
     onBackClick: () -> Unit
 ) {
+    var searchText by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All") }
     var selectedSeverity by remember { mutableStateOf("All") }
-    var searchQuery by remember { mutableStateOf("") }
+    var selectedSort by remember { mutableStateOf("Newest First") }
 
-    val statusFilters = listOf("All", "Open", "In Progress", "Resolved")
-    val severityFilters = listOf("All", "Low", "Medium", "High")
+    var selectedReport by remember { mutableStateOf<SoftwareIssueReport?>(null) }
+    var selectedNewStatus by remember { mutableStateOf("") }
+    var adminComment by remember { mutableStateOf("") }
 
-    val filteredList = reportList.filter { report ->
-        val statusMatch =
-            selectedStatus == "All" || report.status.equals(selectedStatus, true)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-        val severityMatch =
-            selectedSeverity == "All" || report.severity.equals(selectedSeverity, true)
+    val statusFilters = listOf(
+        "All",
+        "Open",
+        "In Progress",
+        "Solved",
+        "Rejected"
+    )
 
-        val searchMatch =
-            searchQuery.isBlank() ||
-                    report.softwareName.contains(searchQuery, true) ||
-                    report.computerName.contains(searchQuery, true) ||
-                    report.reportedByUserName.contains(searchQuery, true)
+    val severityFilters = listOf(
+        "All",
+        "Low",
+        "Medium",
+        "High"
+    )
 
-        statusMatch && severityMatch && searchMatch
+    val filteredReports = reportList
+        .filter { report ->
+            val query = searchText.trim().lowercase()
+
+            val matchesSearch =
+                query.isBlank() ||
+                        report.softwareName.lowercase().contains(query) ||
+                        report.computerName.lowercase().contains(query) ||
+                        report.reportedByUserName.lowercase().contains(query) ||
+                        report.issueType.lowercase().contains(query) ||
+                        report.description.lowercase().contains(query) ||
+                        report.status.lowercase().contains(query) ||
+                        report.severity.lowercase().contains(query) ||
+                        report.adminComment.lowercase().contains(query)
+
+            val matchesStatus =
+                selectedStatus == "All" ||
+                        report.status.equals(selectedStatus, ignoreCase = true) ||
+                        (selectedStatus == "Solved" && report.status.equals("Resolved", ignoreCase = true))
+
+            val matchesSeverity =
+                selectedSeverity == "All" ||
+                        report.severity.equals(selectedSeverity, ignoreCase = true)
+
+            matchesSearch && matchesStatus && matchesSeverity
+        }
+        .let { list ->
+            when (selectedSort) {
+                "Oldest First" -> list.sortedBy { it.timestamp }
+                "Status" -> list.sortedWith(
+                    compareBy<SoftwareIssueReport> { issueStatusOrder(it.status) }
+                        .thenByDescending { it.timestamp }
+                )
+
+                "Severity" -> list.sortedWith(
+                    compareBy<SoftwareIssueReport> { issueSeverityOrder(it.severity) }
+                        .thenBy { issueStatusOrder(it.status) }
+                )
+
+                "Software A-Z" -> list.sortedBy { it.softwareName.lowercase() }
+                "Computer A-Z" -> list.sortedBy { it.computerName.lowercase() }
+                else -> list.sortedByDescending { it.timestamp }
+            }
+        }
+
+    val openCount = reportList.count { it.status.equals("Open", ignoreCase = true) }
+    val inProgressCount = reportList.count { it.status.equals("In Progress", ignoreCase = true) }
+    val solvedCount = reportList.count {
+        it.status.equals("Solved", ignoreCase = true) ||
+                it.status.equals("Resolved", ignoreCase = true)
+    }
+    val highCount = reportList.count { it.severity.equals("High", ignoreCase = true) }
+
+    selectedReport?.let { report ->
+        UpdateIssueStatusDialog(
+            report = report,
+            newStatus = selectedNewStatus,
+            adminComment = adminComment,
+            onCommentChange = {
+                adminComment = it
+            },
+            onDismiss = {
+                selectedReport = null
+                selectedNewStatus = ""
+                adminComment = ""
+            },
+            onConfirm = {
+                onUpdateStatusClick(report, selectedNewStatus, adminComment.trim())
+
+                scope.launch {
+                    snackbarHostState.showSnackbar("Issue update requested")
+                }
+
+                selectedReport = null
+                selectedNewStatus = ""
+                adminComment = ""
+            }
+        )
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = SoftwareReportColors.ModernBg) {
-        Column(
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
+        containerColor = IssueColors.ModernBg
+    ) { padding ->
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(padding),
+            color = IssueColors.ModernBg
         ) {
-            //  Modern Top Bar
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                IconButton(
-                    onClick = onBackClick,
+                Row(
                     modifier = Modifier
-                        .background(SoftwareReportColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                        .fillMaxWidth()
+                        .padding(bottom = 18.dp, top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = SoftwareReportColors.TextDark
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Software Reports",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = SoftwareReportColors.TextDark,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Issue Monitoring & Resolution",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SoftwareReportColors.TextMuted
-                    )
-                }
-            }
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .background(
+                                IssueColors.CardWhite,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .shadow(
+                                2.dp,
+                                RoundedCornerShape(12.dp),
+                                spotColor = Color.Black.copy(alpha = 0.05f)
+                            )
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Back",
+                            tint = IssueColors.TextDark
+                        )
+                    }
 
-            // Summary Stats
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ModernStatCard(
-                    title = "Total",
-                    value = reportList.size.toString(),
-                    bgColor = SoftwareReportColors.BlueLight,
-                    textColor = SoftwareReportColors.BlueText,
-                    modifier = Modifier.weight(1f)
-                )
+                    Spacer(modifier = Modifier.padding(horizontal = 8.dp))
 
-                ModernStatCard(
-                    title = "Open",
-                    value = reportList.count { it.status == "Open" }.toString(),
-                    bgColor = SoftwareReportColors.RedLight,
-                    textColor = SoftwareReportColors.RedText,
-                    modifier = Modifier.weight(1f)
-                )
+                    Column {
+                        Text(
+                            text = "Software Issue Reports",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = IssueColors.TextDark,
+                            fontWeight = FontWeight.ExtraBold
+                        )
 
-                ModernStatCard(
-                    title = "High",
-                    value = reportList.count { it.severity == "High" }.toString(),
-                    bgColor = SoftwareReportColors.OrangeLight,
-                    textColor = SoftwareReportColors.OrangeText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Modern Search Field
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
-                shape = RoundedCornerShape(14.dp),
-                placeholder = { Text("Search software, PC, or user...", color = SoftwareReportColors.TextMuted) },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = "Search", tint = SoftwareReportColors.TextMuted) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = SoftwareReportColors.CardWhite,
-                    unfocusedContainerColor = SoftwareReportColors.CardWhite,
-                    focusedBorderColor = SoftwareReportColors.PrimaryIndigo,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = SoftwareReportColors.TextDark,
-                    unfocusedTextColor = SoftwareReportColors.TextDark
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Filters
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Status:", style = MaterialTheme.typography.labelLarge, color = SoftwareReportColors.TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(statusFilters) { filter ->
-                        ModernFilterChip(
-                            text = filter,
-                            isSelected = selectedStatus == filter,
-                            onClick = { selectedStatus = filter }
+                        Text(
+                            text = "Update issue status and add admin comments",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = IssueColors.TextMuted
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                IssueHeroCard(
+                    total = reportList.size,
+                    open = openCount
+                )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Severity:", style = MaterialTheme.typography.labelLarge, color = SoftwareReportColors.TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(severityFilters) { filter ->
-                        ModernFilterChip(
-                            text = filter,
-                            isSelected = selectedSeverity == filter,
-                            onClick = { selectedSeverity = filter }
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    IssueMiniStatCard(
+                        title = "Open",
+                        value = openCount.toString(),
+                        bgColor = IssueColors.RedLight,
+                        textColor = IssueColors.RedText,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    IssueMiniStatCard(
+                        title = "In Progress",
+                        value = inProgressCount.toString(),
+                        bgColor = IssueColors.OrangeLight,
+                        textColor = IssueColors.OrangeText,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    IssueMiniStatCard(
+                        title = "Solved",
+                        value = solvedCount.toString(),
+                        bgColor = IssueColors.GreenLight,
+                        textColor = IssueColors.GreenText,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    IssueMiniStatCard(
+                        title = "High",
+                        value = highCount.toString(),
+                        bgColor = IssueColors.PurpleLight,
+                        textColor = IssueColors.PurpleText,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    label = {
+                        Text("Search software, PC, student, issue or comment")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = IssueColors.TextMuted
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = IssueColors.CardWhite,
+                        unfocusedContainerColor = IssueColors.CardWhite,
+                        focusedBorderColor = IssueColors.PrimaryIndigo,
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                IssueFilterTitle("Status")
+
+                IssueHorizontalFilterRow {
+                    statusFilters.forEach { status ->
+                        IssueFilterChip(
+                            text = status,
+                            selected = selectedStatus == status,
+                            onClick = {
+                                selectedStatus = status
+                            }
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-            // List
-            if (filteredList.isEmpty()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("No matching reports found", color = SoftwareReportColors.TextMuted, style = MaterialTheme.typography.titleMedium)
+                IssueFilterTitle("Severity")
+
+                IssueHorizontalFilterRow {
+                    severityFilters.forEach { severity ->
+                        IssueFilterChip(
+                            text = severity,
+                            selected = selectedSeverity == severity,
+                            onClick = {
+                                selectedSeverity = severity
+                            }
+                        )
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 20.dp)
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                IssueFilterTitle("Sort")
+
+                IssueHorizontalFilterRow {
+                    listOf(
+                        "Newest First",
+                        "Oldest First",
+                        "Status",
+                        "Severity",
+                        "Software A-Z",
+                        "Computer A-Z"
+                    ).forEach { sort ->
+                        IssueFilterChip(
+                            text = sort,
+                            selected = selectedSort == sort,
+                            onClick = {
+                                selectedSort = sort
+                            }
+                        )
+                    }
+                }
+
+                if (
+                    searchText.isNotBlank() ||
+                    selectedStatus != "All" ||
+                    selectedSeverity != "All" ||
+                    selectedSort != "Newest First"
                 ) {
-                    items(filteredList) { report ->
-                        ModernReportCard(report, onStatusUpdateClick)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            searchText = ""
+                            selectedStatus = "All"
+                            selectedSeverity = "All"
+                            selectedSort = "Newest First"
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Clear Search, Filters and Sort")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "Showing ${filteredReports.size} of ${reportList.size} issue report(s)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = IssueColors.TextDark,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (filteredReports.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (reportList.isEmpty()) {
+                                "No software issue reports found."
+                            } else {
+                                "No issue report matches your search/filter."
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            color = IssueColors.TextMuted
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(bottom = 20.dp)
+                    ) {
+                        items(filteredReports, key = { it.id }) { report ->
+                            IssueReportCard(
+                                report = report,
+                                onMarkInProgress = {
+                                    selectedReport = report
+                                    selectedNewStatus = "In Progress"
+                                    adminComment = report.adminComment
+                                },
+                                onMarkSolved = {
+                                    selectedReport = report
+                                    selectedNewStatus = "Solved"
+                                    adminComment = report.adminComment
+                                },
+                                onReject = {
+                                    selectedReport = report
+                                    selectedNewStatus = "Rejected"
+                                    adminComment = report.adminComment
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -220,10 +481,61 @@ fun SoftwareIssueReportsScreen(
     }
 }
 
-// Helper Composables
+@Composable
+private fun IssueHeroCard(
+    total: Int,
+    open: Int
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.linearGradient(
+                    listOf(
+                        IssueColors.PrimaryIndigo,
+                        IssueColors.PurpleAccent
+                    )
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column {
+            Text(
+                text = "Issue Tracking",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(
+                        Color.White.copy(alpha = 0.18f),
+                        RoundedCornerShape(50.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Lab Software Issues",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "$total total issue(s), $open open issue(s)",
+                color = Color.White.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
 
 @Composable
-private fun ModernStatCard(
+private fun IssueMiniStatCard(
     title: String,
     value: String,
     bgColor: Color,
@@ -231,226 +543,558 @@ private fun ModernStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(76.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SoftwareReportColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = IssueColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .background(bgColor)
-                .padding(vertical = 16.dp),
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
-                fontSize = 24.sp,
                 color = textColor,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                style = MaterialTheme.typography.titleLarge
             )
-            Spacer(modifier = Modifier.height(2.dp))
+
             Text(
                 text = title,
-                color = textColor.copy(alpha = 0.8f),
+                color = textColor.copy(alpha = 0.85f),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
 }
 
 @Composable
-private fun ModernFilterChip(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = if (isSelected) SoftwareReportColors.PrimaryIndigo else SoftwareReportColors.CardWhite,
-        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, SoftwareReportColors.TextMuted.copy(alpha = 0.2f)),
-        modifier = Modifier.shadow(if (isSelected) 4.dp else 0.dp, RoundedCornerShape(50), spotColor = SoftwareReportColors.PrimaryIndigo.copy(alpha = 0.5f))
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) Color.White else SoftwareReportColors.TextMuted,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-        )
-    }
-}
-
-@Composable
-private fun ModernReportCard(
+private fun IssueReportCard(
     report: SoftwareIssueReport,
-    onStatusUpdateClick: (SoftwareIssueReport, String) -> Unit
+    onMarkInProgress: () -> Unit,
+    onMarkSolved: () -> Unit,
+    onReject: () -> Unit
 ) {
+    val status = report.status.ifBlank { "Open" }
+    val statusBg = issueStatusBackgroundColor(status)
+    val statusColor = issueStatusTextColor(status)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SoftwareReportColors.CardWhite)
+            .shadow(
+                4.dp,
+                RoundedCornerShape(18.dp),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            ),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = IssueColors.CardWhite)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = report.softwareName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = SoftwareReportColors.TextDark
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ModernStatusBadge(
-                        text = report.severity,
-                        isHigh = report.severity == "High",
-                        isMedium = report.severity == "Medium"
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = report.softwareName.ifBlank { "Unknown Software" },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = IssueColors.TextDark,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    ModernStatusBadge(
-                        text = report.status,
-                        isHigh = report.status == "Open",
-                        isMedium = report.status == "In Progress"
+
+                    Text(
+                        text = report.computerName.ifBlank { "Unknown Computer" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = IssueColors.TextMuted
                     )
                 }
+
+                Text(
+                    text = status,
+                    modifier = Modifier
+                        .background(
+                            statusBg,
+                            RoundedCornerShape(50.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            IssueInfoRow(
+                label = "Reported By",
+                value = report.reportedByUserName.ifBlank { "Unknown Student" }
+            )
+
+            IssueInfoRow(
+                label = "Issue Type",
+                value = report.issueType.ifBlank { "N/A" }
+            )
+
+            IssueInfoRow(
+                label = "Severity",
+                value = report.severity.ifBlank { "Medium" }
+            )
+
+            IssueInfoRow(
+                label = "Reported At",
+                value = formatIssueTimestamp(report.timestamp)
+            )
+
+            if (report.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                MessageBox(
+                    title = "Student Description",
+                    message = report.description,
+                    bgColor = IssueColors.GrayLight,
+                    textColor = IssueColors.GrayText
+                )
+            }
+
+            if (report.adminComment.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                MessageBox(
+                    title = "Admin Comment",
+                    message = report.adminComment,
+                    bgColor = IssueColors.BlueLight,
+                    textColor = IssueColors.BlueText
+                )
+            }
+
+            if (report.studentFeedback.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                MessageBox(
+                    title = "Student Feedback",
+                    message = report.studentFeedback,
+                    bgColor = IssueColors.GreenLight,
+                    textColor = IssueColors.GreenText
+                )
+            }
+
+            if (report.resolvedAt > 0L) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Resolved At: ${formatIssueTimestamp(report.resolvedAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = IssueColors.GreenText,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = IssueColors.ModernBg)
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Details
-            Surface(
-                color = SoftwareReportColors.ModernBg,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Computer, contentDescription = null, modifier = Modifier.size(16.dp), tint = SoftwareReportColors.TextMuted)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = report.computerName, style = MaterialTheme.typography.bodySmall, color = SoftwareReportColors.TextDark, fontWeight = FontWeight.SemiBold)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = SoftwareReportColors.TextMuted)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = report.reportedByUserName, style = MaterialTheme.typography.bodySmall, color = SoftwareReportColors.TextDark)
+            when {
+                status.equals("Open", ignoreCase = true) -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onMarkInProgress,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = IssueColors.OrangeLight,
+                                contentColor = IssueColors.OrangeText
+                            )
+                        ) {
+                            Icon(
+                                Icons.Rounded.PlayArrow,
+                                contentDescription = null
+                            )
+
+                            Spacer(modifier = Modifier.padding(horizontal = 3.dp))
+
+                            Text("In Progress", fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = onReject,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = null,
+                                tint = IssueColors.RedText
+                            )
+
+                            Spacer(modifier = Modifier.padding(horizontal = 3.dp))
+
+                            Text(
+                                text = "Reject",
+                                color = IssueColors.RedText,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                status.equals("In Progress", ignoreCase = true) -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onMarkSolved,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = IssueColors.GreenLight,
+                                contentColor = IssueColors.GreenText
+                            )
+                        ) {
+                            Icon(
+                                Icons.Rounded.DoneAll,
+                                contentDescription = null
+                            )
 
-            // Description
-            Text(
-                text = report.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SoftwareReportColors.TextMuted,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
+                            Spacer(modifier = Modifier.padding(horizontal = 3.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = SoftwareReportColors.ModernBg)
-            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Solved", fontWeight = FontWeight.Bold)
+                        }
 
-            // Action Buttons
-            Text("Update Status:", style = MaterialTheme.typography.labelSmall, color = SoftwareReportColors.TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ModernStatusButton(
-                    text = "Open",
-                    isSelected = report.status == "Open",
-                    onClick = { onStatusUpdateClick(report, "Open") },
-                    modifier = Modifier.weight(1f)
-                )
-                ModernStatusButton(
-                    text = "Progress",
-                    isSelected = report.status == "In Progress",
-                    onClick = { onStatusUpdateClick(report, "In Progress") },
-                    modifier = Modifier.weight(1f)
-                )
-                ModernStatusButton(
-                    text = "Resolved",
-                    isSelected = report.status == "Resolved",
-                    onClick = { onStatusUpdateClick(report, "Resolved") },
-                    modifier = Modifier.weight(1f)
-                )
+                        OutlinedButton(
+                            onClick = onReject,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = null,
+                                tint = IssueColors.RedText
+                            )
+
+                            Spacer(modifier = Modifier.padding(horizontal = 3.dp))
+
+                            Text(
+                                text = "Reject",
+                                color = IssueColors.RedText,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                status.equals("Solved", ignoreCase = true) ||
+                        status.equals("Resolved", ignoreCase = true) -> {
+                    Text(
+                        text = "This issue has been solved.",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                IssueColors.GreenLight,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(12.dp),
+                        color = IssueColors.GreenText,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                status.equals("Rejected", ignoreCase = true) -> {
+                    Text(
+                        text = "This issue has been rejected.",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                IssueColors.RedLight,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(12.dp),
+                        color = IssueColors.RedText,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                else -> {
+                    OutlinedButton(
+                        onClick = onMarkInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Comment,
+                            contentDescription = null
+                        )
+
+                        Spacer(modifier = Modifier.padding(horizontal = 3.dp))
+
+                        Text("Update Status")
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ModernStatusBadge(
-    text: String,
-    isHigh: Boolean,
-    isMedium: Boolean
+private fun UpdateIssueStatusDialog(
+    report: SoftwareIssueReport,
+    newStatus: String,
+    adminComment: String,
+    onCommentChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
 ) {
-    val bgColor = when {
-        isHigh -> SoftwareReportColors.RedLight
-        isMedium -> SoftwareReportColors.OrangeLight
-        else -> SoftwareReportColors.GreenLight
+    val buttonColor = when (newStatus) {
+        "In Progress" -> IssueColors.OrangeText
+        "Solved" -> IssueColors.GreenText
+        "Rejected" -> IssueColors.RedText
+        else -> IssueColors.PrimaryIndigo
     }
 
-    val textColor = when {
-        isHigh -> SoftwareReportColors.RedText
-        isMedium -> SoftwareReportColors.OrangeText
-        else -> SoftwareReportColors.GreenText
-    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(20.dp),
+        containerColor = IssueColors.CardWhite,
+        title = {
+            Text(
+                text = "Update Issue Status",
+                fontWeight = FontWeight.Bold,
+                color = IssueColors.TextDark
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Status will be changed to: $newStatus",
+                    color = IssueColors.TextDark,
+                    fontWeight = FontWeight.SemiBold
+                )
 
-    Surface(
-        color = bgColor,
-        shape = RoundedCornerShape(8.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = report.softwareName.ifBlank { "Unknown Software" },
+                    color = IssueColors.TextMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = adminComment,
+                    onValueChange = onCommentChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    label = {
+                        Text("Admin Comment")
+                    },
+                    placeholder = {
+                        Text("Write action note or solution details...")
+                    },
+                    shape = RoundedCornerShape(14.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = buttonColor,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Update")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Cancel",
+                    color = IssueColors.TextMuted
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun IssueInfoRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = text,
-            color = textColor,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            text = "$label:",
+            modifier = Modifier.weight(0.38f),
+            color = IssueColors.TextMuted,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Text(
+            text = value.ifBlank { "N/A" },
+            modifier = Modifier.weight(0.62f),
+            color = IssueColors.TextDark,
+            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodySmall
         )
     }
 }
 
 @Composable
-private fun ModernStatusButton(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun MessageBox(
+    title: String,
+    message: String,
+    bgColor: Color,
+    textColor: Color
 ) {
-    if (isSelected) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                bgColor,
+                RoundedCornerShape(12.dp)
+            )
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = title,
+            color = textColor,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium
+        )
+
+        Text(
+            text = message,
+            color = textColor,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun IssueFilterTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = IssueColors.TextMuted,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+private fun IssueHorizontalFilterRow(
+    content: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun IssueFilterChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    if (selected) {
         Button(
             onClick = onClick,
-            modifier = modifier.height(36.dp),
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SoftwareReportColors.PrimaryIndigo),
-            contentPadding = PaddingValues(0.dp)
+            shape = RoundedCornerShape(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = IssueColors.PrimaryIndigo,
+                contentColor = Color.White
+            )
         ) {
-            Text(text = text, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(text)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            modifier = modifier.height(36.dp),
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = SoftwareReportColors.TextDark),
-            border = androidx.compose.foundation.BorderStroke(1.dp, SoftwareReportColors.ModernBg),
-            contentPadding = PaddingValues(0.dp)
+            shape = RoundedCornerShape(50.dp)
         ) {
-            Text(text = text, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(text)
         }
+    }
+}
+
+private fun issueStatusOrder(status: String): Int {
+    return when (status.trim().lowercase()) {
+        "open" -> 0
+        "in progress" -> 1
+        "solved" -> 2
+        "resolved" -> 2
+        "rejected" -> 3
+        else -> 4
+    }
+}
+
+private fun issueSeverityOrder(severity: String): Int {
+    return when (severity.trim().lowercase()) {
+        "high" -> 0
+        "medium" -> 1
+        "low" -> 2
+        else -> 3
+    }
+}
+
+private fun issueStatusTextColor(status: String): Color {
+    return when (status.trim().lowercase()) {
+        "open" -> IssueColors.RedText
+        "in progress" -> IssueColors.OrangeText
+        "solved" -> IssueColors.GreenText
+        "resolved" -> IssueColors.GreenText
+        "rejected" -> IssueColors.GrayText
+        else -> IssueColors.GrayText
+    }
+}
+
+private fun issueStatusBackgroundColor(status: String): Color {
+    return when (status.trim().lowercase()) {
+        "open" -> IssueColors.RedLight
+        "in progress" -> IssueColors.OrangeLight
+        "solved" -> IssueColors.GreenLight
+        "resolved" -> IssueColors.GreenLight
+        "rejected" -> IssueColors.GrayLight
+        else -> IssueColors.GrayLight
+    }
+}
+
+private fun formatIssueTimestamp(timestamp: Long): String {
+    return try {
+        if (timestamp <= 0L) {
+            "N/A"
+        } else {
+            SimpleDateFormat(
+                "dd MMM yyyy, hh:mm a",
+                Locale.getDefault()
+            ).format(Date(timestamp))
+        }
+    } catch (_: Exception) {
+        "N/A"
     }
 }

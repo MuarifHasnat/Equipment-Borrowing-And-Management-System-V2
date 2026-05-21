@@ -23,6 +23,7 @@ sealed class AppScreen(val route: String) {
     object MyRequests : AppScreen("my_requests")
     object LabComputerList : AppScreen("lab_computer_list")
     object ReportSoftwareIssue : AppScreen("report_software_issue")
+    object MySoftwareIssues : AppScreen("my_software_issues")
 
     object AdminDashboard : AppScreen("admin_dashboard")
     object PendingStudents : AppScreen("pending_students")

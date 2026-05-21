@@ -60,6 +60,7 @@ fun isStudentScreen(screen: AppScreen): Boolean {
         AppScreen.RequestSubmitted,
         AppScreen.MyRequests,
         AppScreen.LabComputerList,
-        AppScreen.ReportSoftwareIssue
+        AppScreen.ReportSoftwareIssue,
+        AppScreen.MySoftwareIssues
     )
 }

@@ -40,6 +40,7 @@ import com.example.equipmentborrowingapp.ui.student.BorrowRequestScreen
 import com.example.equipmentborrowingapp.ui.student.EquipmentListScreen
 import com.example.equipmentborrowingapp.ui.student.LabComputerListScreen
 import com.example.equipmentborrowingapp.ui.student.MyRequestsScreen
+import com.example.equipmentborrowingapp.ui.student.MySoftwareIssuesScreen
 import com.example.equipmentborrowingapp.ui.student.ReportSoftwareIssueScreen
 import com.example.equipmentborrowingapp.ui.student.StudentDashboardScreen
 import com.example.equipmentborrowingapp.ui.theme.EquipmentBorrowingAppTheme
@@ -171,6 +172,9 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<List<ComputerSoftwareStatus>>(emptyList())
                 }
                 var softwareIssueReports by remember {
+                    mutableStateOf<List<SoftwareIssueReport>>(emptyList())
+                }
+                var mySoftwareIssueReports by remember {
                     mutableStateOf<List<SoftwareIssueReport>>(emptyList())
                 }
                 var institutionAdminRequestList by remember {
@@ -666,7 +670,23 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 fun loadAdminEquipmentAndOpenManage() {
-                    refreshEquipmentForAdmin(AppScreen.ManageEquipment)
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    roomViewModel.loadRooms(
+                        institutionId = currentInstitutionId
+                    ) {
+                        adminEquipmentViewModel.loadEquipment(
+                            institutionId = currentInstitutionId
+                        ) {
+                            runOnUiThread {
+                                roomList = roomViewModel.roomList
+                                currentScreen = AppScreen.ManageEquipment
+                            }
+                        }
+                    }
                 }
 
                     fun loadPendingRequestsAndOpen() {
@@ -1156,7 +1176,57 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                fun loadMySoftwareIssuesAndOpen() {
+                    val uid = authRepository.getCurrentUserUid()
 
+                    if (uid == null) {
+                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                        safeLogoutToLogin()
+                        return
+                    }
+
+                    labComputerRepository.getStudentSoftwareIssueReports(
+                        institutionId = currentInstitutionId.trim(),
+                        userId = uid.trim()
+                    ) { list ->
+                        runOnUiThread {
+                            mySoftwareIssueReports = list
+                            currentScreen = AppScreen.MySoftwareIssues
+
+                            if (list.isEmpty()) {
+                                showMessage("No issue found. UID: $uid, Institution: $currentInstitutionId")
+                            }
+                        }
+                    }
+                }
+
+                fun handleStudentSoftwareIssueFeedback(
+                    report: SoftwareIssueReport,
+                    feedback: String
+                ) {
+                    if (report.id.isBlank()) {
+                        showMessage("Invalid issue report")
+                        return
+                    }
+
+                    if (feedback.isBlank()) {
+                        showMessage("Feedback is required")
+                        return
+                    }
+
+                    labComputerRepository.addStudentFeedbackToIssueReport(
+                        reportId = report.id,
+                        studentFeedback = feedback
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                loadMySoftwareIssuesAndOpen()
+                            }
+                        }
+                    }
+                }
                 @Composable
                 fun renderPendingRequestsScreen() {
                     PendingRequestsScreen(
@@ -1213,6 +1283,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onLabComputersClick = {
                                         loadLabComputersForStudent()
+                                    },
+                                    onMySoftwareIssuesClick = {
+                                        loadMySoftwareIssuesAndOpen()
                                     },
                                     onProfileClick = {
                                         currentScreen = AppScreen.StudentProfile
@@ -1577,7 +1650,7 @@ class MainActivity : ComponentActivity() {
                                                                         type = "warning"
                                                                     )
 
-                                                                    currentScreen = AppScreen.LabComputerList
+                                                                    loadMySoftwareIssuesAndOpen()
                                                                 }
                                                             }
                                                         }
@@ -1596,7 +1669,24 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-
+                        AppScreen.MySoftwareIssues -> {
+                            if (!isStudent()) {
+                                redirectUnauthorized(AppScreen.MySoftwareIssues)
+                            } else {
+                                MySoftwareIssuesScreen(
+                                    issueList = mySoftwareIssueReports,
+                                    onRefreshClick = {
+                                        loadMySoftwareIssuesAndOpen()
+                                    },
+                                    onFeedbackSubmitClick = { report, feedback ->
+                                        handleStudentSoftwareIssueFeedback(report, feedback)
+                                    },
+                                    onBackClick = {
+                                        currentScreen = AppScreen.StudentDashboard
+                                    }
+                                )
+                            }
+                        }
                         else -> Unit
                     }
                 }
@@ -1650,6 +1740,7 @@ class MainActivity : ComponentActivity() {
                         refreshAdminDashboardData()
                     }
                 }
+
                 BackHandler {
                     when (currentScreen) {
 
@@ -1709,7 +1800,8 @@ class MainActivity : ComponentActivity() {
                             currentScreen = AppScreen.StudentDashboard
                         }
                         AppScreen.MyRequests,
-                        AppScreen.LabComputerList -> {
+                        AppScreen.LabComputerList,
+                        AppScreen.MySoftwareIssues -> {
                             currentScreen = AppScreen.StudentDashboard
                         }
                         AppScreen.EquipmentDetails -> {
@@ -1790,7 +1882,8 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.RequestSubmitted,
                                 AppScreen.MyRequests,
                                 AppScreen.LabComputerList,
-                                AppScreen.ReportSoftwareIssue
+                                AppScreen.ReportSoftwareIssue,
+                                AppScreen.MySoftwareIssues
                             ) -> {
                                 renderStudentScreens()
                             }
@@ -2275,12 +2368,13 @@ class MainActivity : ComponentActivity() {
                                             } else {
                                                 ManageEquipmentScreen(
                                                     equipmentList = adminEquipmentViewModel.equipmentList,
+                                                    roomList = roomList,
                                                     onEditClick = { equipment ->
                                                         selectedEquipment = equipment
                                                         currentScreen = AppScreen.EditEquipment
                                                     },
                                                     onBackClick = {
-                                                        openAdminDashboardWithFreshData()
+                                                        currentScreen = AppScreen.AdminDashboard
                                                     }
                                                 )
                                             }
@@ -2767,6 +2861,47 @@ class MainActivity : ComponentActivity() {
                                                 ) { success, message ->
                                                     runOnUiThread {
                                                         showMessage(message)
+
+                                                        if (success) {
+                                                            labComputerRepository.getSoftwareStatusForComputer(
+                                                                institutionId = currentInstitutionId,
+                                                                computerId = computer.id
+                                                            ) { list ->
+                                                                runOnUiThread {
+                                                                    computerSoftwareList = list
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            onUpdateSoftwareClick = { updatedSoftware ->
+                                                labComputerRepository.updateSoftwareStatus(
+                                                    softwareStatus = updatedSoftware
+                                                ) { success, message ->
+                                                    runOnUiThread {
+                                                        showMessage(message)
+
+                                                        if (success) {
+                                                            labComputerRepository.getSoftwareStatusForComputer(
+                                                                institutionId = currentInstitutionId,
+                                                                computerId = computer.id
+                                                            ) { list ->
+                                                                runOnUiThread {
+                                                                    computerSoftwareList = list
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            onDeleteSoftwareClick = { softwareStatus ->
+                                                labComputerRepository.deleteSoftwareStatus(
+                                                    softwareStatusId = softwareStatus.id
+                                                ) { success, message ->
+                                                    runOnUiThread {
+                                                        showMessage(message)
+
                                                         if (success) {
                                                             labComputerRepository.getSoftwareStatusForComputer(
                                                                 institutionId = currentInstitutionId,
@@ -2800,25 +2935,22 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     SoftwareIssueReportsScreen(
                                         reportList = softwareIssueReports,
-                                        onStatusUpdateClick = { report, newStatus ->
+                                        onUpdateStatusClick = { report, newStatus, adminComment ->
                                             labComputerRepository.updateIssueReportStatus(
                                                 reportId = report.id,
-                                                newStatus = newStatus
+                                                status = newStatus,
+                                                adminComment = adminComment,
+                                                handledBy = authRepository.getCurrentUserUid().orEmpty()
                                             ) { success, message ->
                                                 runOnUiThread {
                                                     showMessage(message)
+
                                                     if (success) {
-                                                        val selectedComputerId = selectedLabComputer?.id
                                                         labComputerRepository.getSoftwareIssueReports(
                                                             institutionId = currentInstitutionId
-                                                        ) { list ->
+                                                        ) { reports ->
                                                             runOnUiThread {
-                                                                softwareIssueReports =
-                                                                    if (selectedComputerId.isNullOrBlank()) {
-                                                                        list
-                                                                    } else {
-                                                                        list.filter { it.computerId == selectedComputerId }
-                                                                    }
+                                                                softwareIssueReports = reports
                                                             }
                                                         }
                                                     }
@@ -2826,7 +2958,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         onBackClick = {
-                                            currentScreen = AppScreen.ManageLabComputers
+                                            currentScreen = AppScreen.AdminDashboard
                                         }
                                     )
                                 }

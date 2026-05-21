@@ -5,6 +5,7 @@ import com.example.equipmentborrowingapp.data.model.LabComputer
 import com.example.equipmentborrowingapp.data.model.SoftwareIssueReport
 import com.google.firebase.firestore.FirebaseFirestore
 
+
 class LabComputerRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
@@ -265,33 +266,68 @@ class LabComputerRepository {
                 onResult(false, e.message ?: "Failed to submit issue report")
             }
     }
-
     fun getSoftwareIssueReports(
         institutionId: String,
         onResult: (List<SoftwareIssueReport>) -> Unit
     ) {
-        if (institutionId.isBlank()) {
+        val cleanInstitutionId = institutionId.trim()
+
+        if (cleanInstitutionId.isBlank()) {
             onResult(emptyList())
             return
         }
 
         firestore.collection("software_issue_reports")
-            .whereEqualTo("institutionId", institutionId)
+            .whereEqualTo("institutionId", cleanInstitutionId)
             .get()
             .addOnSuccessListener { result ->
-                val list = result.documents.mapNotNull {
-                    it.toObject(SoftwareIssueReport::class.java)
+                val list = result.documents.mapNotNull { document ->
+                    document.toObject(SoftwareIssueReport::class.java)
+                }.sortedByDescending { report ->
+                    report.timestamp
                 }
+
                 onResult(list)
             }
             .addOnFailureListener {
                 onResult(emptyList())
             }
     }
+    fun getStudentSoftwareIssueReports(
+        institutionId: String,
+        userId: String,
+        onResult: (List<SoftwareIssueReport>) -> Unit
+    ) {
+        val cleanUserId = userId.trim()
 
+        if (cleanUserId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
+        firestore.collection("software_issue_reports")
+            .whereEqualTo("reportedByUserId", cleanUserId)
+            .get()
+            .addOnSuccessListener { result ->
+                val list = result.documents.mapNotNull { document ->
+                    document.toObject(SoftwareIssueReport::class.java)
+                }.filter { report ->
+                    institutionId.isBlank() || report.institutionId == institutionId.trim()
+                }.sortedByDescending { report ->
+                    report.timestamp
+                }
+
+                onResult(list)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
     fun updateIssueReportStatus(
         reportId: String,
-        newStatus: String,
+        status: String,
+        adminComment: String = "",
+        handledBy: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         if (reportId.isBlank()) {
@@ -299,19 +335,154 @@ class LabComputerRepository {
             return
         }
 
-        if (newStatus.isBlank()) {
+        if (status.isBlank()) {
             onResult(false, "Status is required")
             return
         }
 
+        val normalizedStatus = status.trim()
+        val now = System.currentTimeMillis()
+
+        val updateMap = mutableMapOf<String, Any>(
+            "status" to normalizedStatus,
+            "updatedAt" to now
+        )
+
+        if (adminComment.isNotBlank()) {
+            updateMap["adminComment"] = adminComment.trim()
+        }
+
+        if (handledBy.isNotBlank()) {
+            updateMap["assignedTo"] = handledBy
+        }
+
+        if (
+            normalizedStatus.equals("Solved", ignoreCase = true) ||
+            normalizedStatus.equals("Resolved", ignoreCase = true)
+        ) {
+            updateMap["resolvedBy"] = handledBy
+            updateMap["resolvedAt"] = now
+            updateMap["status"] = "Solved"
+        }
+
         firestore.collection("software_issue_reports")
             .document(reportId)
-            .update("status", newStatus.trim())
+            .update(updateMap)
             .addOnSuccessListener {
-                onResult(true, "Issue report status updated successfully")
+                onResult(true, "Issue report updated successfully")
             }
             .addOnFailureListener { e ->
-                onResult(false, e.message ?: "Failed to update issue report status")
+                onResult(false, e.message ?: "Failed to update issue report")
+            }
+    }
+    fun addStudentFeedbackToIssueReport(
+        reportId: String,
+        studentFeedback: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (reportId.isBlank()) {
+            onResult(false, "Invalid report id")
+            return
+        }
+
+        if (studentFeedback.isBlank()) {
+            onResult(false, "Feedback is required")
+            return
+        }
+
+        val reportRef = firestore.collection("software_issue_reports")
+            .document(reportId)
+
+        reportRef.get()
+            .addOnSuccessListener { document ->
+                val report = document.toObject(SoftwareIssueReport::class.java)
+
+                if (report == null) {
+                    onResult(false, "Issue report not found")
+                    return@addOnSuccessListener
+                }
+
+                if (!report.status.equals("Solved", ignoreCase = true)) {
+                    onResult(false, "Feedback can be submitted only after the issue is solved")
+                    return@addOnSuccessListener
+                }
+
+                reportRef.update(
+                    mapOf(
+                        "studentFeedback" to studentFeedback.trim(),
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                )
+                    .addOnSuccessListener {
+                        onResult(true, "Feedback submitted successfully")
+                    }
+                    .addOnFailureListener { e ->
+                        onResult(false, e.message ?: "Failed to submit feedback")
+                    }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to check issue report")
+            }
+    }
+    fun updateSoftwareStatus(
+        softwareStatus: ComputerSoftwareStatus,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (softwareStatus.id.isBlank()) {
+            onResult(false, "Software status not found")
+            return
+        }
+
+        if (softwareStatus.institutionId.isBlank()) {
+            onResult(false, "Institution not found")
+            return
+        }
+
+        if (softwareStatus.computerId.isBlank()) {
+            onResult(false, "Computer not found")
+            return
+        }
+
+        if (softwareStatus.softwareName.isBlank()) {
+            onResult(false, "Software name is required")
+            return
+        }
+
+        val updatedStatus = softwareStatus.copy(
+            softwareName = softwareStatus.softwareName.trim(),
+            version = softwareStatus.version.trim(),
+            remarks = softwareStatus.remarks.trim(),
+            checkedAt = System.currentTimeMillis()
+        )
+
+        firestore.collection("computer_software_status")
+            .document(softwareStatus.id)
+            .set(updatedStatus)
+            .addOnSuccessListener {
+                onResult(true, "Software status updated successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to update software status")
+            }
+    }
+
+    fun deleteSoftwareStatus(
+        softwareStatusId: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (softwareStatusId.isBlank()) {
+            onResult(false, "Invalid software status id")
+            return
+        }
+
+        firestore.collection("computer_software_status")
+            .document(softwareStatusId)
+            .delete()
+            .addOnSuccessListener {
+                onResult(true, "Software status deleted successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to delete software status")
             }
     }
 }

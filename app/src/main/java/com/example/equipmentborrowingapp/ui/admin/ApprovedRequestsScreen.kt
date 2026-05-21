@@ -2,6 +2,7 @@ package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -33,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -53,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
@@ -127,9 +131,99 @@ fun ApprovedRequestsScreen(
     var selectedRequest by remember { mutableStateOf<BorrowRequest?>(null) }
     var selectedAction by remember { mutableStateOf("") }
 
+    var searchText by remember { mutableStateOf("") }
+    var selectedStatus by remember { mutableStateOf("All") }
+    var selectedDepartment by remember { mutableStateOf("All") }
+    var selectedCategory by remember { mutableStateOf("All") }
+    var selectedSort by remember { mutableStateOf("Newest First") }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+
+    val departmentList = remember(requestList) {
+        listOf("All") + requestList
+            .map { it.department.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
+    val categoryList = remember(requestList) {
+        listOf("All") + requestList
+            .map { it.equipmentCategory.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
+    val filteredRequests = requestList
+        .filter { request ->
+            val query = searchText.trim().lowercase()
+
+            val matchesSearch =
+                query.isBlank() ||
+                        request.userName.lowercase().contains(query) ||
+                        request.userEmail.lowercase().contains(query) ||
+                        request.studentId.lowercase().contains(query) ||
+                        request.department.lowercase().contains(query) ||
+                        request.equipmentName.lowercase().contains(query) ||
+                        request.equipmentCategory.lowercase().contains(query) ||
+                        request.status.lowercase().contains(query) ||
+                        request.borrowDate.lowercase().contains(query) ||
+                        request.dueDate.lowercase().contains(query)
+
+            val matchesStatus =
+                selectedStatus == "All" ||
+                        request.status.equals(selectedStatus, ignoreCase = true)
+
+            val matchesDepartment =
+                selectedDepartment == "All" ||
+                        request.department.equals(selectedDepartment, ignoreCase = true)
+
+            val matchesCategory =
+                selectedCategory == "All" ||
+                        request.equipmentCategory.equals(selectedCategory, ignoreCase = true)
+
+            matchesSearch && matchesStatus && matchesDepartment && matchesCategory
+        }
+        .let { list ->
+            when (selectedSort) {
+                "Oldest First" -> list.sortedBy { it.requestTimestamp }
+
+                "Student A-Z" -> list.sortedBy { it.userName.lowercase() }
+
+                "Equipment A-Z" -> list.sortedBy { it.equipmentName.lowercase() }
+
+                "Quantity High-Low" -> list.sortedWith(
+                    compareByDescending<BorrowRequest> { it.quantity }
+                        .thenBy { it.equipmentName.lowercase() }
+                )
+
+                "Due Date" -> list.sortedBy { it.dueDate }
+
+                "Status" -> list.sortedWith(
+                    compareBy<BorrowRequest> { activeStatusOrder(it.status) }
+                        .thenByDescending { it.requestTimestamp }
+                )
+
+                else -> list.sortedByDescending { it.requestTimestamp }
+            }
+        }
+
+    val approvedCount = requestList.count {
+        it.status.equals("Approved", ignoreCase = true)
+    }
+
+    val issuedCount = requestList.count {
+        it.status.equals("Issued", ignoreCase = true)
+    }
+
+    val overdueCount = requestList.count {
+        it.status.equals("Overdue", ignoreCase = true)
+    }
+
+    val totalQuantity = requestList.sumOf { it.quantity }
 
     selectedRequest?.let { request ->
         ConfirmLifecycleActionDialog(
@@ -227,21 +321,199 @@ fun ApprovedRequestsScreen(
                         )
 
                         Text(
-                            text = "Approved, issued, overdue and return tracking",
+                            text = "Search, filter, sort and manage lifecycle",
                             style = MaterialTheme.typography.bodyMedium,
                             color = ApprovedColors.TextMuted
                         )
                     }
                 }
 
-                if (requestList.isEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ActiveMiniStatCard(
+                        title = "Approved",
+                        value = approvedCount.toString(),
+                        bgColor = ApprovedColors.BlueLight,
+                        textColor = ApprovedColors.BlueText,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    ActiveMiniStatCard(
+                        title = "Issued",
+                        value = issuedCount.toString(),
+                        bgColor = ApprovedColors.PurpleLight,
+                        textColor = ApprovedColors.PurpleText,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ActiveMiniStatCard(
+                        title = "Overdue",
+                        value = overdueCount.toString(),
+                        bgColor = ApprovedColors.RedLight,
+                        textColor = ApprovedColors.RedText,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    ActiveMiniStatCard(
+                        title = "Total Qty",
+                        value = totalQuantity.toString(),
+                        bgColor = ApprovedColors.GreenLight,
+                        textColor = ApprovedColors.GreenText,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    label = {
+                        Text("Search student, ID, department, equipment or status")
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                ActiveFilterTitle("Status")
+
+                ActiveHorizontalFilterRow {
+                    listOf(
+                        "All",
+                        "Approved",
+                        "Issued",
+                        "Overdue"
+                    ).forEach { status ->
+                        ActiveFilterChip(
+                            text = status,
+                            selected = selectedStatus == status,
+                            onClick = {
+                                selectedStatus = status
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ActiveFilterTitle("Department")
+
+                ActiveHorizontalFilterRow {
+                    departmentList.forEach { department ->
+                        ActiveFilterChip(
+                            text = department,
+                            selected = selectedDepartment == department,
+                            onClick = {
+                                selectedDepartment = department
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ActiveFilterTitle("Category")
+
+                ActiveHorizontalFilterRow {
+                    categoryList.forEach { category ->
+                        ActiveFilterChip(
+                            text = category,
+                            selected = selectedCategory == category,
+                            onClick = {
+                                selectedCategory = category
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ActiveFilterTitle("Sort")
+
+                ActiveHorizontalFilterRow {
+                    listOf(
+                        "Newest First",
+                        "Oldest First",
+                        "Due Date",
+                        "Status",
+                        "Student A-Z",
+                        "Equipment A-Z",
+                        "Quantity High-Low"
+                    ).forEach { sort ->
+                        ActiveFilterChip(
+                            text = sort,
+                            selected = selectedSort == sort,
+                            onClick = {
+                                selectedSort = sort
+                            }
+                        )
+                    }
+                }
+
+                if (
+                    searchText.isNotBlank() ||
+                    selectedStatus != "All" ||
+                    selectedDepartment != "All" ||
+                    selectedCategory != "All" ||
+                    selectedSort != "Newest First"
+                ) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            searchText = ""
+                            selectedStatus = "All"
+                            selectedDepartment = "All"
+                            selectedCategory = "All"
+                            selectedSort = "Newest First"
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Clear Search, Filters and Sort")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "Showing ${filteredRequests.size} of ${requestList.size} active request(s)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ApprovedColors.TextDark,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (filteredRequests.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No active borrow requests found",
-                            color = ApprovedColors.TextMuted
+                            text = if (requestList.isEmpty()) {
+                                "No active borrow requests found."
+                            } else {
+                                "No active request matches your search/filter."
+                            },
+                            color = ApprovedColors.TextMuted,
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 } else {
@@ -250,7 +522,7 @@ fun ApprovedRequestsScreen(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         contentPadding = PaddingValues(bottom = 20.dp)
                     ) {
-                        items(requestList) { request ->
+                        items(filteredRequests) { request ->
                             BorrowLifecycleRequestCard(
                                 request = request,
                                 onIssueClick = {
@@ -274,6 +546,102 @@ fun ApprovedRequestsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ActiveMiniStatCard(
+    title: String,
+    value: String,
+    bgColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(76.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = ApprovedColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = ApprovedColors.TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = value,
+                modifier = Modifier
+                    .background(
+                        color = bgColor,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = textColor,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActiveFilterTitle(
+    text: String
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = ApprovedColors.TextMuted,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+private fun ActiveHorizontalFilterRow(
+    content: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun ActiveFilterChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    if (selected) {
+        Button(
+            onClick = onClick,
+            shape = RoundedCornerShape(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ApprovedColors.PrimaryIndigo,
+                contentColor = Color.White
+            )
+        ) {
+            Text(text)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            shape = RoundedCornerShape(50.dp)
+        ) {
+            Text(text)
         }
     }
 }
@@ -321,7 +689,9 @@ private fun BorrowLifecycleRequestCard(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = ApprovedColors.TextDark,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         ProfessionalStatusBadge(
@@ -349,6 +719,25 @@ private fun BorrowLifecycleRequestCard(
                         )
                     }
 
+                    if (request.studentId.isNotBlank() || request.department.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = buildString {
+                                if (request.studentId.isNotBlank()) {
+                                    append("ID: ${request.studentId}")
+                                }
+
+                                if (request.department.isNotBlank()) {
+                                    if (isNotBlank()) append(" • ")
+                                    append(request.department)
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ApprovedColors.TextMuted
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,9 +751,37 @@ private fun BorrowLifecycleRequestCard(
                         Spacer(modifier = Modifier.width(4.dp))
 
                         Text(
-                            text = "Borrow: ${request.borrowDate.ifBlank { "N/A" }}  •  Due: ${request.dueDate.ifBlank { "N/A" }}",
+                            text = "Borrow: ${request.borrowDate.ifBlank { "N/A" }}",
                             style = MaterialTheme.typography.bodySmall,
                             color = ApprovedColors.TextMuted
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = ApprovedColors.TextMuted
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Text(
+                            text = "Due: ${request.dueDate.ifBlank { "N/A" }}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (status.equals("Overdue", ignoreCase = true)) {
+                                ApprovedColors.RedText
+                            } else {
+                                ApprovedColors.TextMuted
+                            },
+                            fontWeight = if (status.equals("Overdue", ignoreCase = true)) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            }
                         )
                     }
 
@@ -608,4 +1025,13 @@ private fun ConfirmLifecycleActionDialog(
             }
         }
     )
+}
+
+private fun activeStatusOrder(status: String): Int {
+    return when (status.trim().lowercase()) {
+        "approved" -> 0
+        "issued" -> 1
+        "overdue" -> 2
+        else -> 3
+    }
 }
