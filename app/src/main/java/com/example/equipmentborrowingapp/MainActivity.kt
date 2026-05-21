@@ -65,7 +65,6 @@ import com.example.equipmentborrowingapp.ui.student.StudentProfileScreen
 import com.example.equipmentborrowingapp.ui.admin.AdminProfileScreen
 import com.example.equipmentborrowingapp.viewmodel.NotificationViewModel
 import com.example.equipmentborrowingapp.ui.common.NotificationScreen
-import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.example.equipmentborrowingapp.data.repository.NotificationRepository
 import com.example.equipmentborrowingapp.ui.student.EquipmentDetailsScreen
 import com.example.equipmentborrowingapp.ui.student.RequestSubmittedScreen
@@ -144,27 +143,7 @@ class MainActivity : ComponentActivity() {
 
 
 
-                // Screen data state
-                fun sendNotification(
-                    userId: String,
-                    role: String,
-                    title: String,
-                    message: String,
-                    type: String = "info"
-                ) {
-                    notificationRepository.sendNotification(
-                        AppNotification(
-                            institutionId = currentInstitutionId,
-                            userId = userId,
-                            role = role,
-                            title = title,
-                            message = message,
-                            type = type,
-                            read = false,
-                            timestamp = System.currentTimeMillis()
-                        )
-                    )
-                }
+
 
                 var adminAllRequests by remember { mutableStateOf<List<BorrowRequest>>(emptyList()) }
                 var labComputerList by remember { mutableStateOf<List<LabComputer>>(emptyList()) }
@@ -329,7 +308,8 @@ class MainActivity : ComponentActivity() {
                             }
 
                             notificationViewModel.startListening(
-                                userId = uid,
+                                institutionId = currentInstitutionId.trim(),
+                                userId = uid.trim(),
                                 role = currentUserRole ?: "student"
                             )
                         }
@@ -787,9 +767,9 @@ class MainActivity : ComponentActivity() {
                             showMessage(message)
 
                             if (success) {
-                                sendNotification(
-                                    userId = student.uid,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = student.uid,
                                     title = "Account Verified",
                                     message = "Your student account has been verified. You can now borrow equipment.",
                                     type = "success"
@@ -807,9 +787,9 @@ class MainActivity : ComponentActivity() {
                             showMessage(message)
 
                             if (success) {
-                                sendNotification(
-                                    userId = student.uid,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = student.uid,
                                     title = "Account Rejected",
                                     message = "Your student verification request has been rejected.",
                                     type = "error"
@@ -852,9 +832,9 @@ class MainActivity : ComponentActivity() {
                                     else -> "info"
                                 }
 
-                                sendNotification(
-                                    userId = student.uid,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = student.uid,
                                     title = notificationTitle,
                                     message = notificationMessage,
                                     type = notificationType
@@ -878,9 +858,9 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
-                                sendNotification(
-                                    userId = request.userId,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
                                     title = "Request Approved",
                                     message = "Your request for ${request.equipmentName} has been approved.",
                                     type = "success"
@@ -909,9 +889,9 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
-                                sendNotification(
-                                    userId = request.userId,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
                                     title = "Request Rejected",
                                     message = "Your request for ${request.equipmentName} has been rejected.",
                                     type = "error"
@@ -940,9 +920,9 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
-                                sendNotification(
-                                    userId = request.userId,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
                                     title = "Item Issued",
                                     message = "${request.equipmentName} has been issued to you.",
                                     type = "success"
@@ -972,9 +952,9 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
-                                sendNotification(
-                                    userId = request.userId,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
                                     title = "Item Returned",
                                     message = "${request.equipmentName} has been marked as returned.",
                                     type = "info"
@@ -1002,14 +982,13 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
-                                sendNotification(
-                                    userId = request.userId,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
                                     title = "Item Marked as Lost",
                                     message = "${request.equipmentName} has been marked as lost. Please contact your admin.",
                                     type = "error"
                                 )
-
                                 refreshAdminDashboardData(
                                     refreshPending = true,
                                     refreshApproved = true
@@ -1032,9 +1011,9 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
-                                sendNotification(
-                                    userId = request.userId,
-                                    role = "student",
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
                                     title = "Item Marked as Damaged",
                                     message = "${request.equipmentName} has been marked as damaged. Please contact your admin.",
                                     type = "warning"
@@ -1193,9 +1172,6 @@ class MainActivity : ComponentActivity() {
                             mySoftwareIssueReports = list
                             currentScreen = AppScreen.MySoftwareIssues
 
-                            if (list.isEmpty()) {
-                                showMessage("No issue found. UID: $uid, Institution: $currentInstitutionId")
-                            }
                         }
                     }
                 }
@@ -1470,9 +1446,8 @@ class MainActivity : ComponentActivity() {
                                                                             )
 
                                                                             if (success) {
-                                                                                sendNotification(
-                                                                                    userId = "admin", // or actual admin UID list
-                                                                                    role = "admin",
+                                                                                notificationRepository.sendNotificationToInstitutionAdmins(
+                                                                                    institutionId = currentInstitutionId,
                                                                                     title = "New Borrow Request",
                                                                                     message = "$userName requested ${equipment.name}",
                                                                                     type = "warning"
@@ -1642,9 +1617,8 @@ class MainActivity : ComponentActivity() {
                                                             runOnUiThread {
                                                                 showMessage(message)
                                                                 if (success) {
-                                                                    sendNotification(
-                                                                        userId = "",
-                                                                        role = "admin",
+                                                                    notificationRepository.sendNotificationToInstitutionAdmins(
+                                                                        institutionId = currentInstitutionId,
                                                                         title = "New Software Issue",
                                                                         message = "$userName reported issue in $softwareName on ${computer.pcName}",
                                                                         type = "warning"
@@ -2946,6 +2920,19 @@ class MainActivity : ComponentActivity() {
                                                     showMessage(message)
 
                                                     if (success) {
+                                                        notificationRepository.sendNotificationToStudent(
+                                                            institutionId = report.institutionId,
+                                                            studentUserId = report.reportedByUserId,
+                                                            title = "Software Issue Updated",
+                                                            message = "Your software issue for ${report.softwareName} is now $newStatus.",
+                                                            type = when (newStatus.lowercase()) {
+                                                                "solved" -> "success"
+                                                                "rejected" -> "error"
+                                                                "in progress" -> "warning"
+                                                                else -> "info"
+                                                            }
+                                                        )
+
                                                         labComputerRepository.getSoftwareIssueReports(
                                                             institutionId = currentInstitutionId
                                                         ) { reports ->

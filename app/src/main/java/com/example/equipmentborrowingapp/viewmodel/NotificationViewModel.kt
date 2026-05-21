@@ -3,49 +3,64 @@ package com.example.equipmentborrowingapp.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
 import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.example.equipmentborrowingapp.data.repository.NotificationRepository
 import com.google.firebase.firestore.ListenerRegistration
 
-class NotificationViewModel(
-    private val notificationRepository: NotificationRepository = NotificationRepository()
-) {
-    var notificationList by mutableStateOf<List<AppNotification>>(emptyList())
-        private set
+class NotificationViewModel : ViewModel() {
 
-    var unreadCount by mutableStateOf(0)
+    private val repository = NotificationRepository()
+
+    var notificationList by mutableStateOf<List<AppNotification>>(emptyList())
         private set
 
     private var listenerRegistration: ListenerRegistration? = null
 
-    fun startListening(userId: String, role: String) {
+    fun startListening(
+        institutionId: String,
+        userId: String,
+        role: String
+    ) {
         stopListening()
 
-        listenerRegistration = notificationRepository.listenToNotifications(
+        listenerRegistration = repository.listenToNotifications(
+            institutionId = institutionId,
             userId = userId,
             role = role
         ) { list ->
             notificationList = list
-            unreadCount = list.count { !it.read }
         }
     }
 
     fun markAsRead(notificationId: String) {
-        notificationRepository.markAsRead(notificationId)
+        repository.markAsRead(notificationId)
+    }
+
+    fun markAllAsRead() {
+        repository.markAllAsRead(notificationList)
     }
 
     fun deleteNotification(notificationId: String) {
-        notificationRepository.deleteNotification(notificationId)
+        repository.deleteNotification(notificationId)
     }
 
-    fun stopListening() {
+    fun deleteAllNotifications() {
+        repository.deleteAllNotifications(notificationList)
+    }
+
+    fun clearNotifications() {
+        notificationList = emptyList()
+        stopListening()
+    }
+
+    private fun stopListening() {
         listenerRegistration?.remove()
         listenerRegistration = null
     }
 
-    fun clearNotifications() {
+    override fun onCleared() {
+        super.onCleared()
         stopListening()
-        notificationList = emptyList()
-        unreadCount = 0
     }
 }
