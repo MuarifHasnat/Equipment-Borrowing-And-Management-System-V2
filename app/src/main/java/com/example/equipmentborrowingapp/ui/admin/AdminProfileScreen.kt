@@ -2,206 +2,291 @@ package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AdminPanelSettings
+import androidx.compose.material.icons.rounded.Business
 import androidx.compose.material.icons.rounded.Email
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.rounded.LockReset
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.equipmentborrowingapp.data.model.AppUser
 
-
-private object ProfileColors {
-    val ModernBg = Color(0xFFF4F7FB)
+private object AdminProfileColors {
+    val Bg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
-    val PrimaryIndigo = Color(0xFF4F46E5)
-    val PurpleAccent = Color(0xFF7C3AED)
-    val BlueLight = Color(0xFFEFF6FF)
+    val Primary = Color(0xFF4F46E5)
+    val Purple = Color(0xFF7C3AED)
+    val BlueBg = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
 }
 
 @Composable
 fun AdminProfileScreen(
-    userName: String,
-    userEmail: String,
-    role: String,
+    user: AppUser?,
+    onSaveClick: (phone: String) -> Unit,
+    onPasswordResetClick: (String) -> Unit,
     onBackClick: () -> Unit
 ) {
+    var phone by remember { mutableStateOf("") }
+
+    LaunchedEffect(user?.uid) {
+        phone = user?.phone.orEmpty()
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = ProfileColors.ModernBg
+        color = AdminProfileColors.Bg
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // Modern Top Bar
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp, top = 8.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = onBackClick,
-                    modifier = Modifier
-                        .background(ProfileColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                    modifier = Modifier.background(
+                        AdminProfileColors.CardWhite,
+                        RoundedCornerShape(12.dp)
+                    )
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                         contentDescription = "Back",
-                        tint = ProfileColors.TextDark
+                        tint = AdminProfileColors.TextDark
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Admin Profile",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = ProfileColors.TextDark,
-                    fontWeight = FontWeight.ExtraBold
-                )
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column {
+                    Text(
+                        text = "Admin Profile",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AdminProfileColors.TextDark
+                    )
+                    Text(
+                        text = "Manage your admin account",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AdminProfileColors.TextMuted
+                    )
+                }
             }
 
-            //  Premium Hero Section
-            Box(
+            Spacer(modifier = Modifier.height(18.dp))
+
+            AdminProfileHeroCard(user = user)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = ProfileColors.PrimaryIndigo.copy(alpha = 0.4f))
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(ProfileColors.PrimaryIndigo, ProfileColors.PurpleAccent)
-                        ),
-                        shape = RoundedCornerShape(28.dp)
-                    )
-                    .padding(vertical = 32.dp, horizontal = 20.dp),
-                contentAlignment = Alignment.Center
+                    .shadow(4.dp, RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = AdminProfileColors.CardWhite)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.size(90.dp)
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text(
+                        text = "Editable Information",
+                        color = AdminProfileColors.TextDark,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { phone = it },
+                        label = { Text("Phone") },
+                        leadingIcon = {
+                            Icon(Icons.Rounded.Phone, contentDescription = null)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = {
+                            onSaveClick(phone.trim())
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AdminProfileColors.Primary
+                        )
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Rounded.AdminPanelSettings,
-                                contentDescription = "Admin Avatar",
-                                tint = Color.White,
-                                modifier = Modifier.size(45.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save Profile", fontWeight = FontWeight.Bold)
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(
-                        text = userName,
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Surface(
-                        color = Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(50)
+                    OutlinedButton(
+                        onClick = {
+                            val email = user?.email.orEmpty()
+                            if (email.isNotBlank()) {
+                                onPasswordResetClick(email)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text(
-                            text = "Administrator",
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
+                        Icon(
+                            imageVector = Icons.Rounded.LockReset,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send Password Reset Email", fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Personal Information",
-                style = MaterialTheme.typography.titleMedium,
-                color = ProfileColors.TextDark,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp, start = 4.dp)
-            )
-
-            // Info Cards
-            ModernProfileInfoCard(Icons.Rounded.Person, "Full Name", userName)
-            Spacer(modifier = Modifier.height(16.dp))
-            ModernProfileInfoCard(Icons.Rounded.Email, "Email Address", userEmail)
-            Spacer(modifier = Modifier.height(16.dp))
-            ModernProfileInfoCard(Icons.Rounded.AdminPanelSettings, "Role Access", role.uppercase())
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun ModernProfileInfoCard(
-    icon: ImageVector,
+private fun AdminProfileHeroCard(user: AppUser?) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = AdminProfileColors.CardWhite)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .background(AdminProfileColors.Primary.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.AdminPanelSettings,
+                        contentDescription = null,
+                        tint = AdminProfileColors.Primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = user?.name?.ifBlank { "Admin" } ?: "Admin",
+                        color = AdminProfileColors.TextDark,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = user?.email?.ifBlank { "No email found" } ?: "No email found",
+                        color = AdminProfileColors.TextMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AdminProfileInfoRow(
+                icon = Icons.Rounded.Email,
+                label = "Email",
+                value = user?.email.orEmpty().ifBlank { "N/A" }
+            )
+
+            AdminProfileInfoRow(
+                icon = Icons.Rounded.VerifiedUser,
+                label = "Role",
+                value = user?.role.orEmpty().ifBlank { "admin" }
+            )
+
+            AdminProfileInfoRow(
+                icon = Icons.Rounded.Business,
+                label = "Institution ID",
+                value = user?.institutionId.orEmpty().ifBlank { "N/A" }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdminProfileInfoRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String
 ) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = ProfileColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+            .padding(vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(ProfileColors.BlueLight),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = ProfileColors.BlueText,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = AdminProfileColors.Purple,
+            modifier = Modifier.size(20.dp)
+        )
 
-            Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
-            Column {
-                Text(
-                    text = label,
-                    color = ProfileColors.TextMuted,
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = value,
-                    fontWeight = FontWeight.Bold,
-                    color = ProfileColors.TextDark,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+        Column {
+            Text(
+                text = label,
+                color = AdminProfileColors.TextMuted,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = value,
+                color = AdminProfileColors.TextDark,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }

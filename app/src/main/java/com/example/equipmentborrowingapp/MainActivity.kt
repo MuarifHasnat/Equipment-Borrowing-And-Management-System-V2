@@ -122,6 +122,9 @@ class MainActivity : ComponentActivity() {
                 var currentUserEmail by remember { mutableStateOf("") }
                 var currentInstitutionId by remember { mutableStateOf("") }
                 var currentVerificationStatus by remember { mutableStateOf("") }
+                var currentAppUser by remember {
+                    mutableStateOf<AppUser?>(null)
+                }
                 var roomList by remember { mutableStateOf<List<Room>>(emptyList()) }
                 val equipmentViewModel = remember { EquipmentViewModel() }
                 val requestViewModel = remember { RequestViewModel() }
@@ -240,6 +243,7 @@ class MainActivity : ComponentActivity() {
                     currentUserEmail = ""
                     currentInstitutionId = ""
                     currentVerificationStatus = ""
+                    currentAppUser = null
                 }
                 fun isSuperAdmin(): Boolean = currentUserRole == "super_admin"
                 fun isAdmin(): Boolean = currentUserRole == "admin"
@@ -291,8 +295,8 @@ class MainActivity : ComponentActivity() {
                             currentUserName = user.name
                             currentUserEmail = user.email
                             currentUserRole = user.role.trim().lowercase()
-                            currentInstitutionId = user.institutionId
-                            currentVerificationStatus = user.verificationStatus
+                            currentInstitutionId = user.institutionId.trim()
+                            currentVerificationStatus = user.verificationStatus.trim().lowercase()
 
                             when (currentUserRole) {
                                 "super_admin", "admin", "student" -> {
@@ -1175,7 +1179,123 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                fun loadStudentProfileAndOpen() {
+                    val uid = authRepository.getCurrentUserUid()
 
+                    if (uid.isNullOrBlank()) {
+                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                        safeLogoutToLogin()
+                        return
+                    }
+
+                    userRepository.getUserById(uid) { user ->
+                        runOnUiThread {
+                            if (user == null) {
+                                showMessage("Profile not found")
+                                return@runOnUiThread
+                            }
+
+                            currentAppUser = user
+                            currentUserName = user.name
+                            currentUserEmail = user.email
+                            currentInstitutionId = user.institutionId.trim()
+                            currentVerificationStatus = user.verificationStatus.trim().lowercase()
+                            currentScreen = AppScreen.StudentProfile
+                        }
+                    }
+                }
+                fun loadAdminProfileAndOpen() {
+                    val uid = authRepository.getCurrentUserUid()
+
+                    if (uid.isNullOrBlank()) {
+                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                        safeLogoutToLogin()
+                        return
+                    }
+
+                    userRepository.getUserById(uid) { user ->
+                        runOnUiThread {
+                            if (user == null) {
+                                showMessage("Profile not found")
+                                return@runOnUiThread
+                            }
+
+                            currentAppUser = user
+                            currentUserName = user.name
+                            currentUserEmail = user.email
+                            currentInstitutionId = user.institutionId.trim()
+                            currentScreen = AppScreen.AdminProfile
+                        }
+                    }
+                }
+
+                fun handleUpdateAdminProfile(
+                    phone: String
+                ) {
+                    val uid = authRepository.getCurrentUserUid()
+
+                    if (uid.isNullOrBlank()) {
+                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                        safeLogoutToLogin()
+                        return
+                    }
+
+                    userRepository.updateAdminProfile(
+                        userId = uid,
+                        phone = phone
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                loadAdminProfileAndOpen()
+                            }
+                        }
+                    }
+                }
+                fun handleUpdateStudentProfile(
+                    phone: String,
+                    studentId: String,
+                    department: String,
+                    semester: String
+                ) {
+                    val uid = authRepository.getCurrentUserUid()
+
+                    if (uid.isNullOrBlank()) {
+                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                        safeLogoutToLogin()
+                        return
+                    }
+
+                    userRepository.updateStudentProfile(
+                        userId = uid,
+                        phone = phone,
+                        studentId = studentId,
+                        department = department,
+                        semester = semester
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(message)
+
+                            if (success) {
+                                loadStudentProfileAndOpen()
+                            }
+                        }
+                    }
+                }
+
+                fun sendProfilePasswordReset(email: String) {
+                    if (email.isBlank()) {
+                        showMessage("Email not found")
+                        return
+                    }
+
+                    authRepository.sendPasswordResetEmail(email) { _, message ->
+                        runOnUiThread {
+                            showMessage(message)
+                        }
+                    }
+                }
                 fun handleStudentSoftwareIssueFeedback(
                     report: SoftwareIssueReport,
                     feedback: String
@@ -1264,7 +1384,7 @@ class MainActivity : ComponentActivity() {
                                         loadMySoftwareIssuesAndOpen()
                                     },
                                     onProfileClick = {
-                                        currentScreen = AppScreen.StudentProfile
+                                        loadStudentProfileAndOpen()
                                     },
                                     onNotificationClick = {
                                         currentScreen = AppScreen.Notifications
@@ -1295,9 +1415,18 @@ class MainActivity : ComponentActivity() {
                                 redirectUnauthorized(AppScreen.StudentProfile)
                             } else {
                                 StudentProfileScreen(
-                                    userName = currentUserName.ifBlank { "Student" },
-                                    userEmail = currentUserEmail.ifBlank { "No email found" },
-                                    role = currentUserRole ?: "student",
+                                    user = currentAppUser,
+                                    onSaveClick = { phone, studentId, department, semester ->
+                                        handleUpdateStudentProfile(
+                                            phone = phone,
+                                            studentId = studentId,
+                                            department = department,
+                                            semester = semester
+                                        )
+                                    },
+                                    onPasswordResetClick = { email ->
+                                        sendProfilePasswordReset(email)
+                                    },
                                     onBackClick = {
                                         currentScreen = AppScreen.StudentDashboard
                                     }
@@ -2144,7 +2273,7 @@ class MainActivity : ComponentActivity() {
                                             openReportsDashboard()
                                         },
                                         onProfileClick = {
-                                            currentScreen = AppScreen.AdminProfile
+                                            loadAdminProfileAndOpen()
                                         },
                                         onNotificationClick = {
                                             currentScreen = AppScreen.Notifications
@@ -2193,9 +2322,13 @@ class MainActivity : ComponentActivity() {
                                     redirectUnauthorized(AppScreen.AdminProfile)
                                 } else {
                                     AdminProfileScreen(
-                                        userName = currentUserName.ifBlank { "Admin" },
-                                        userEmail = currentUserEmail.ifBlank { "No email found" },
-                                        role = currentUserRole ?: "admin",
+                                        user = currentAppUser,
+                                        onSaveClick = { phone ->
+                                            handleUpdateAdminProfile(phone)
+                                        },
+                                        onPasswordResetClick = { email ->
+                                            sendProfilePasswordReset(email)
+                                        },
                                         onBackClick = {
                                             currentScreen = AppScreen.AdminDashboard
                                         }

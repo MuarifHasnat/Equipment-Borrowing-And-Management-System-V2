@@ -110,7 +110,96 @@ class UserRepository {
             onResult = onResult
         )
     }
+    fun getUserById(
+        userId: String,
+        onResult: (AppUser?) -> Unit
+    ) {
+        if (userId.isBlank()) {
+            onResult(null)
+            return
+        }
 
+        firestore.collection("users")
+            .document(userId)
+            .get()
+            .addOnSuccessListener { document ->
+                val user = document.toObject(AppUser::class.java)?.copy(
+                    uid = document.id,
+                    role = document.getString("role")?.trim()?.lowercase().orEmpty(),
+                    institutionId = document.getString("institutionId")?.trim().orEmpty(),
+                    verificationStatus = document.getString("verificationStatus")
+                        ?.trim()
+                        ?.lowercase()
+                        .orEmpty()
+                        .ifBlank { "pending" },
+                    studentId = document.getString("studentId")?.trim().orEmpty(),
+                    department = document.getString("department")?.trim().orEmpty(),
+                    semester = document.getString("semester")?.trim().orEmpty(),
+                    phone = document.getString("phone")?.trim().orEmpty()
+                )
+
+                onResult(user)
+            }
+            .addOnFailureListener {
+                onResult(null)
+            }
+    }
+
+    fun updateStudentProfile(
+        userId: String,
+        phone: String,
+        studentId: String,
+        department: String,
+        semester: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (userId.isBlank()) {
+            onResult(false, "User not found")
+            return
+        }
+
+        firestore.collection("users")
+            .document(userId)
+            .update(
+                mapOf(
+                    "phone" to phone.trim(),
+                    "studentId" to studentId.trim(),
+                    "department" to department.trim(),
+                    "semester" to semester.trim()
+                )
+            )
+            .addOnSuccessListener {
+                onResult(true, "Profile updated successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to update profile")
+            }
+    }
+
+    fun updateAdminProfile(
+        userId: String,
+        phone: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (userId.isBlank()) {
+            onResult(false, "User not found")
+            return
+        }
+
+        firestore.collection("users")
+            .document(userId)
+            .update(
+                mapOf(
+                    "phone" to phone.trim()
+                )
+            )
+            .addOnSuccessListener {
+                onResult(true, "Profile updated successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to update profile")
+            }
+    }
     fun getVerifiedStudents(
         institutionId: String,
         onResult: (List<AppUser>) -> Unit
