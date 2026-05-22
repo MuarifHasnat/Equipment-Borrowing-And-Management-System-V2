@@ -1,28 +1,54 @@
 package com.example.equipmentborrowingapp.ui.student
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.ListAlt
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.equipmentborrowingapp.data.model.BorrowRequest
+import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
-// Modern Premium Colors
 private object StudentColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -31,19 +57,27 @@ private object StudentColors {
 
     val PrimaryIndigo = Color(0xFF4F46E5)
     val PurpleAccent = Color(0xFF7C3AED)
+    val DeepBlue = Color(0xFF1D4ED8)
 
-    val WarningLight = Color(0xFFFFF7ED)
-    val WarningText = Color(0xFFEA580C)
+    val BlueLight = Color(0xFFEFF6FF)
+    val BlueText = Color(0xFF2563EB)
+
+    val GreenLight = Color(0xFFF0FDF4)
+    val GreenText = Color(0xFF16A34A)
+
+    val OrangeLight = Color(0xFFFFF7ED)
+    val OrangeText = Color(0xFFEA580C)
 
     val RedLight = Color(0xFFFEF2F2)
     val RedText = Color(0xFFDC2626)
 
-    val BlueLight = Color(0xFFEFF6FF)
-    val BlueText = Color(0xFF2563EB)
+    val PurpleLight = Color(0xFFF5F3FF)
+    val PurpleText = Color(0xFF7C3AED)
 }
 
 @Composable
 fun StudentDashboardScreen(
+    recentRequests: List<BorrowRequest> = emptyList(),
     onViewEquipmentClick: () -> Unit,
     onMyRequestsClick: () -> Unit,
     onLabComputersClick: () -> Unit,
@@ -59,318 +93,367 @@ fun StudentDashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
+            DashboardTopBar(
+                onNotificationClick = onNotificationClick,
+                onProfileClick = onProfileClick
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            HeroCard()
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SectionHeader(
+                title = "Quick Actions",
+                actionText = "See all",
+                onActionClick = onViewEquipmentClick
+            )
+
             Spacer(modifier = Modifier.height(10.dp))
 
-            //  Hero Card
-            StudentHeroCard()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Overview",
-                style = MaterialTheme.typography.titleLarge,
-                color = StudentColors.TextDark,
-                fontWeight = FontWeight.ExtraBold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            //  Stats
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                StudentMiniStatCard(
-                    title = "Equipment",
-                    value = "Browse",
-                    icon = Icons.Rounded.Inventory2,
-                    modifier = Modifier.weight(1f)
-                )
-
-                StudentMiniStatCard(
-                    title = "Requests",
-                    value = "Track",
-                    icon = Icons.Rounded.ListAlt,
-                    modifier = Modifier.weight(1f)
-                )
-
-                StudentMiniStatCard(
-                    title = "Lab PCs",
-                    value = "Report",
-                    icon = Icons.Rounded.Computer,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            //  Modern Alert Card
-            ModernAlertCard(
-                title = "Reminder",
-                message = "Check your request status regularly and return approved equipment before the due date.",
-                icon = Icons.Rounded.WarningAmber
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Quick Actions",
-                style = MaterialTheme.typography.titleLarge,
-                color = StudentColors.TextDark,
-                fontWeight = FontWeight.ExtraBold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            //  Action List (Settings Style)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f))
-                    .background(StudentColors.CardWhite, RoundedCornerShape(24.dp))
-                    .padding(8.dp)
-            ) {
-                ModernActionRow(
-                    title = "My Profile",
-                    subtitle = "View your account details",
-                    icon = Icons.Rounded.Person,
-                    iconBgColor = StudentColors.BlueLight,
-                    iconColor = StudentColors.BlueText,
-                    onClick = onProfileClick
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = StudentColors.ModernBg)
-
-                ModernActionRow(
-                    title = "Notifications",
-                    subtitle = "View alerts and updates",
-                    icon = Icons.Rounded.Notifications,
-                    iconBgColor = StudentColors.WarningLight,
-                    iconColor = StudentColors.WarningText,
-                    onClick = onNotificationClick
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = StudentColors.ModernBg)
-
-                ModernActionRow(
-                    title = "View Equipment",
-                    subtitle = "Browse and request items",
-                    icon = Icons.Rounded.Inventory2,
-                    iconBgColor = StudentColors.BlueLight,
-                    iconColor = StudentColors.BlueText,
-                    onClick = onViewEquipmentClick
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = StudentColors.ModernBg)
-
-                ModernActionRow(
-                    title = "My Requests",
-                    subtitle = "Track your borrowed items",
-                    icon = Icons.Rounded.ListAlt,
-                    iconBgColor = StudentColors.PrimaryIndigo.copy(alpha = 0.1f),
-                    iconColor = StudentColors.PrimaryIndigo,
-                    onClick = onMyRequestsClick
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = StudentColors.ModernBg)
-
-                ModernActionRow(
-                    title = "Lab Computers",
-                    subtitle = "Report software issues",
-                    icon = Icons.Rounded.Computer,
-                    iconBgColor = StudentColors.PurpleAccent.copy(alpha = 0.1f),
-                    iconColor = StudentColors.PurpleAccent,
-                    onClick = onLabComputersClick
-                )
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = StudentColors.ModernBg)
-
-            ModernActionRow(
-                title = "My Software Issues",
-                subtitle = "Track issue status and submit feedback",
-                icon = Icons.Rounded.BugReport,
-                iconBgColor = StudentColors.BlueLight,
-                iconColor = StudentColors.BlueText,
-                onClick = onMySoftwareIssuesClick
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Logout Button
-            Button(
-                onClick = onLogout,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = StudentColors.RedText.copy(alpha = 0.3f)),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = StudentColors.RedLight,
-                    contentColor = StudentColors.RedText
-                ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = ButtonDefaults.buttonElevation(0.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Logout,
-                    contentDescription = "Logout",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout Account", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-@Composable
-private fun StudentHeroCard() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = StudentColors.PrimaryIndigo.copy(alpha = 0.4f))
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(StudentColors.PrimaryIndigo, StudentColors.PurpleAccent)
-                ),
-                shape = RoundedCornerShape(28.dp)
-            )
-            .padding(24.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(50)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "Student Panel",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelLarge
+                    QuickActionCard(
+                        title = "Equipment",
+                        subtitle = "Browse & reserve",
+                        icon = Icons.Rounded.Inventory2,
+                        iconBg = StudentColors.BlueLight,
+                        iconColor = StudentColors.BlueText,
+                        modifier = Modifier.weight(1f),
+                        onClick = onViewEquipmentClick
+                    )
+
+                    QuickActionCard(
+                        title = "Requests",
+                        subtitle = "Track status",
+                        icon = Icons.Rounded.ListAlt,
+                        iconBg = StudentColors.GreenLight,
+                        iconColor = StudentColors.GreenText,
+                        modifier = Modifier.weight(1f),
+                        onClick = onMyRequestsClick
                     )
                 }
-                Icon(
-                    Icons.Rounded.School,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(28.dp)
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    QuickActionCard(
+                        title = "Lab PCs",
+                        subtitle = "Computers",
+                        icon = Icons.Rounded.Computer,
+                        iconBg = StudentColors.PurpleLight,
+                        iconColor = StudentColors.PurpleText,
+                        modifier = Modifier.weight(1f),
+                        onClick = onLabComputersClick
+                    )
+
+                    QuickActionCard(
+                        title = "Issues",
+                        subtitle = "Software help",
+                        icon = Icons.Rounded.BugReport,
+                        iconBg = StudentColors.OrangeLight,
+                        iconColor = StudentColors.OrangeText,
+                        modifier = Modifier.weight(1f),
+                        onClick = onMySoftwareIssuesClick
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            Text(
-                text = "Lab & Equipment Access",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
+            SectionHeader(
+                title = "Recent Requests",
+                actionText = "View all",
+                onActionClick = onMyRequestsClick
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Borrow equipment, track requests, and report lab software issues easily.",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyMedium,
-                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.2f
+            RecentRequestsCard(
+                requests = recentRequests,
+                onClick = onMyRequestsClick
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            DashboardBottomBar(
+                onHomeClick = { },
+                onEquipmentClick = onViewEquipmentClick,
+                onRequestsClick = onMyRequestsClick,
+                onProfileClick = onProfileClick
             )
         }
     }
 }
 
 @Composable
-private fun StudentMiniStatCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
+private fun DashboardTopBar(
+    onNotificationClick: () -> Unit,
+    onProfileClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier.height(100.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = StudentColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = StudentColors.PrimaryIndigo,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = value,
-                color = StudentColors.TextDark,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold
-            )
-
-            Text(
-                text = title,
-                color = StudentColors.TextMuted,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@Composable
-private fun ModernAlertCard(
-    title: String,
-    message: String,
-    icon: ImageVector
-) {
-    Card(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = StudentColors.WarningLight),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = StudentColors.WarningText,
-                modifier = Modifier.size(24.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(StudentColors.PurpleLight, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.School,
+                    contentDescription = null,
+                    tint = StudentColors.PrimaryIndigo,
+                    modifier = Modifier.size(27.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column {
                 Text(
-                    text = title,
-                    color = StudentColors.WarningText,
-                    fontWeight = FontWeight.ExtraBold,
-                    style = MaterialTheme.typography.titleMedium
+                    text = "LabMate",
+                    color = StudentColors.TextDark,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+
                 Text(
-                    text = message,
-                    color = StudentColors.WarningText.copy(alpha = 0.9f),
+                    text = "Equipment Portal",
+                    color = StudentColors.TextMuted,
                     style = MaterialTheme.typography.bodySmall,
-                    lineHeight = 18.sp
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clickable { onNotificationClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Notifications,
+                contentDescription = "Notifications",
+                tint = StudentColors.TextDark,
+                modifier = Modifier.size(25.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .align(Alignment.TopEnd)
+                    .background(StudentColors.RedText, CircleShape)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(StudentColors.BlueLight, CircleShape)
+                .clickable { onProfileClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Person,
+                contentDescription = "Profile",
+                tint = StudentColors.BlueText,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(154.dp)
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(26.dp),
+                spotColor = StudentColors.PrimaryIndigo.copy(alpha = 0.25f)
+            )
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        StudentColors.DeepBlue,
+                        StudentColors.PrimaryIndigo,
+                        StudentColors.PurpleAccent
+                    )
+                ),
+                shape = RoundedCornerShape(26.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.align(Alignment.CenterStart)
+        ) {
+            Text(
+                text = "Welcome back 👋",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Manage lab equipment,\nrequests and software issues.",
+                color = Color.White.copy(alpha = 0.88f),
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier
+                    .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(50.dp))
+                    .padding(horizontal = 11.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                Text(
+                    text = "Smart Lab Dashboard",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Icon(
+            imageVector = Icons.Rounded.Inventory2,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.14f),
+            modifier = Modifier
+                .size(112.dp)
+                .align(Alignment.CenterEnd)
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    title: String,
+    actionText: String,
+    onActionClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            color = StudentColors.TextDark,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold
+        )
+
+        Row(
+            modifier = Modifier.clickable { onActionClick() },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = actionText,
+                color = StudentColors.PrimaryIndigo,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = StudentColors.PrimaryIndigo,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickActionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconBg: Color,
+    iconColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(86.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = StudentColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(iconBg, RoundedCornerShape(13.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = StudentColors.TextDark,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = subtitle,
+                    color = StudentColors.TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -378,59 +461,278 @@ private fun ModernAlertCard(
 }
 
 @Composable
-private fun ModernActionRow(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    iconBgColor: Color,
-    iconColor: Color,
+private fun RecentRequestsCard(
+    requests: List<BorrowRequest>,
     onClick: () -> Unit
 ) {
+    val limitedRequests = requests.take(4)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (limitedRequests.size >= 2) 132.dp else 94.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = StudentColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        if (limitedRequests.isEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .background(StudentColors.BlueLight, RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Inventory2,
+                        contentDescription = null,
+                        tint = StudentColors.BlueText,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "No recent request",
+                        color = StudentColors.TextDark,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        text = "Your latest borrow request will appear here",
+                        color = StudentColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                limitedRequests.forEach { request ->
+                    RecentRequestRow(
+                        request = request,
+                        onClick = onClick
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentRequestRow(
+    request: BorrowRequest,
+    onClick: () -> Unit
+) {
+    val imageName = request.equipmentImageName
+    val imageUrl = request.equipmentImageUrl
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 14.dp),
+            .height(56.dp)
+            .clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(iconBgColor),
+                .background(StudentColors.BlueLight, RoundedCornerShape(14.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
+            if (hasImageUrl) {
+                AsyncImage(
+                    model = safeImageUrl,
+                    contentDescription = request.equipmentName,
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = fallbackImageResId),
+                    error = painterResource(id = fallbackImageResId),
+                    fallback = painterResource(id = fallbackImageResId),
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = fallbackImageResId),
+                    contentDescription = request.equipmentName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(6.dp)
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
+                text = request.equipmentName.ifBlank { "Unknown Equipment" },
                 color = StudentColors.TextDark,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(2.dp))
+
             Text(
-                text = subtitle,
+                text = "Qty: ${request.quantity} • Due: ${request.dueDate.ifBlank { "N/A" }}",
                 color = StudentColors.TextMuted,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
+        RequestMiniStatusBadge(status = request.status.ifBlank { "Pending" })
+
+        Spacer(modifier = Modifier.width(4.dp))
+
         Icon(
             imageVector = Icons.Rounded.KeyboardArrowRight,
-            contentDescription = "Go",
-            tint = Color(0xFFCBD5E1),
-            modifier = Modifier.size(28.dp)
+            contentDescription = null,
+            tint = Color(0xFF94A3B8),
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
+@Composable
+private fun RequestMiniStatusBadge(status: String) {
+    val cleanStatus = status.trim().ifBlank { "Pending" }
+
+    val bgColor = when (cleanStatus.lowercase()) {
+        "approved" -> StudentColors.BlueLight
+        "issued" -> StudentColors.PurpleLight
+        "returned" -> StudentColors.GreenLight
+        "rejected", "overdue", "lost" -> StudentColors.RedLight
+        "damaged", "pending" -> StudentColors.OrangeLight
+        else -> StudentColors.BlueLight
+    }
+
+    val textColor = when (cleanStatus.lowercase()) {
+        "approved" -> StudentColors.BlueText
+        "issued" -> StudentColors.PurpleText
+        "returned" -> StudentColors.GreenText
+        "rejected", "overdue", "lost" -> StudentColors.RedText
+        "damaged", "pending" -> StudentColors.OrangeText
+        else -> StudentColors.BlueText
+    }
+
+    Text(
+        text = cleanStatus,
+        modifier = Modifier
+            .background(bgColor, RoundedCornerShape(50.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        color = textColor,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1
+    )
+}
+
+@Composable
+private fun DashboardBottomBar(
+    onHomeClick: () -> Unit,
+    onEquipmentClick: () -> Unit,
+    onRequestsClick: () -> Unit,
+    onProfileClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(66.dp),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = StudentColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            BottomNavItem(
+                title = "Home",
+                icon = Icons.Rounded.School,
+                selected = true,
+                onClick = onHomeClick
+            )
+
+            BottomNavItem(
+                title = "Equipment",
+                icon = Icons.Rounded.Inventory2,
+                selected = false,
+                onClick = onEquipmentClick
+            )
+
+            BottomNavItem(
+                title = "Requests",
+                icon = Icons.Rounded.ListAlt,
+                selected = false,
+                onClick = onRequestsClick
+            )
+
+            BottomNavItem(
+                title = "Profile",
+                icon = Icons.Rounded.Person,
+                selected = false,
+                onClick = onProfileClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomNavItem(
+    title: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(horizontal = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = if (selected) StudentColors.PrimaryIndigo else StudentColors.TextMuted,
+            modifier = Modifier.size(23.dp)
+        )
+
+        Spacer(modifier = Modifier.height(3.dp))
+
+        Text(
+            text = title,
+            color = if (selected) StudentColors.PrimaryIndigo else StudentColors.TextMuted,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold
         )
     }
 }

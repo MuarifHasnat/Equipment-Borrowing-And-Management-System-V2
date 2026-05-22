@@ -1,5 +1,5 @@
 package com.example.equipmentborrowingapp.ui.admin
-
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +16,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -96,7 +101,11 @@ fun ReportsDashboardScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
+            ReportsTopBar(
+                onBackClick = onBackClick
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             ReportsHeroCard(
                 totalActiveRequests = totalActiveRequests,
@@ -306,24 +315,77 @@ fun ReportsDashboardScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            OutlinedButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(
-                    text = "Back to Dashboard",
-                    fontWeight = FontWeight.Bold
-                )
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
+@Composable
+private fun ReportsTopBar(
+    onBackClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(46.dp)
+                .background(
+                    color = ReportColors.CardWhite,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .shadow(
+                    elevation = 3.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    spotColor = Color.Black.copy(alpha = 0.06f)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = ReportColors.TextDark
+            )
+        }
 
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .background(ReportColors.PurpleLight, RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Assessment,
+                contentDescription = null,
+                tint = ReportColors.PrimaryIndigo,
+                modifier = Modifier.size(27.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                text = "Reports",
+                color = ReportColors.TextDark,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
+            Text(
+                text = "Admin analytics center",
+                color = ReportColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
 @Composable
 private fun ReportsHeroCard(
     totalActiveRequests: Int,
@@ -332,6 +394,12 @@ private fun ReportsHeroCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(170.dp)
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(28.dp),
+                spotColor = ReportColors.PrimaryIndigo.copy(alpha = 0.25f)
+            )
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
@@ -515,6 +583,11 @@ private fun ReportsGroupCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            )
             .background(
                 color = ReportColors.CardWhite,
                 shape = RoundedCornerShape(24.dp)

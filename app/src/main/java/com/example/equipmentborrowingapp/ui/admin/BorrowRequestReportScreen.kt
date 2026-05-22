@@ -74,6 +74,8 @@ fun BorrowRequestReportScreen(
     subtitle: String,
     requestList: List<BorrowRequest>,
     fixedStatus: String = "All",
+    onFinePaidClick: (BorrowRequest) -> Unit = {},
+    onFineWaivedClick: (BorrowRequest) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     var searchText by remember { mutableStateOf("") }
@@ -127,7 +129,17 @@ fun BorrowRequestReportScreen(
     }.sortedByDescending { it.requestTimestamp }
 
     val totalQty = filteredList.sumOf { it.quantity }
+    val totalFineAmount = filteredList.sumOf { it.fineAmount }
 
+    val pendingFineAmount = filteredList
+        .filter { it.fineStatus.equals("Pending", ignoreCase = true) }
+        .sumOf { it.fineAmount }
+
+    val paidFineAmount = filteredList
+        .filter { it.fineStatus.equals("Paid", ignoreCase = true) }
+        .sumOf { it.fineAmount }
+
+    val finedRequestCount = filteredList.count { it.fineAmount > 0 }
     val pendingCount = requestList.count { it.status.equals("Pending", ignoreCase = true) }
     val approvedCount = requestList.count { it.status.equals("Approved", ignoreCase = true) }
     val issuedCount = requestList.count { it.status.equals("Issued", ignoreCase = true) }
@@ -198,7 +210,28 @@ fun BorrowRequestReportScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+            Spacer(modifier = Modifier.height(12.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                BorrowReportStatCard(
+                    title = "Total Fine",
+                    value = "$totalFineAmount Tk",
+                    bgColor = RequestReportColors.RedLight,
+                    textColor = RequestReportColors.RedText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                BorrowReportStatCard(
+                    title = "Pending Fine",
+                    value = "$pendingFineAmount Tk",
+                    bgColor = RequestReportColors.OrangeLight,
+                    textColor = RequestReportColors.OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
@@ -278,7 +311,15 @@ fun BorrowRequestReportScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredList) { request ->
-                        BorrowRequestReportCard(request = request)
+                        BorrowRequestReportCard(
+                            request = request,
+                            onFinePaidClick = {
+                                onFinePaidClick(request)
+                            },
+                            onFineWaivedClick = {
+                                onFineWaivedClick(request)
+                            }
+                        )
                     }
                 }
             }
@@ -400,7 +441,9 @@ private fun BorrowReportStatCard(
 
 @Composable
 private fun BorrowRequestReportCard(
-    request: BorrowRequest
+    request: BorrowRequest,
+    onFinePaidClick: () -> Unit,
+    onFineWaivedClick: () -> Unit
 ) {
     val statusColor = statusTextColor(request.status)
     val statusBg = statusBackgroundColor(request.status)
@@ -525,7 +568,66 @@ private fun BorrowRequestReportCard(
                     textColor = RequestReportColors.GreenText
                 )
             }
+            if (request.fineAmount > 0) {
+                val fineStatus = request.fineStatus.ifBlank { "Pending" }
 
+                BorrowReportMessageBox(
+                    message = "Fine: ${request.fineAmount} Tk • Status: $fineStatus",
+                    bgColor = when (fineStatus.lowercase()) {
+                        "paid" -> RequestReportColors.GreenLight
+                        "waived" -> RequestReportColors.BlueLight
+                        else -> RequestReportColors.RedLight
+                    },
+                    textColor = when (fineStatus.lowercase()) {
+                        "paid" -> RequestReportColors.GreenText
+                        "waived" -> RequestReportColors.BlueText
+                        else -> RequestReportColors.RedText
+                    }
+                )
+
+                if (request.fineReason.isNotBlank()) {
+                    BorrowReportMessageBox(
+                        message = "Fine Reason: ${request.fineReason}",
+                        bgColor = RequestReportColors.OrangeLight,
+                        textColor = RequestReportColors.OrangeText
+                    )
+                }
+
+                if (fineStatus.equals("Pending", ignoreCase = true)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onFinePaidClick,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = RequestReportColors.GreenText
+                            )
+                        ) {
+                            Text(
+                                text = "Mark Paid",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = onFineWaivedClick,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = RequestReportColors.BlueText
+                            )
+                        ) {
+                            Text(
+                                text = "Waive",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
             if (request.adminNote.isNotBlank()) {
                 BorrowReportMessageBox(
                     message = "Admin Note: ${request.adminNote}",

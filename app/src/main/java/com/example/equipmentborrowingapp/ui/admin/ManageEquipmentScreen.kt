@@ -130,7 +130,8 @@ private fun EquipmentCardImage(
     contentDescription: String
 ) {
     val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
-    val hasImageUrl = imageUrl.trim().isNotBlank()
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
 
     val modifier = Modifier
         .size(90.dp)
@@ -139,11 +140,12 @@ private fun EquipmentCardImage(
 
     if (hasImageUrl) {
         AsyncImage(
-            model = imageUrl.trim(),
+            model = safeImageUrl,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             placeholder = painterResource(id = fallbackImageResId),
             error = painterResource(id = fallbackImageResId),
+            fallback = painterResource(id = fallbackImageResId),
             modifier = modifier
         )
     } else {
@@ -244,6 +246,7 @@ fun ManageEquipmentScreen(
         .let { list ->
             when (selectedSort) {
                 "Name Z-A" -> list.sortedByDescending { it.name.lowercase() }
+
                 "Available Low-High" -> list.sortedWith(
                     compareBy<Equipment> { it.availableQuantity }
                         .thenBy { it.name.lowercase() }
@@ -760,7 +763,9 @@ private fun ManageEquipmentCard(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
             HorizontalDivider(color = ManageColors.ModernBg)
+
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(

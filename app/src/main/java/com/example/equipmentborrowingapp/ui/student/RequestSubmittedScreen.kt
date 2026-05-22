@@ -2,8 +2,18 @@ package com.example.equipmentborrowingapp.ui.student
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +26,16 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Send
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,11 +52,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.equipmentborrowingapp.R
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
-// Colors
 private object SuccessColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -64,7 +81,8 @@ fun RequestSubmittedScreen(
     onBackHomeClick: () -> Unit
 ) {
     val fallbackImage = EquipmentImageMapper.getImageRes(equipment.imageName)
-        .takeIf { it != 0 } ?: R.drawable.ic_launcher_foreground
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -79,7 +97,6 @@ fun RequestSubmittedScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Success Icon
             Box(
                 modifier = Modifier
                     .size(90.dp)
@@ -116,11 +133,14 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            //  Equipment Details Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = SuccessColors.CardWhite),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -129,19 +149,19 @@ fun RequestSubmittedScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Image
                     Box(
                         modifier = Modifier
                             .size(76.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(SuccessColors.ModernBg)
                     ) {
-                        if (equipment.imageUrl.isNotBlank()) {
+                        if (hasImageUrl) {
                             AsyncImage(
-                                model = equipment.imageUrl,
+                                model = safeImageUrl,
                                 contentDescription = equipment.name,
                                 placeholder = painterResource(id = fallbackImage),
                                 error = painterResource(id = fallbackImage),
+                                fallback = painterResource(id = fallbackImage),
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -150,14 +170,15 @@ fun RequestSubmittedScreen(
                                 painter = painterResource(id = fallbackImage),
                                 contentDescription = equipment.name,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize().padding(8.dp)
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp)
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Info
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = equipment.name.ifBlank { "Equipment" },
@@ -182,20 +203,45 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Request Details Group
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = SuccessColors.CardWhite)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    ModernInfoRow(icon = Icons.Rounded.CalendarToday, label = "Borrow Date", value = borrowDate)
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp), color = SuccessColors.ModernBg)
-                    ModernInfoRow(icon = Icons.Rounded.Schedule, label = "Return Date", value = dueDate)
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp), color = SuccessColors.ModernBg)
-                    ModernInfoRow(icon = Icons.Rounded.EditNote, label = "Purpose", value = purpose.ifBlank { "Lab Project" })
+                    ModernInfoRow(
+                        icon = Icons.Rounded.CalendarToday,
+                        label = "Borrow Date",
+                        value = borrowDate.ifBlank { "N/A" }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                        color = SuccessColors.ModernBg
+                    )
+
+                    ModernInfoRow(
+                        icon = Icons.Rounded.Schedule,
+                        label = "Return Date",
+                        value = dueDate.ifBlank { "N/A" }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                        color = SuccessColors.ModernBg
+                    )
+
+                    ModernInfoRow(
+                        icon = Icons.Rounded.EditNote,
+                        label = "Purpose",
+                        value = purpose.ifBlank { "Lab Project" }
+                    )
                 }
             }
 
@@ -203,7 +249,9 @@ fun RequestSubmittedScreen(
 
             Text(
                 text = "Important Guidelines",
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = SuccessColors.TextDark
@@ -211,11 +259,14 @@ fun RequestSubmittedScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Guidelines Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        elevation = 2.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = SuccessColors.CardWhite)
             ) {
@@ -223,21 +274,38 @@ fun RequestSubmittedScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ModernGuidelineRow(icon = Icons.Rounded.Security, title = "Handle with Care", subtitle = "Keep the equipment safe from damage")
-                    ModernGuidelineRow(icon = Icons.Rounded.Schedule, title = "Return on Time", subtitle = "Must be returned before the due date")
-                    ModernGuidelineRow(icon = Icons.Rounded.CheckCircle, title = "Use Responsibly", subtitle = "Use only for learning & lab projects")
+                    ModernGuidelineRow(
+                        icon = Icons.Rounded.Security,
+                        title = "Handle with Care",
+                        subtitle = "Keep the equipment safe from damage"
+                    )
+
+                    ModernGuidelineRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = "Return on Time",
+                        subtitle = "Must be returned before the due date"
+                    )
+
+                    ModernGuidelineRow(
+                        icon = Icons.Rounded.CheckCircle,
+                        title = "Use Responsibly",
+                        subtitle = "Use only for learning & lab projects"
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Action Buttons
             Button(
                 onClick = onViewRequestClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = SuccessColors.PrimaryIndigo.copy(alpha = 0.5f)),
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = SuccessColors.PrimaryIndigo.copy(alpha = 0.5f)
+                    ),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                 contentPadding = PaddingValues()
@@ -246,33 +314,60 @@ fun RequestSubmittedScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            brush = Brush.horizontalGradient(listOf(SuccessColors.PrimaryIndigo, SuccessColors.PurpleAccent)),
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    SuccessColors.PrimaryIndigo,
+                                    SuccessColors.PurpleAccent
+                                )
+                            ),
                             shape = RoundedCornerShape(16.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Rounded.Send, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.Send,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("View My Requests", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                        Text(
+                            text = "View My Requests",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
                 onClick = onBackHomeClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = SuccessColors.TextDark),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, SuccessColors.TextMuted.copy(alpha = 0.2f))
+                    .height(54.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(imageVector = Icons.Rounded.Home, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(
+                    imageVector = Icons.Rounded.Home,
+                    contentDescription = null,
+                    tint = SuccessColors.PrimaryIndigo,
+                    modifier = Modifier.size(20.dp)
+                )
+
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Back to Home", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                Text(
+                    text = "Back to Home",
+                    color = SuccessColors.PrimaryIndigo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -292,19 +387,19 @@ private fun ModernInfoRow(
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .background(SuccessColors.BlueLight, RoundedCornerShape(12.dp)),
+                .size(42.dp)
+                .background(SuccessColors.BlueLight, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = SuccessColors.BlueText,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -313,9 +408,9 @@ private fun ModernInfoRow(
                 color = SuccessColors.TextMuted,
                 fontWeight = FontWeight.SemiBold
             )
-            Spacer(modifier = Modifier.height(2.dp))
+
             Text(
-                text = value,
+                text = value.ifBlank { "N/A" },
                 style = MaterialTheme.typography.bodyMedium,
                 color = SuccessColors.TextDark,
                 fontWeight = FontWeight.Bold
@@ -340,7 +435,7 @@ private fun ModernGuidelineRow(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
                 .background(SuccessColors.CardWhite, CircleShape)
                 .shadow(1.dp, CircleShape),
             contentAlignment = Alignment.Center
@@ -349,7 +444,7 @@ private fun ModernGuidelineRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = SuccessColors.PrimaryIndigo,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(19.dp)
             )
         }
 
@@ -362,6 +457,7 @@ private fun ModernGuidelineRow(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium
             )
+
             Text(
                 text = subtitle,
                 color = SuccessColors.TextMuted,

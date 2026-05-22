@@ -2,45 +2,68 @@ package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
-// Modern Colors
-private object EditColors {
+private object EditEquipmentColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
     val PrimaryIndigo = Color(0xFF4F46E5)
-    val PurpleAccent = Color(0xFF7C3AED)
-    val RedLight = Color(0xFFFEF2F2)
     val RedText = Color(0xFFDC2626)
+    val RedLight = Color(0xFFFEF2F2)
+    val GreenText = Color(0xFF16A34A)
+    val GreenLight = Color(0xFFF0FDF4)
 }
 
 @Composable
@@ -52,29 +75,399 @@ fun EditEquipmentScreen(
 ) {
     var name by remember { mutableStateOf(equipment.name) }
     var description by remember { mutableStateOf(equipment.description) }
-    var category by remember { mutableStateOf(equipment.category) }
     var condition by remember { mutableStateOf(equipment.condition) }
-    var totalQty by remember { mutableStateOf(equipment.totalQuantity.toString()) }
-    var availableQty by remember { mutableStateOf(equipment.availableQuantity.toString()) }
+    var category by remember { mutableStateOf(equipment.category) }
+    var totalQuantity by remember { mutableStateOf(equipment.totalQuantity.toString()) }
+    var availableQuantity by remember { mutableStateOf(equipment.availableQuantity.toString()) }
     var imageName by remember { mutableStateOf(equipment.imageName) }
     var imageUrl by remember { mutableStateOf(equipment.imageUrl) }
+    var assetTag by remember { mutableStateOf(equipment.assetTag) }
+    var serialNumber by remember { mutableStateOf(equipment.serialNumber) }
     var isBorrowable by remember { mutableStateOf(equipment.isBorrowable) }
-
     var showDeleteDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = EditEquipmentColors.ModernBg
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .background(EditEquipmentColors.CardWhite, RoundedCornerShape(12.dp))
+                        .shadow(2.dp, RoundedCornerShape(12.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Back",
+                        tint = EditEquipmentColors.TextDark
+                    )
+                }
+
+                Spacer(modifier = Modifier.size(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Edit Equipment",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = EditEquipmentColors.TextDark
+                    )
+
+                    Text(
+                        text = "Update equipment information",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EditEquipmentColors.TextMuted
+                    )
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = EditEquipmentColors.CardWhite)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "Image Preview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = EditEquipmentColors.TextDark
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(EditEquipmentColors.ModernBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hasImageUrl) {
+                            AsyncImage(
+                                model = safeImageUrl,
+                                contentDescription = name.ifBlank { "Equipment image" },
+                                contentScale = ContentScale.Fit,
+                                placeholder = painterResource(id = fallbackImageResId),
+                                error = painterResource(id = fallbackImageResId),
+                                fallback = painterResource(id = fallbackImageResId),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(12.dp)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = fallbackImageResId),
+                                contentDescription = name.ifBlank { "Equipment image" },
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(12.dp)
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = imageName,
+                        onValueChange = { imageName = it },
+                        label = { Text("Image Name") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Image,
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = imageUrl,
+                        onValueChange = { imageUrl = it },
+                        label = { Text("Image URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = EditEquipmentColors.CardWhite)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "Equipment Details",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = EditEquipmentColors.TextDark
+                    )
+
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Equipment Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        minLines = 3
+                    )
+
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        label = { Text("Category") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = condition,
+                        onValueChange = { condition = it },
+                        label = { Text("Condition") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = totalQuantity,
+                            onValueChange = { totalQuantity = it },
+                            label = { Text("Total Qty") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+
+                        OutlinedTextField(
+                            value = availableQuantity,
+                            onValueChange = { availableQuantity = it },
+                            label = { Text("Available") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = assetTag,
+                        onValueChange = { assetTag = it },
+                        label = { Text("Asset Tag") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = serialNumber,
+                        onValueChange = { serialNumber = it },
+                        label = { Text("Serial Number") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = if (isBorrowable) {
+                                    EditEquipmentColors.GreenLight
+                                } else {
+                                    EditEquipmentColors.ModernBg
+                                },
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Borrowable",
+                                color = EditEquipmentColors.TextDark,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = if (isBorrowable) {
+                                    "Students can request this equipment"
+                                } else {
+                                    "This item is lab-use-only"
+                                },
+                                color = EditEquipmentColors.TextMuted,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Switch(
+                            checked = isBorrowable,
+                            onCheckedChange = { isBorrowable = it }
+                        )
+                    }
+
+                    if (errorMessage.isNotBlank()) {
+                        Text(
+                            text = errorMessage,
+                            color = EditEquipmentColors.RedText,
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val totalQty = totalQuantity.toIntOrNull()
+                            val availableQty = availableQuantity.toIntOrNull()
+
+                            errorMessage = when {
+                                name.isBlank() -> "Equipment name is required"
+                                description.isBlank() -> "Description is required"
+                                category.isBlank() -> "Category is required"
+                                condition.isBlank() -> "Condition is required"
+                                totalQty == null || totalQty <= 0 -> "Enter a valid total quantity"
+                                availableQty == null || availableQty < 0 -> "Enter a valid available quantity"
+                                availableQty > totalQty -> "Available quantity cannot be greater than total quantity"
+                                imageName.isBlank() && imageUrl.isBlank() -> "Image name or image URL is required"
+                                else -> ""
+                            }
+
+                            if (errorMessage.isBlank()) {
+                                onSaveClick(
+                                    equipment.copy(
+                                        name = name.trim(),
+                                        description = description.trim(),
+                                        condition = condition.trim(),
+                                        category = category.trim(),
+                                        totalQuantity = totalQty ?: equipment.totalQuantity,
+                                        availableQuantity = availableQty ?: equipment.availableQuantity,
+                                        imageName = imageName.trim(),
+                                        imageUrl = imageUrl.trim(),
+                                        assetTag = assetTag.trim(),
+                                        serialNumber = serialNumber.trim(),
+                                        isBorrowable = isBorrowable
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = EditEquipmentColors.PrimaryIndigo
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+
+                        Spacer(modifier = Modifier.size(8.dp))
+
+                        Text(
+                            text = "Save Changes",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            showDeleteDialog = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = EditEquipmentColors.RedText
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+
+                        Spacer(modifier = Modifier.size(8.dp))
+
+                        Text(
+                            text = "Delete Equipment",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
             shape = RoundedCornerShape(20.dp),
-            containerColor = EditColors.CardWhite,
+            containerColor = EditEquipmentColors.CardWhite,
             title = {
-                Text("Delete Equipment", fontWeight = FontWeight.Bold, color = EditColors.TextDark)
+                Text(
+                    text = "Delete Equipment?",
+                    color = EditEquipmentColors.TextDark,
+                    fontWeight = FontWeight.Bold
+                )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to delete '${equipment.name}'? This action cannot be undone.",
-                    color = EditColors.TextMuted
+                    text = "Are you sure you want to delete ${name.ifBlank { "this equipment" }}? This action cannot be undone.",
+                    color = EditEquipmentColors.TextMuted
                 )
             },
             confirmButton = {
@@ -83,380 +476,22 @@ fun EditEquipmentScreen(
                         showDeleteDialog = false
                         onDeleteClick(equipment)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = EditColors.RedText)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = EditEquipmentColors.RedText
+                    )
                 ) {
                     Text("Delete")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel", color = EditColors.TextMuted)
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
                 }
             }
         )
-    }
-
-    Surface(modifier = Modifier.fillMaxSize(), color = EditColors.ModernBg) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Modern Header with Back Button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier
-                        .background(EditColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp))
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = EditColors.TextDark
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Edit Equipment",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = EditColors.TextDark,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Modify inventory details",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = EditColors.TextMuted
-                    )
-                }
-            }
-
-            // Input Fields
-            ModernTextField(
-                value = name,
-                onValueChange = { name = it; errorMessage = "" },
-                label = "Equipment Name"
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                ModernTextField(
-                    value = category,
-                    onValueChange = { category = it; errorMessage = "" },
-                    label = "Category",
-                    modifier = Modifier.weight(1f)
-                )
-
-                ModernTextField(
-                    value = condition,
-                    onValueChange = { condition = it; errorMessage = "" },
-                    label = "Condition",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                ModernTextField(
-                    value = totalQty,
-                    onValueChange = { totalQty = it; errorMessage = "" },
-                    label = "Total Qty",
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-
-                ModernTextField(
-                    value = availableQty,
-                    onValueChange = { availableQty = it; errorMessage = "" },
-                    label = "Available Qty",
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-            }
-
-            ModernTextField(
-                value = description,
-                onValueChange = { description = it; errorMessage = "" },
-                label = "Description",
-                modifier = Modifier.height(100.dp),
-                singleLine = false
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = EditColors.TextMuted.copy(alpha = 0.2f))
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Image Section
-            Text(
-                text = "Media & Images",
-                style = MaterialTheme.typography.titleMedium,
-                color = EditColors.TextDark,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            ModernTextField(
-                value = imageName,
-                onValueChange = { imageName = it; errorMessage = "" },
-                label = "Local Image Name (Fallback)"
-            )
-
-            ModernTextField(
-                value = imageUrl,
-                onValueChange = { imageUrl = it; errorMessage = "" },
-                label = "Image URL (Online Source)"
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            EquipmentPreviewSection(
-                imageName = imageName,
-                imageUrl = imageUrl,
-                equipmentName = name.ifBlank { "Preview" }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Modern Toggle Card for Borrowable Status
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
-                colors = CardDefaults.cardColors(containerColor = EditColors.CardWhite),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "Borrowable Status",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = EditColors.TextDark
-                        )
-                        Text(
-                            text = if (isBorrowable) "Students can borrow this item" else "Strictly for Lab Use only",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = EditColors.TextMuted
-                        )
-                    }
-                    Switch(
-                        checked = isBorrowable,
-                        onCheckedChange = { isBorrowable = it; errorMessage = "" },
-                        colors = SwitchDefaults.colors(checkedTrackColor = EditColors.PrimaryIndigo)
-                    )
-                }
-            }
-
-            // Error Message
-            if (errorMessage.isNotBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(EditColors.RedLight, RoundedCornerShape(12.dp))
-                        .border(1.dp, EditColors.RedText.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Rounded.Warning, contentDescription = "Error", tint = EditColors.RedText)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = errorMessage, color = EditColors.RedText, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Save Button
-            Button(
-                onClick = {
-                    val total = totalQty.toIntOrNull()
-                    val available = availableQty.toIntOrNull()
-
-                    errorMessage = when {
-                        name.isBlank() -> "Equipment name is required"
-                        description.isBlank() -> "Description is required"
-                        category.isBlank() -> "Category is required"
-                        condition.isBlank() -> "Condition is required"
-                        total == null || total < 0 -> "Enter a valid total quantity"
-                        available == null || available < 0 -> "Enter a valid available quantity"
-                        available > total -> "Available quantity cannot exceed total"
-                        imageName.isBlank() && imageUrl.isBlank() -> "Provide image name or image URL"
-                        else -> ""
-                    }
-
-                    if (errorMessage.isBlank()) {
-                        val updated = equipment.copy(
-                            name = name.trim(), description = description.trim(), category = category.trim(),
-                            condition = condition.trim(), totalQuantity = total ?: 0, availableQuantity = available ?: 0,
-                            imageName = imageName.trim(), imageUrl = imageUrl.trim(), isBorrowable = isBorrowable
-                        )
-                        onSaveClick(updated)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = EditColors.PrimaryIndigo.copy(alpha = 0.5f)),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.horizontalGradient(listOf(EditColors.PrimaryIndigo, EditColors.PurpleAccent)),
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save Changes", color = Color.White, fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Delete Button
-            OutlinedButton(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = EditColors.RedText),
-                border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(EditColors.RedText.copy(alpha = 0.5f), EditColors.RedText.copy(alpha = 0.5f))))
-            ) {
-                Icon(Icons.Rounded.DeleteOutline, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Equipment", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-// Reusable Modern TextField Composable
-@Composable
-private fun ModernTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    singleLine: Boolean = true,
-    keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, color = EditColors.TextMuted) },
-        singleLine = singleLine,
-        keyboardOptions = keyboardOptions,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
-        shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = EditColors.CardWhite,
-            unfocusedContainerColor = EditColors.CardWhite,
-            focusedBorderColor = EditColors.PrimaryIndigo,
-            unfocusedBorderColor = Color.Transparent,
-            focusedTextColor = EditColors.TextDark,
-            unfocusedTextColor = EditColors.TextDark,
-            cursorColor = EditColors.PrimaryIndigo
-        )
-    )
-}
-
-@Composable
-private fun EquipmentPreviewSection(
-    imageName: String,
-    imageUrl: String,
-    equipmentName: String
-) {
-    val trimmedImageName = imageName.trim()
-    val trimmedImageUrl = imageUrl.trim()
-    val fallbackResId = EquipmentImageMapper.getImageRes(trimmedImageName)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.08f)),
-        colors = CardDefaults.cardColors(containerColor = EditColors.CardWhite),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(EditColors.ModernBg),
-                contentAlignment = Alignment.Center
-            ) {
-                when {
-                    trimmedImageUrl.isNotBlank() -> {
-                        AsyncImage(
-                            model = trimmedImageUrl,
-                            contentDescription = equipmentName,
-                            contentScale = ContentScale.Crop,
-                            placeholder = painterResource(id = fallbackResId),
-                            error = painterResource(id = fallbackResId),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    trimmedImageName.isNotBlank() -> {
-                        Image(
-                            painter = painterResource(id = fallbackResId),
-                            contentDescription = equipmentName,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    else -> {
-                        Text(
-                            text = "Image Preview",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = EditColors.TextMuted,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = when {
-                    trimmedImageUrl.isNotBlank() && trimmedImageName.isNotBlank() -> "Using URL image. Local acts as fallback."
-                    trimmedImageUrl.isNotBlank() -> "Using online URL image."
-                    trimmedImageName.isNotBlank() -> "Using local fallback image."
-                    else -> "Add image name or URL to see preview."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = EditColors.TextMuted,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-        }
     }
 }

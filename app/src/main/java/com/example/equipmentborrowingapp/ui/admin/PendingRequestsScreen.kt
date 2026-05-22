@@ -96,27 +96,30 @@ private fun RequestCardImage(
     contentDescription: String
 ) {
     val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
-    val hasImageUrl = imageUrl.trim().isNotBlank()
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
+
+    val imageModifier = Modifier
+        .size(85.dp)
+        .clip(RoundedCornerShape(12.dp))
+        .background(PendingColors.ModernBg)
 
     if (hasImageUrl) {
         AsyncImage(
-            model = imageUrl.trim(),
+            model = safeImageUrl,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
-            placeholder = painterResource(fallbackImageResId),
-            error = painterResource(fallbackImageResId),
-            modifier = Modifier
-                .size(85.dp)
-                .clip(RoundedCornerShape(12.dp))
+            placeholder = painterResource(id = fallbackImageResId),
+            error = painterResource(id = fallbackImageResId),
+            fallback = painterResource(id = fallbackImageResId),
+            modifier = imageModifier
         )
     } else {
         Image(
-            painter = painterResource(fallbackImageResId),
+            painter = painterResource(id = fallbackImageResId),
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(85.dp)
-                .clip(RoundedCornerShape(12.dp))
+            modifier = imageModifier.padding(8.dp)
         )
     }
 }
@@ -184,13 +187,18 @@ fun PendingRequestsScreen(
         .let { list ->
             when (selectedSort) {
                 "Oldest First" -> list.sortedBy { it.requestTimestamp }
+
                 "Student A-Z" -> list.sortedBy { it.userName.lowercase() }
+
                 "Equipment A-Z" -> list.sortedBy { it.equipmentName.lowercase() }
+
                 "Quantity High-Low" -> list.sortedWith(
                     compareByDescending<BorrowRequest> { it.quantity }
                         .thenBy { it.equipmentName.lowercase() }
                 )
+
                 "Due Date" -> list.sortedBy { it.dueDate }
+
                 else -> list.sortedByDescending { it.requestTimestamp }
             }
         }
@@ -796,7 +804,9 @@ private fun PendingRequestCard(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
+
             HorizontalDivider(color = PendingColors.ModernBg)
+
             Spacer(modifier = Modifier.height(10.dp))
 
             Row(

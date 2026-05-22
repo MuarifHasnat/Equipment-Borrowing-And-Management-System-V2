@@ -44,5 +44,10 @@ data class BorrowRequest(
     val returnCondition: String = "",
     val adminNote: String = "",
 
+    val fineAmount: Int = 0,
+    val fineReason: String = "",
+    val fineStatus: String = "None",
+    val penaltyUpdatedAt: Long = 0L,
+
     val requestTimestamp: Long = System.currentTimeMillis()
 )

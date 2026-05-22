@@ -31,11 +31,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.equipmentborrowingapp.R
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
-// Modern Colors
 private object EqDetailsColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -59,18 +57,21 @@ fun EquipmentDetailsScreen(
     onBorrowClick: (Equipment) -> Unit,
     onBackClick: () -> Unit
 ) {
-    val fallbackImageResId = getFallbackImageRes(equipment.imageName)
-    val hasImageUrl = equipment.imageUrl.trim().isNotBlank()
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(equipment.imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
     val inStock = equipment.availableQuantity > 0
 
-    Surface(modifier = Modifier.fillMaxSize(), color = EqDetailsColors.ModernBg) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = EqDetailsColors.ModernBg
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -82,22 +83,37 @@ fun EquipmentDetailsScreen(
                     onClick = onBackClick,
                     modifier = Modifier
                         .background(EqDetailsColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                        .shadow(
+                            2.dp,
+                            RoundedCornerShape(12.dp),
+                            spotColor = Color.Black.copy(alpha = 0.05f)
+                        )
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = EqDetailsColors.TextDark)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Back",
+                        tint = EqDetailsColors.TextDark
+                    )
                 }
 
                 IconButton(
-                    onClick = { /* TODO: Bookmark feature */ },
+                    onClick = { },
                     modifier = Modifier
                         .background(EqDetailsColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                        .shadow(
+                            2.dp,
+                            RoundedCornerShape(12.dp),
+                            spotColor = Color.Black.copy(alpha = 0.05f)
+                        )
                 ) {
-                    Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Save", tint = EqDetailsColors.TextDark)
+                    Icon(
+                        imageVector = Icons.Rounded.BookmarkBorder,
+                        contentDescription = "Save",
+                        tint = EqDetailsColors.TextDark
+                    )
                 }
             }
 
-            //  Title & Availability
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = equipment.name.ifBlank { "Unknown Equipment" },
@@ -127,15 +143,29 @@ fun EquipmentDetailsScreen(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Icon(
-                                imageVector = if (inStock) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
+                                imageVector = if (inStock) {
+                                    Icons.Rounded.CheckCircle
+                                } else {
+                                    Icons.Rounded.ErrorOutline
+                                },
                                 contentDescription = null,
-                                tint = if (inStock) EqDetailsColors.GreenText else EqDetailsColors.RedText,
+                                tint = if (inStock) {
+                                    EqDetailsColors.GreenText
+                                } else {
+                                    EqDetailsColors.RedText
+                                },
                                 modifier = Modifier.size(16.dp)
                             )
+
                             Spacer(modifier = Modifier.width(4.dp))
+
                             Text(
                                 text = if (inStock) "In Stock" else "Out of Stock",
-                                color = if (inStock) EqDetailsColors.GreenText else EqDetailsColors.RedText,
+                                color = if (inStock) {
+                                    EqDetailsColors.GreenText
+                                } else {
+                                    EqDetailsColors.RedText
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -146,50 +176,70 @@ fun EquipmentDetailsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //  Modern Image Display
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(260.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(EqDetailsColors.CardWhite)
-                    .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        4.dp,
+                        RoundedCornerShape(24.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (hasImageUrl) {
                     AsyncImage(
-                        model = equipment.imageUrl.trim(),
+                        model = safeImageUrl,
                         contentDescription = equipment.name,
                         contentScale = ContentScale.Fit,
                         placeholder = painterResource(id = fallbackImageResId),
                         error = painterResource(id = fallbackImageResId),
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        fallback = painterResource(id = fallbackImageResId),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     )
                 } else {
                     Image(
                         painter = painterResource(id = fallbackImageResId),
                         contentDescription = equipment.name,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //  Chips Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ModernFeatureChip(icon = Icons.Rounded.Memory, title = equipment.category.ifBlank { "General" }, modifier = Modifier.weight(1f))
-                ModernFeatureChip(icon = Icons.Rounded.Power, title = equipment.condition.ifBlank { "Good" }, modifier = Modifier.weight(1f))
-                ModernFeatureChip(icon = Icons.Rounded.SettingsInputComponent, title = if (equipment.isBorrowable) "Borrowable" else "Lab Only", modifier = Modifier.weight(1f))
+                ModernFeatureChip(
+                    icon = Icons.Rounded.Memory,
+                    title = equipment.category.ifBlank { "General" },
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernFeatureChip(
+                    icon = Icons.Rounded.Power,
+                    title = equipment.condition.ifBlank { "Good" },
+                    modifier = Modifier.weight(1f)
+                )
+
+                ModernFeatureChip(
+                    icon = Icons.Rounded.SettingsInputComponent,
+                    title = if (equipment.isBorrowable) "Borrowable" else "Lab Only",
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //  Description Section
             Text(
                 text = "Description",
                 style = MaterialTheme.typography.titleMedium,
@@ -210,7 +260,6 @@ fun EquipmentDetailsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            //  Premium Borrow Button
             Button(
                 onClick = { onBorrowClick(equipment) },
                 enabled = equipment.isBorrowable && equipment.availableQuantity > 0,
@@ -218,7 +267,11 @@ fun EquipmentDetailsScreen(
                     .fillMaxWidth()
                     .height(56.dp)
                     .shadow(
-                        elevation = if (equipment.isBorrowable && equipment.availableQuantity > 0) 8.dp else 0.dp,
+                        elevation = if (equipment.isBorrowable && equipment.availableQuantity > 0) {
+                            8.dp
+                        } else {
+                            0.dp
+                        },
                         shape = RoundedCornerShape(16.dp),
                         spotColor = EqDetailsColors.PrimaryIndigo.copy(alpha = 0.5f)
                     ),
@@ -231,17 +284,35 @@ fun EquipmentDetailsScreen(
                         .fillMaxSize()
                         .background(
                             brush = if (equipment.isBorrowable && equipment.availableQuantity > 0) {
-                                Brush.horizontalGradient(listOf(EqDetailsColors.PrimaryIndigo, EqDetailsColors.PurpleAccent))
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        EqDetailsColors.PrimaryIndigo,
+                                        EqDetailsColors.PurpleAccent
+                                    )
+                                )
                             } else {
-                                Brush.horizontalGradient(listOf(EqDetailsColors.GrayLight, EqDetailsColors.GrayLight))
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        EqDetailsColors.GrayLight,
+                                        EqDetailsColors.GrayLight
+                                    )
+                                )
                             },
                             shape = RoundedCornerShape(16.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (!equipment.isBorrowable) "For Lab Use Only" else if (!inStock) "Currently Unavailable" else "Borrow Equipment",
-                        color = if (equipment.isBorrowable && equipment.availableQuantity > 0) Color.White else EqDetailsColors.TextMuted,
+                        text = when {
+                            !equipment.isBorrowable -> "For Lab Use Only"
+                            !inStock -> "Currently Unavailable"
+                            else -> "Borrow Equipment"
+                        },
+                        color = if (equipment.isBorrowable && equipment.availableQuantity > 0) {
+                            Color.White
+                        } else {
+                            EqDetailsColors.TextMuted
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -254,7 +325,11 @@ fun EquipmentDetailsScreen(
 }
 
 @Composable
-private fun ModernFeatureChip(icon: ImageVector, title: String, modifier: Modifier = Modifier) {
+private fun ModernFeatureChip(
+    icon: ImageVector,
+    title: String,
+    modifier: Modifier = Modifier
+) {
     Surface(
         modifier = modifier.height(44.dp),
         shape = RoundedCornerShape(12.dp),
@@ -285,9 +360,4 @@ private fun ModernFeatureChip(icon: ImageVector, title: String, modifier: Modifi
             )
         }
     }
-}
-
-private fun getFallbackImageRes(imageName: String): Int {
-    val mappedRes = EquipmentImageMapper.getImageRes(imageName.trim())
-    return if (mappedRes != 0) mappedRes else R.drawable.ic_launcher_foreground
 }

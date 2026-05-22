@@ -975,10 +975,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                fun handleLostRequest(request: BorrowRequest) {
+                fun handleLostRequest(
+                    request: BorrowRequest,
+                    fineAmount: Int,
+                    fineReason: String
+                ) {
                     requestRepository.markRequestLost(
                         request = request,
-                        adminNote = "Marked as lost by admin"
+                        adminNote = "Marked as lost by admin",
+                        fineAmount = fineAmount,
+                        fineReason = fineReason
                     ) { success, message ->
                         runOnUiThread {
                             showMessage(
@@ -986,13 +992,20 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
+                                val fineText = if (fineAmount > 0) {
+                                    " Fine: $fineAmount taka."
+                                } else {
+                                    ""
+                                }
+
                                 notificationRepository.sendNotificationToStudent(
                                     institutionId = currentInstitutionId,
                                     studentUserId = request.userId,
                                     title = "Item Marked as Lost",
-                                    message = "${request.equipmentName} has been marked as lost. Please contact your admin.",
+                                    message = "${request.equipmentName} has been marked as lost.$fineText Please contact your admin.",
                                     type = "error"
                                 )
+
                                 refreshAdminDashboardData(
                                     refreshPending = true,
                                     refreshApproved = true
@@ -1004,10 +1017,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                fun handleDamagedRequest(request: BorrowRequest) {
+                fun handleDamagedRequest(
+                    request: BorrowRequest,
+                    fineAmount: Int,
+                    fineReason: String
+                ) {
                     requestRepository.markRequestDamaged(
                         request = request,
-                        adminNote = "Marked as damaged by admin"
+                        adminNote = "Marked as damaged by admin",
+                        fineAmount = fineAmount,
+                        fineReason = fineReason
                     ) { success, message ->
                         runOnUiThread {
                             showMessage(
@@ -1015,12 +1034,76 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (success) {
+                                val fineText = if (fineAmount > 0) {
+                                    " Fine: $fineAmount taka."
+                                } else {
+                                    ""
+                                }
+
                                 notificationRepository.sendNotificationToStudent(
                                     institutionId = currentInstitutionId,
                                     studentUserId = request.userId,
                                     title = "Item Marked as Damaged",
-                                    message = "${request.equipmentName} has been marked as damaged. Please contact your admin.",
+                                    message = "${request.equipmentName} has been marked as damaged.$fineText Please contact your admin.",
                                     type = "warning"
+                                )
+
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.ApprovedRequests
+                                }
+                            }
+                        }
+                    }
+                }
+                fun handleFinePaid(request: BorrowRequest) {
+                    requestRepository.markFinePaid(
+                        requestId = request.requestId
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(
+                                if (success) "Fine marked as paid" else message
+                            )
+
+                            if (success) {
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
+                                    title = "Fine Paid",
+                                    message = "Your fine for ${request.equipmentName} has been marked as paid.",
+                                    type = "success"
+                                )
+
+                                refreshAdminDashboardData(
+                                    refreshPending = true,
+                                    refreshApproved = true
+                                ) {
+                                    currentScreen = AppScreen.ApprovedRequests
+                                }
+                            }
+                        }
+                    }
+                }
+
+                fun handleFineWaived(request: BorrowRequest) {
+                    requestRepository.waiveFine(
+                        requestId = request.requestId,
+                        waiveReason = "Fine waived by admin"
+                    ) { success, message ->
+                        runOnUiThread {
+                            showMessage(
+                                if (success) "Fine waived successfully" else message
+                            )
+
+                            if (success) {
+                                notificationRepository.sendNotificationToStudent(
+                                    institutionId = currentInstitutionId,
+                                    studentUserId = request.userId,
+                                    title = "Fine Waived",
+                                    message = "Your fine for ${request.equipmentName} has been waived by admin.",
+                                    type = "success"
                                 )
 
                                 refreshAdminDashboardData(
@@ -1348,12 +1431,25 @@ class MainActivity : ComponentActivity() {
                         },
                         onReturnedClick = { request ->
                             handleReturnRequest(request)
+                        },onLostClick = { request, fineAmount, fineReason ->
+                            handleLostRequest(
+                                request = request,
+                                fineAmount = fineAmount,
+                                fineReason = fineReason
+                            )
                         },
-                        onLostClick = { request ->
-                            handleLostRequest(request)
+                        onDamagedClick = { request, fineAmount, fineReason ->
+                            handleDamagedRequest(
+                                request = request,
+                                fineAmount = fineAmount,
+                                fineReason = fineReason
+                            )
                         },
-                        onDamagedClick = { request ->
-                            handleDamagedRequest(request)
+                        onFinePaidClick = { request ->
+                            handleFinePaid(request)
+                        },
+                        onFineWaivedClick = { request ->
+                            handleFineWaived(request)
                         },
                         onBackClick = {
                             openAdminDashboardWithFreshData()
@@ -1371,6 +1467,9 @@ class MainActivity : ComponentActivity() {
                                 redirectUnauthorized(AppScreen.StudentDashboard)
                             } else {
                                 StudentDashboardScreen(
+                                    recentRequests = requestViewModel.myRequests
+                                        .sortedByDescending { request -> request.requestTimestamp }
+                                        .take(2),
                                     onViewEquipmentClick = {
                                         loadRoomsAndOpenStudentRoomSelection()
                                     },
@@ -2778,6 +2877,12 @@ class MainActivity : ComponentActivity() {
                                         subtitle = "Items marked as lost or damaged",
                                         requestList = adminAllRequests,
                                         fixedStatus = "Lost/Damaged",
+                                        onFinePaidClick = { request ->
+                                            handleFinePaid(request)
+                                        },
+                                        onFineWaivedClick = { request ->
+                                            handleFineWaived(request)
+                                        },
                                         onBackClick = {
                                             currentScreen = AppScreen.ReportsDashboard
                                         }

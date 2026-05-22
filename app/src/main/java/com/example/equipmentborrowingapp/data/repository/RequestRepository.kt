@@ -8,6 +8,7 @@ import java.util.Locale
 class RequestRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
+    private val overdueFinePerDay = 20
 
     fun submitBorrowRequest(
         institutionId: String,
@@ -104,6 +105,10 @@ class RequestRepository {
                             dueDate = dueDate,
                             returnedDate = "",
                             status = "Pending",
+                            fineAmount = 0,
+                            fineReason = "",
+                            fineStatus = "None",
+                            penaltyUpdatedAt = 0L,
                             requestTimestamp = System.currentTimeMillis()
                         )
 
@@ -488,6 +493,8 @@ class RequestRepository {
     fun markRequestLost(
         request: BorrowRequest,
         adminNote: String = "",
+        fineAmount: Int = 0,
+        fineReason: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         updateFinalNoQuantityReturnStatus(
@@ -495,6 +502,8 @@ class RequestRepository {
             newStatus = "Lost",
             returnCondition = "Lost",
             adminNote = adminNote,
+            fineAmount = fineAmount,
+            fineReason = fineReason.ifBlank { "Item marked as lost" },
             successMessage = "Request marked as lost",
             onResult = onResult
         )
@@ -503,6 +512,8 @@ class RequestRepository {
     fun markRequestDamaged(
         request: BorrowRequest,
         adminNote: String = "",
+        fineAmount: Int = 0,
+        fineReason: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         updateFinalNoQuantityReturnStatus(
@@ -510,6 +521,8 @@ class RequestRepository {
             newStatus = "Damaged",
             returnCondition = "Damaged",
             adminNote = adminNote,
+            fineAmount = fineAmount,
+            fineReason = fineReason.ifBlank { "Item marked as damaged" },
             successMessage = "Request marked as damaged",
             onResult = onResult
         )
@@ -606,14 +619,109 @@ class RequestRepository {
             }
     }
 
+    fun updateRequestFine(
+        requestId: String,
+        fineAmount: Int,
+        fineReason: String,
+        fineStatus: String = "Pending",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (requestId.isBlank()) {
+            onResult(false, "Invalid request id")
+            return
+        }
+
+        if (fineAmount < 0) {
+            onResult(false, "Fine amount cannot be negative")
+            return
+        }
+
+        val cleanFineStatus = fineStatus.trim().ifBlank {
+            if (fineAmount > 0) "Pending" else "None"
+        }
+
+        val updates = mapOf(
+            "fineAmount" to fineAmount,
+            "fineReason" to fineReason.trim(),
+            "fineStatus" to cleanFineStatus,
+            "penaltyUpdatedAt" to System.currentTimeMillis()
+        )
+
+        firestore.collection("borrow_requests")
+            .document(requestId.trim())
+            .update(updates)
+            .addOnSuccessListener {
+                onResult(true, "Fine updated successfully")
+            }
+            .addOnFailureListener { error ->
+                onResult(false, error.message ?: "Failed to update fine")
+            }
+    }
+    fun markFinePaid(
+        requestId: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (requestId.isBlank()) {
+            onResult(false, "Invalid request id")
+            return
+        }
+
+        val updates = mapOf(
+            "fineStatus" to "Paid",
+            "penaltyUpdatedAt" to System.currentTimeMillis()
+        )
+
+        firestore.collection("borrow_requests")
+            .document(requestId.trim())
+            .update(updates)
+            .addOnSuccessListener {
+                onResult(true, "Fine marked as paid")
+            }
+            .addOnFailureListener { error ->
+                onResult(false, error.message ?: "Failed to mark fine as paid")
+            }
+    }
+    fun waiveFine(
+        requestId: String,
+        waiveReason: String = "",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (requestId.isBlank()) {
+            onResult(false, "Invalid request id")
+            return
+        }
+
+        val updates = mapOf(
+            "fineStatus" to "Waived",
+            "fineReason" to waiveReason.trim().ifBlank { "Fine waived by admin" },
+            "penaltyUpdatedAt" to System.currentTimeMillis()
+        )
+
+        firestore.collection("borrow_requests")
+            .document(requestId.trim())
+            .update(updates)
+            .addOnSuccessListener {
+                onResult(true, "Fine waived successfully")
+            }
+            .addOnFailureListener { error ->
+                onResult(false, error.message ?: "Failed to waive fine")
+            }
+    }
     private fun updateFinalNoQuantityReturnStatus(
         request: BorrowRequest,
         newStatus: String,
         returnCondition: String,
         adminNote: String,
+        fineAmount: Int,
+        fineReason: String,
         successMessage: String,
         onResult: (Boolean, String) -> Unit
     ) {
+        if (fineAmount < 0) {
+            onResult(false, "Fine amount cannot be negative")
+            return
+        }
+
         val requestRef = firestore.collection("borrow_requests").document(request.requestId)
 
         firestore.runTransaction { transaction ->
@@ -638,7 +746,11 @@ class RequestRepository {
                 mapOf(
                     "status" to newStatus,
                     "returnCondition" to returnCondition,
-                    "adminNote" to adminNote
+                    "adminNote" to adminNote,
+                    "fineAmount" to fineAmount,
+                    "fineReason" to fineReason.trim(),
+                    "fineStatus" to if (fineAmount > 0) "Pending" else "None",
+                    "penaltyUpdatedAt" to System.currentTimeMillis()
                 )
             )
         }.addOnSuccessListener {
@@ -667,7 +779,26 @@ class RequestRepository {
                 throw Exception("Only issued requests can be marked as overdue")
             }
 
-            transaction.update(requestRef, "status", "Overdue")
+            val fineAmount = calculateOverdueFineAmount(request.dueDate)
+
+            transaction.update(
+                requestRef,
+                mapOf(
+                    "status" to "Overdue",
+                    "fineAmount" to fineAmount,
+                    "fineReason" to if (fineAmount > 0) {
+                        "Overdue fine: $fineAmount taka"
+                    } else {
+                        ""
+                    },
+                    "fineStatus" to if (fineAmount > 0) {
+                        "Pending"
+                    } else {
+                        "None"
+                    },
+                    "penaltyUpdatedAt" to System.currentTimeMillis()
+                )
+            )
         }.addOnSuccessListener {
             onResult(true, "Request marked as overdue")
         }.addOnFailureListener { e ->
@@ -680,7 +811,33 @@ class RequestRepository {
             request.status.equals("Issued", ignoreCase = true) &&
             isDueDatePast(request.dueDate)
         ) {
-            request.copy(status = "Overdue")
+            val fineAmount = calculateOverdueFineAmount(request.dueDate)
+
+            request.copy(
+                status = "Overdue",
+                fineAmount = if (request.fineAmount > 0) {
+                    request.fineAmount
+                } else {
+                    fineAmount
+                },
+                fineReason = if (request.fineReason.isNotBlank()) {
+                    request.fineReason
+                } else if (fineAmount > 0) {
+                    "Overdue fine: $fineAmount taka"
+                } else {
+                    ""
+                },
+                fineStatus = if (fineAmount > 0) {
+                    request.fineStatus.ifBlank { "Pending" }
+                } else {
+                    request.fineStatus.ifBlank { "None" }
+                },
+                penaltyUpdatedAt = if (request.penaltyUpdatedAt > 0L) {
+                    request.penaltyUpdatedAt
+                } else {
+                    System.currentTimeMillis()
+                }
+            )
         } else {
             request
         }
@@ -693,10 +850,52 @@ class RequestRepository {
                 isDueDatePast(request.dueDate) &&
                 request.requestId.isNotBlank()
             ) {
+                val fineAmount = calculateOverdueFineAmount(request.dueDate)
+
+                val updates = mapOf(
+                    "status" to "Overdue",
+                    "fineAmount" to fineAmount,
+                    "fineReason" to if (fineAmount > 0) {
+                        "Overdue fine: $fineAmount taka"
+                    } else {
+                        ""
+                    },
+                    "fineStatus" to if (fineAmount > 0) {
+                        "Pending"
+                    } else {
+                        "None"
+                    },
+                    "penaltyUpdatedAt" to System.currentTimeMillis()
+                )
+
                 firestore.collection("borrow_requests")
                     .document(request.requestId)
-                    .update("status", "Overdue")
+                    .update(updates)
             }
+        }
+    }
+
+    private fun calculateOverdueFineAmount(dueDate: String): Int {
+        if (dueDate.isBlank()) return 0
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        dateFormat.isLenient = false
+
+        return try {
+            val dueDateParsed = dateFormat.parse(dueDate.trim()) ?: return 0
+            val todayText = dateFormat.format(System.currentTimeMillis())
+            val todayParsed = dateFormat.parse(todayText) ?: return 0
+
+            val diffMillis = todayParsed.time - dueDateParsed.time
+            val overdueDays = diffMillis / (1000 * 60 * 60 * 24)
+
+            if (overdueDays > 0) {
+                (overdueDays * overdueFinePerDay).toInt()
+            } else {
+                0
+            }
+        } catch (_: Exception) {
+            0
         }
     }
 

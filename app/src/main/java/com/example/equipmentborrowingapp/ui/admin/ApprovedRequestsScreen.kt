@@ -94,27 +94,31 @@ private fun RequestCardImage(
     imageUrl: String,
     contentDescription: String
 ) {
-    val fallback = EquipmentImageMapper.getImageRes(imageName)
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
 
-    if (imageUrl.isNotBlank()) {
+    val imageModifier = Modifier
+        .size(85.dp)
+        .clip(RoundedCornerShape(12.dp))
+        .background(ApprovedColors.ModernBg)
+
+    if (hasImageUrl) {
         AsyncImage(
-            model = imageUrl,
+            model = safeImageUrl,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
-            placeholder = painterResource(fallback),
-            error = painterResource(fallback),
-            modifier = Modifier
-                .size(85.dp)
-                .clip(RoundedCornerShape(12.dp))
+            placeholder = painterResource(id = fallbackImageResId),
+            error = painterResource(id = fallbackImageResId),
+            fallback = painterResource(id = fallbackImageResId),
+            modifier = imageModifier
         )
     } else {
         Image(
-            painter = painterResource(fallback),
+            painter = painterResource(id = fallbackImageResId),
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(85.dp)
-                .clip(RoundedCornerShape(12.dp))
+            modifier = imageModifier.padding(8.dp)
         )
     }
 }
@@ -124,8 +128,10 @@ fun ApprovedRequestsScreen(
     requestList: List<BorrowRequest>,
     onIssuedClick: (BorrowRequest) -> Unit,
     onReturnedClick: (BorrowRequest) -> Unit,
-    onLostClick: (BorrowRequest) -> Unit,
-    onDamagedClick: (BorrowRequest) -> Unit,
+    onLostClick: (BorrowRequest, Int, String) -> Unit,
+    onDamagedClick: (BorrowRequest, Int, String) -> Unit,
+    onFinePaidClick: (BorrowRequest) -> Unit,
+    onFineWaivedClick: (BorrowRequest) -> Unit,
     onBackClick: () -> Unit
 ) {
     var selectedRequest by remember { mutableStateOf<BorrowRequest?>(null) }
@@ -171,7 +177,8 @@ fun ApprovedRequestsScreen(
                         request.equipmentCategory.lowercase().contains(query) ||
                         request.status.lowercase().contains(query) ||
                         request.borrowDate.lowercase().contains(query) ||
-                        request.dueDate.lowercase().contains(query)
+                        request.dueDate.lowercase().contains(query) ||
+                        request.fineReason.lowercase().contains(query)
 
             val matchesStatus =
                 selectedStatus == "All" ||
@@ -207,6 +214,11 @@ fun ApprovedRequestsScreen(
                         .thenByDescending { it.requestTimestamp }
                 )
 
+                "Fine High-Low" -> list.sortedWith(
+                    compareByDescending<BorrowRequest> { it.fineAmount }
+                        .thenByDescending { it.requestTimestamp }
+                )
+
                 else -> list.sortedByDescending { it.requestTimestamp }
             }
         }
@@ -233,14 +245,14 @@ fun ApprovedRequestsScreen(
                 selectedRequest = null
                 selectedAction = ""
             },
-            onConfirm = {
+            onConfirm = { fineAmount, fineReason ->
                 isLoading = true
 
                 when (selectedAction) {
                     "issue" -> onIssuedClick(request)
                     "return" -> onReturnedClick(request)
-                    "lost" -> onLostClick(request)
-                    "damaged" -> onDamagedClick(request)
+                    "lost" -> onLostClick(request, fineAmount, fineReason)
+                    "damaged" -> onDamagedClick(request, fineAmount, fineReason)
                 }
 
                 val snackbarText = when (selectedAction) {
@@ -383,7 +395,7 @@ fun ApprovedRequestsScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     label = {
-                        Text("Search student, ID, department, equipment or status")
+                        Text("Search student, ID, department, equipment, status or fine reason")
                     }
                 )
 
@@ -450,6 +462,7 @@ fun ApprovedRequestsScreen(
                         "Oldest First",
                         "Due Date",
                         "Status",
+                        "Fine High-Low",
                         "Student A-Z",
                         "Equipment A-Z",
                         "Quantity High-Low"
@@ -540,6 +553,12 @@ fun ApprovedRequestsScreen(
                                 onDamagedClick = {
                                     selectedRequest = request
                                     selectedAction = "damaged"
+                                },
+                                onFinePaidClick = {
+                                    onFinePaidClick(request)
+                                },
+                                onFineWaivedClick = {
+                                    onFineWaivedClick(request)
                                 }
                             )
                         }
@@ -652,7 +671,10 @@ private fun BorrowLifecycleRequestCard(
     onIssueClick: () -> Unit,
     onReturnClick: () -> Unit,
     onLostClick: () -> Unit,
-    onDamagedClick: () -> Unit
+    onDamagedClick: () -> Unit,
+    onFinePaidClick: () -> Unit,
+    onFineWaivedClick: () -> Unit
+
 ) {
     val status = request.status.trim()
 
@@ -814,6 +836,70 @@ private fun BorrowLifecycleRequestCard(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+
+                    if (request.fineAmount > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "Fine: ${request.fineAmount} taka • ${request.fineStatus.ifBlank { "Pending" }}",
+                            color = when (request.fineStatus.lowercase()) {
+                                "paid" -> ApprovedColors.GreenText
+                                "waived" -> ApprovedColors.BlueText
+                                else -> ApprovedColors.RedText
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        if (request.fineReason.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            Text(
+                                text = request.fineReason,
+                                color = ApprovedColors.TextMuted,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        if (request.fineStatus.equals("Pending", ignoreCase = true)) {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = onFinePaidClick,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = ApprovedColors.GreenText
+                                    )
+                                ) {
+                                    Text(
+                                        text = "Mark Paid",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = onFineWaivedClick,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = ApprovedColors.BlueText
+                                    )
+                                ) {
+                                    Text(
+                                        text = "Waive",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -921,8 +1007,15 @@ private fun ConfirmLifecycleActionDialog(
     request: BorrowRequest,
     action: String,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (Int, String) -> Unit
 ) {
+    var fineAmountText by remember { mutableStateOf("") }
+    var fineReason by remember { mutableStateOf("") }
+
+    val isPenaltyAction =
+        action.equals("lost", ignoreCase = true) ||
+                action.equals("damaged", ignoreCase = true)
+
     val title = when (action) {
         "issue" -> "Confirm Issue"
         "return" -> "Confirm Return"
@@ -1001,13 +1094,81 @@ private fun ConfirmLifecycleActionDialog(
                             text = "Current Status: ${request.status.ifBlank { "N/A" }}",
                             color = ApprovedColors.TextDark
                         )
+
+                        if (request.fineAmount > 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Current Fine: ${request.fineAmount} taka",
+                                color = ApprovedColors.RedText,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
+                }
+
+                if (isPenaltyAction) {
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = fineAmountText,
+                        onValueChange = { value ->
+                            fineAmountText = value.filter { it.isDigit() }
+                        },
+                        label = {
+                            Text("Fine Amount (optional)")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = fineReason,
+                        onValueChange = {
+                            fineReason = it
+                        },
+                        label = {
+                            Text(
+                                if (action == "lost") {
+                                    "Fine Reason / Lost Note"
+                                } else {
+                                    "Fine Reason / Damage Note"
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        minLines = 2
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "If no fine is needed, keep amount empty or 0.",
+                        color = ApprovedColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    val fineAmount = fineAmountText.toIntOrNull() ?: 0
+
+                    val finalReason = fineReason.trim().ifBlank {
+                        when (action) {
+                            "lost" -> "Item marked as lost"
+                            "damaged" -> "Item marked as damaged"
+                            else -> ""
+                        }
+                    }
+
+                    onConfirm(fineAmount, finalReason)
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = buttonColor,
                     contentColor = Color.White

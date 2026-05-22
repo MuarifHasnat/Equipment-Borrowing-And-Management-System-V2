@@ -1,5 +1,6 @@
 package com.example.equipmentborrowingapp.ui.student
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -12,16 +13,33 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,10 +48,43 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
+import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
+
+private object MyReqColors {
+    val ModernBg = Color(0xFFF4F7FB)
+    val CardWhite = Color(0xFFFFFFFF)
+    val TextDark = Color(0xFF111827)
+    val TextMuted = Color(0xFF6B7280)
+    val PrimaryBlue = Color(0xFF2563EB)
+
+    val BlueLight = Color(0xFFEFF6FF)
+    val BlueText = Color(0xFF2563EB)
+
+    val GreenLight = Color(0xFFF0FDF4)
+    val GreenText = Color(0xFF166534)
+
+    val OrangeLight = Color(0xFFFFFBEB)
+    val OrangeText = Color(0xFF92400E)
+
+    val RedLight = Color(0xFFFEF2F2)
+    val RedText = Color(0xFFB91C1C)
+
+    val GrayLight = Color(0xFFF3F4F6)
+    val GrayText = Color(0xFF374151)
+
+    val PurpleLight = Color(0xFFF5F3FF)
+    val PurpleText = Color(0xFF7C3AED)
+}
 
 @Composable
 fun MyRequestsScreen(
@@ -41,6 +92,7 @@ fun MyRequestsScreen(
     onBackClick: () -> Unit
 ) {
     var selectedStatus by remember { mutableStateOf("All") }
+    var searchText by remember { mutableStateOf("") }
 
     val statusFilters = listOf(
         "All",
@@ -57,29 +109,127 @@ fun MyRequestsScreen(
 
     val filteredRequests = requestList
         .filter { request ->
-            selectedStatus == "All" ||
-                    request.status.equals(selectedStatus, ignoreCase = true)
+            val statusMatched =
+                selectedStatus == "All" ||
+                        request.status.equals(selectedStatus, ignoreCase = true)
+
+            val query = searchText.trim().lowercase()
+
+            val searchMatched =
+                query.isBlank() ||
+                        request.equipmentName.lowercase().contains(query) ||
+                        request.equipmentCategory.lowercase().contains(query) ||
+                        request.status.lowercase().contains(query) ||
+                        request.borrowDate.lowercase().contains(query) ||
+                        request.dueDate.lowercase().contains(query)
+
+            statusMatched && searchMatched
         }
         .sortedByDescending { it.requestTimestamp }
+
+    val pendingCount = requestList.count { it.status.equals("Pending", ignoreCase = true) }
+    val activeCount = requestList.count {
+        it.status.equals("Approved", ignoreCase = true) ||
+                it.status.equals("Issued", ignoreCase = true) ||
+                it.status.equals("Overdue", ignoreCase = true)
+    }
+    val completedCount = requestList.count { it.status.equals("Returned", ignoreCase = true) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF4F7FB))
+            .background(MyReqColors.ModernBg)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "My Requests",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .background(MyReqColors.CardWhite, RoundedCornerShape(12.dp))
+                    .shadow(
+                        elevation = 2.dp,
+                        shape = RoundedCornerShape(12.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MyReqColors.TextDark
+                )
+            }
 
-        Text(
-            text = "Track your pending, approved, issued, returned, rejected and overdue requests.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF6B7280)
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column {
+                Text(
+                    text = "My Requests",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MyReqColors.TextDark
+                )
+
+                Text(
+                    text = "Track your equipment borrowing history",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MyReqColors.TextMuted
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MyRequestStatCard(
+                title = "Pending",
+                value = pendingCount.toString(),
+                bgColor = MyReqColors.OrangeLight,
+                textColor = MyReqColors.OrangeText,
+                modifier = Modifier.weight(1f)
+            )
+
+            MyRequestStatCard(
+                title = "Active",
+                value = activeCount.toString(),
+                bgColor = MyReqColors.BlueLight,
+                textColor = MyReqColors.BlueText,
+                modifier = Modifier.weight(1f)
+            )
+
+            MyRequestStatCard(
+                title = "Returned",
+                value = completedCount.toString(),
+                bgColor = MyReqColors.GreenLight,
+                textColor = MyReqColors.GreenText,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = {
+                searchText = it
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = MyReqColors.TextMuted
+                )
+            },
+            label = {
+                Text("Search equipment, status or date")
+            }
         )
 
         Row(
@@ -103,7 +253,7 @@ fun MyRequestsScreen(
             text = "Requests Found: ${filteredRequests.size}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
+            color = MyReqColors.TextDark
         )
 
         if (filteredRequests.isEmpty()) {
@@ -112,7 +262,7 @@ fun MyRequestsScreen(
                     .fillMaxWidth()
                     .weight(1f),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MyReqColors.CardWhite),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Box(
@@ -122,13 +272,13 @@ fun MyRequestsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (selectedStatus == "All") {
-                            "You have not made any borrowing requests yet."
-                        } else {
-                            "No $selectedStatus request found."
+                        text = when {
+                            requestList.isEmpty() -> "You have not made any borrowing requests yet."
+                            selectedStatus != "All" -> "No $selectedStatus request found."
+                            else -> "No request matches your search."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
+                        color = MyReqColors.TextMuted
                     )
                 }
             }
@@ -143,13 +293,45 @@ fun MyRequestsScreen(
                 }
             }
         }
+    }
+}
 
-        OutlinedButton(
-            onClick = onBackClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp)
+@Composable
+private fun MyRequestStatCard(
+    title: String,
+    value: String,
+    bgColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(74.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MyReqColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Back")
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = MyReqColors.TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = value,
+                modifier = Modifier
+                    .background(bgColor, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = textColor,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
@@ -161,10 +343,16 @@ private fun StudentRequestHistoryCard(
     val status = request.status.ifBlank { "Pending" }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 3.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            ),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        colors = CardDefaults.cardColors(containerColor = MyReqColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -172,26 +360,96 @@ private fun StudentRequestHistoryCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
+                StudentRequestImage(
+                    imageName = request.equipmentImageName,
+                    imageUrl = request.equipmentImageUrl,
+                    contentDescription = request.equipmentName
+                )
+
+                Spacer(modifier = Modifier.width(14.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = request.equipmentName.ifBlank { "Unknown Equipment" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF111827)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = request.equipmentName.ifBlank { "Unknown Equipment" },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MyReqColors.TextDark,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
 
-                    Text(
-                        text = request.equipmentCategory.ifBlank { "No category" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
-                    )
+                            Text(
+                                text = request.equipmentCategory.ifBlank { "No category" },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MyReqColors.TextMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        StudentRequestStatusBadge(status = status)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.Inventory2,
+                            contentDescription = null,
+                            tint = MyReqColors.TextMuted,
+                            modifier = Modifier.size(15.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(5.dp))
+
+                        Text(
+                            text = "Quantity: ${request.quantity}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MyReqColors.TextMuted
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.CalendarToday,
+                            contentDescription = null,
+                            tint = MyReqColors.TextMuted,
+                            modifier = Modifier.size(15.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(5.dp))
+
+                        Text(
+                            text = "Due: ${request.dueDate.ifBlank { "N/A" }}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (status.equals("Overdue", ignoreCase = true)) {
+                                MyReqColors.RedText
+                            } else {
+                                MyReqColors.TextMuted
+                            },
+                            fontWeight = if (status.equals("Overdue", ignoreCase = true)) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            }
+                        )
+                    }
                 }
-
-                StudentRequestStatusBadge(status = status)
             }
+
+            HorizontalDivider(color = MyReqColors.ModernBg)
 
             Column(
                 modifier = Modifier
@@ -203,11 +461,6 @@ private fun StudentRequestHistoryCard(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StudentRequestInfoRow(
-                    label = "Quantity",
-                    value = request.quantity.toString()
-                )
-
                 StudentRequestInfoRow(
                     label = "Borrow Date",
                     value = request.borrowDate.ifBlank { "N/A" }
@@ -233,82 +486,25 @@ private fun StudentRequestHistoryCard(
                 }
             }
 
-            when {
-                status.equals("Pending", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "Your request is waiting for admin approval.",
-                        backgroundColor = Color(0xFFFFFBEB),
-                        textColor = Color(0xFF92400E)
-                    )
-                }
+            RequestStatusMessage(
+                status = status,
+                request = request
+            )
+            if (request.fineAmount > 0) {
+                RequestMessageBox(
+                    message = "Fine: ${request.fineAmount} taka • Status: ${request.fineStatus.ifBlank { "Pending" }}",
+                    backgroundColor = MyReqColors.RedLight,
+                    textColor = MyReqColors.RedText
+                )
 
-                status.equals("Approved", ignoreCase = true) -> {
+                if (request.fineReason.isNotBlank()) {
                     RequestMessageBox(
-                        message = "Your request is approved. Please collect the equipment from admin.",
-                        backgroundColor = Color(0xFFEFF6FF),
-                        textColor = Color(0xFF2563EB)
-                    )
-                }
-
-                status.equals("Issued", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "Equipment has been issued to you. Return it before the due date.",
-                        backgroundColor = Color(0xFFF0FDF4),
-                        textColor = Color(0xFF166534)
-                    )
-                }
-
-                status.equals("Overdue", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "⚠ This request is overdue. Please return the equipment immediately.",
-                        backgroundColor = Color(0xFFFEF2F2),
-                        textColor = Color(0xFFB91C1C)
-                    )
-                }
-
-                status.equals("Returned", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "This equipment has been returned successfully.",
-                        backgroundColor = Color(0xFFF0FDF4),
-                        textColor = Color(0xFF166534)
-                    )
-                }
-
-                status.equals("Rejected", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = request.rejectedReason.ifBlank {
-                            "Your request has been rejected by admin."
-                        },
-                        backgroundColor = Color(0xFFFEF2F2),
-                        textColor = Color(0xFFB91C1C)
-                    )
-                }
-
-                status.equals("Lost", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "This equipment has been marked as lost. Please contact admin.",
-                        backgroundColor = Color(0xFFFEF2F2),
-                        textColor = Color(0xFFB91C1C)
-                    )
-                }
-
-                status.equals("Damaged", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "This equipment has been marked as damaged. Please contact admin.",
+                        message = "Reason: ${request.fineReason}",
                         backgroundColor = Color(0xFFFFF7ED),
                         textColor = Color(0xFFEA580C)
                     )
                 }
-
-                status.equals("Cancelled", ignoreCase = true) -> {
-                    RequestMessageBox(
-                        message = "This request has been cancelled.",
-                        backgroundColor = Color(0xFFF3F4F6),
-                        textColor = Color(0xFF374151)
-                    )
-                }
             }
-
             if (request.adminNote.isNotBlank()) {
                 RequestMessageBox(
                     message = "Admin Note: ${request.adminNote}",
@@ -316,6 +512,123 @@ private fun StudentRequestHistoryCard(
                     textColor = Color(0xFF475569)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun StudentRequestImage(
+    imageName: String,
+    imageUrl: String,
+    contentDescription: String
+) {
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
+
+    val imageModifier = Modifier
+        .size(84.dp)
+        .clip(RoundedCornerShape(14.dp))
+        .background(MyReqColors.ModernBg)
+
+    if (hasImageUrl) {
+        AsyncImage(
+            model = safeImageUrl,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(id = fallbackImageResId),
+            error = painterResource(id = fallbackImageResId),
+            fallback = painterResource(id = fallbackImageResId),
+            modifier = imageModifier
+        )
+    } else {
+        Image(
+            painter = painterResource(id = fallbackImageResId),
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier.padding(8.dp)
+        )
+    }
+}
+
+@Composable
+private fun RequestStatusMessage(
+    status: String,
+    request: BorrowRequest
+) {
+    when {
+        status.equals("Pending", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "Your request is waiting for admin approval.",
+                backgroundColor = MyReqColors.OrangeLight,
+                textColor = MyReqColors.OrangeText
+            )
+        }
+
+        status.equals("Approved", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "Your request is approved. Please collect the equipment from admin.",
+                backgroundColor = MyReqColors.BlueLight,
+                textColor = MyReqColors.BlueText
+            )
+        }
+
+        status.equals("Issued", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "Equipment has been issued to you. Return it before the due date.",
+                backgroundColor = MyReqColors.GreenLight,
+                textColor = MyReqColors.GreenText
+            )
+        }
+
+        status.equals("Overdue", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "⚠ This request is overdue. Please return the equipment immediately.",
+                backgroundColor = MyReqColors.RedLight,
+                textColor = MyReqColors.RedText
+            )
+        }
+
+        status.equals("Returned", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "This equipment has been returned successfully.",
+                backgroundColor = MyReqColors.GreenLight,
+                textColor = MyReqColors.GreenText
+            )
+        }
+
+        status.equals("Rejected", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = request.rejectedReason.ifBlank {
+                    "Your request has been rejected by admin."
+                },
+                backgroundColor = MyReqColors.RedLight,
+                textColor = MyReqColors.RedText
+            )
+        }
+
+        status.equals("Lost", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "This equipment has been marked as lost. Please contact admin.",
+                backgroundColor = MyReqColors.RedLight,
+                textColor = MyReqColors.RedText
+            )
+        }
+
+        status.equals("Damaged", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "This equipment has been marked as damaged. Please contact admin.",
+                backgroundColor = Color(0xFFFFF7ED),
+                textColor = Color(0xFFEA580C)
+            )
+        }
+
+        status.equals("Cancelled", ignoreCase = true) -> {
+            RequestMessageBox(
+                message = "This request has been cancelled.",
+                backgroundColor = MyReqColors.GrayLight,
+                textColor = MyReqColors.GrayText
+            )
         }
     }
 }
@@ -380,14 +693,14 @@ private fun StudentRequestInfoRow(
             modifier = Modifier.weight(0.42f),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF6B7280)
+            color = MyReqColors.TextMuted
         )
 
         Text(
             text = value.ifBlank { "N/A" },
             modifier = Modifier.weight(0.58f),
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF111827),
+            color = MyReqColors.TextDark,
             fontWeight = if (label == "Due Date") {
                 FontWeight.SemiBold
             } else {
@@ -429,7 +742,7 @@ private fun RequestStatusFilterChip(
             onClick = onClick,
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2563EB),
+                containerColor = MyReqColors.PrimaryBlue,
                 contentColor = Color.White
             )
         ) {

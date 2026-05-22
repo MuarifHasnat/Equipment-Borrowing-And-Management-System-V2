@@ -34,16 +34,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.equipmentborrowingapp.R
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Modern Colors
 private object BorrowColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -78,18 +75,21 @@ fun BorrowRequestScreen(
     var showBorrowDatePicker by remember { mutableStateOf(false) }
     var showDueDatePicker by remember { mutableStateOf(false) }
 
-    val fallbackImageResId = getFallbackImageRes(equipment.imageName)
-    val hasImageUrl = equipment.imageUrl.trim().isNotBlank()
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(equipment.imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
     val canSubmit = equipment.availableQuantity > 0 && equipment.isBorrowable
 
-    Surface(modifier = Modifier.fillMaxSize(), color = BorrowColors.ModernBg) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = BorrowColors.ModernBg
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            //  Modern Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -100,15 +100,21 @@ fun BorrowRequestScreen(
                     onClick = onBackClick,
                     modifier = Modifier
                         .background(BorrowColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                        .shadow(
+                            2.dp,
+                            RoundedCornerShape(12.dp),
+                            spotColor = Color.Black.copy(alpha = 0.05f)
+                        )
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                         contentDescription = "Back",
                         tint = BorrowColors.TextDark
                     )
                 }
+
                 Spacer(modifier = Modifier.width(16.dp))
+
                 Column {
                     Text(
                         text = "Borrow Equipment",
@@ -124,11 +130,14 @@ fun BorrowRequestScreen(
                 }
             }
 
-            //  Equipment Preview Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        4.dp,
+                        RoundedCornerShape(20.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = BorrowColors.CardWhite)
             ) {
@@ -136,7 +145,6 @@ fun BorrowRequestScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Image
                     Box(
                         modifier = Modifier
                             .size(76.dp)
@@ -145,11 +153,12 @@ fun BorrowRequestScreen(
                     ) {
                         if (hasImageUrl) {
                             AsyncImage(
-                                model = equipment.imageUrl.trim(),
+                                model = safeImageUrl,
                                 contentDescription = equipment.name,
                                 contentScale = ContentScale.Crop,
                                 placeholder = painterResource(id = fallbackImageResId),
                                 error = painterResource(id = fallbackImageResId),
+                                fallback = painterResource(id = fallbackImageResId),
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
@@ -157,17 +166,20 @@ fun BorrowRequestScreen(
                                 painter = painterResource(id = fallbackImageResId),
                                 contentDescription = equipment.name,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize().padding(8.dp)
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp)
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Info
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = formatEquipmentName(equipment.name.ifBlank { "Unknown Equipment" }),
+                            text = formatEquipmentName(
+                                equipment.name.ifBlank { "Unknown Equipment" }
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = BorrowColors.TextDark,
@@ -186,7 +198,6 @@ fun BorrowRequestScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Status Badge
                         Surface(
                             color = if (canSubmit) BorrowColors.GreenLight else BorrowColors.RedLight,
                             shape = RoundedCornerShape(8.dp)
@@ -196,15 +207,29 @@ fun BorrowRequestScreen(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (canSubmit) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
+                                    imageVector = if (canSubmit) {
+                                        Icons.Rounded.CheckCircle
+                                    } else {
+                                        Icons.Rounded.ErrorOutline
+                                    },
                                     contentDescription = null,
-                                    tint = if (canSubmit) BorrowColors.GreenText else BorrowColors.RedText,
+                                    tint = if (canSubmit) {
+                                        BorrowColors.GreenText
+                                    } else {
+                                        BorrowColors.RedText
+                                    },
                                     modifier = Modifier.size(14.dp)
                                 )
+
                                 Spacer(modifier = Modifier.width(4.dp))
+
                                 Text(
                                     text = if (canSubmit) "In Stock" else "Unavailable",
-                                    color = if (canSubmit) BorrowColors.GreenText else BorrowColors.RedText,
+                                    color = if (canSubmit) {
+                                        BorrowColors.GreenText
+                                    } else {
+                                        BorrowColors.RedText
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold
                                 )
@@ -216,7 +241,6 @@ fun BorrowRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //  Borrow Details Form
             Text(
                 text = "Borrow Details",
                 style = MaterialTheme.typography.titleMedium,
@@ -228,12 +252,15 @@ fun BorrowRequestScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        4.dp,
+                        RoundedCornerShape(20.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = BorrowColors.CardWhite)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-
                     ModernTextField(
                         value = quantityText,
                         onValueChange = {
@@ -241,12 +268,18 @@ fun BorrowRequestScreen(
                             errorMessage = ""
                         },
                         label = "Quantity",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next
+                        )
                     )
 
                     ModernTextField(
                         value = purpose,
-                        onValueChange = { purpose = it; errorMessage = "" },
+                        onValueChange = {
+                            purpose = it
+                            errorMessage = ""
+                        },
                         label = "Purpose (e.g. Lab Project)",
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                     )
@@ -254,18 +287,24 @@ fun BorrowRequestScreen(
                     ModernDateField(
                         value = borrowDate,
                         placeholder = "Select Borrow Date",
-                        onClick = { showBorrowDatePicker = true }
+                        onClick = {
+                            showBorrowDatePicker = true
+                        }
                     )
 
                     ModernDateField(
                         value = dueDate,
                         placeholder = "Select Return Date",
-                        onClick = { showDueDatePicker = true }
+                        onClick = {
+                            showDueDatePicker = true
+                        }
                     )
 
                     ModernTextField(
                         value = notes,
-                        onValueChange = { notes = it },
+                        onValueChange = {
+                            notes = it
+                        },
                         label = "Notes (Optional)",
                         singleLine = false,
                         modifier = Modifier.height(80.dp),
@@ -276,7 +315,6 @@ fun BorrowRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //  Guidelines
             Text(
                 text = "Important Guidelines",
                 style = MaterialTheme.typography.titleMedium,
@@ -288,7 +326,11 @@ fun BorrowRequestScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(
+                        2.dp,
+                        RoundedCornerShape(20.dp),
+                        spotColor = Color.Black.copy(alpha = 0.05f)
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = BorrowColors.CardWhite)
             ) {
@@ -296,35 +338,63 @@ fun BorrowRequestScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ModernGuidelineRow(icon = Icons.Rounded.Security, title = "Handle with Care", subtitle = "Keep the equipment safe from damage")
-                    ModernGuidelineRow(icon = Icons.Rounded.Schedule, title = "Return on Time", subtitle = "Must be returned before the due date")
-                    ModernGuidelineRow(icon = Icons.Rounded.Assignment, title = "Use Responsibly", subtitle = "Use only for learning & lab projects")
+                    ModernGuidelineRow(
+                        icon = Icons.Rounded.Security,
+                        title = "Handle with Care",
+                        subtitle = "Keep the equipment safe from damage"
+                    )
+
+                    ModernGuidelineRow(
+                        icon = Icons.Rounded.Schedule,
+                        title = "Return on Time",
+                        subtitle = "Must be returned before the due date"
+                    )
+
+                    ModernGuidelineRow(
+                        icon = Icons.Rounded.Assignment,
+                        title = "Use Responsibly",
+                        subtitle = "Use only for learning & lab projects"
+                    )
                 }
             }
 
-            // Error Message Display
             if (errorMessage.isNotBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(BorrowColors.RedLight, RoundedCornerShape(12.dp))
-                        .border(1.dp, BorrowColors.RedText.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .border(
+                            1.dp,
+                            BorrowColors.RedText.copy(alpha = 0.5f),
+                            RoundedCornerShape(12.dp)
+                        )
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Rounded.Warning, contentDescription = "Error", tint = BorrowColors.RedText)
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = "Error",
+                        tint = BorrowColors.RedText
+                    )
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = errorMessage, color = BorrowColors.RedText, style = MaterialTheme.typography.bodyMedium)
+
+                    Text(
+                        text = errorMessage,
+                        color = BorrowColors.RedText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //  Submit Button
             Button(
                 onClick = {
                     val quantity = quantityText.toIntOrNull()
+
                     val validationMessage = validateBorrowRequestInput(
                         quantity = quantity,
                         availableQuantity = equipment.availableQuantity,
@@ -346,7 +416,11 @@ fun BorrowRequestScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .shadow(if (canSubmit) 6.dp else 0.dp, RoundedCornerShape(16.dp), spotColor = BorrowColors.PrimaryIndigo.copy(alpha = 0.5f)),
+                    .shadow(
+                        if (canSubmit) 6.dp else 0.dp,
+                        RoundedCornerShape(16.dp),
+                        spotColor = BorrowColors.PrimaryIndigo.copy(alpha = 0.5f)
+                    ),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
                     disabledContainerColor = BorrowColors.GrayLight
@@ -359,9 +433,19 @@ fun BorrowRequestScreen(
                         .fillMaxSize()
                         .background(
                             brush = if (canSubmit) {
-                                Brush.horizontalGradient(listOf(BorrowColors.PrimaryIndigo, BorrowColors.PurpleAccent))
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        BorrowColors.PrimaryIndigo,
+                                        BorrowColors.PurpleAccent
+                                    )
+                                )
                             } else {
-                                Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.Transparent
+                                    )
+                                )
                             },
                             shape = RoundedCornerShape(16.dp)
                         ),
@@ -380,23 +464,30 @@ fun BorrowRequestScreen(
         }
     }
 
-    // Modals
     if (showBorrowDatePicker) {
         DatePickerModal(
-            onDateSelected = { borrowDate = it; errorMessage = "" },
-            onDismiss = { showBorrowDatePicker = false }
+            onDateSelected = {
+                borrowDate = it
+                errorMessage = ""
+            },
+            onDismiss = {
+                showBorrowDatePicker = false
+            }
         )
     }
 
     if (showDueDatePicker) {
         DatePickerModal(
-            onDateSelected = { dueDate = it; errorMessage = "" },
-            onDismiss = { showDueDatePicker = false }
+            onDateSelected = {
+                dueDate = it
+                errorMessage = ""
+            },
+            onDismiss = {
+                showDueDatePicker = false
+            }
         )
     }
 }
-
-// Helper Composables
 
 @Composable
 private fun ModernTextField(
@@ -410,13 +501,19 @@ private fun ModernTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, color = BorrowColors.TextMuted) },
+        label = {
+            Text(label, color = BorrowColors.TextMuted)
+        },
         singleLine = singleLine,
         keyboardOptions = keyboardOptions,
         modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+            .shadow(
+                2.dp,
+                RoundedCornerShape(12.dp),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = BorrowColors.ModernBg,
@@ -439,9 +536,15 @@ private fun ModernDateField(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+            .shadow(
+                2.dp,
+                RoundedCornerShape(12.dp),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            )
             .background(BorrowColors.ModernBg, RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .clickable {
+                onClick()
+            }
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
         Row(
@@ -455,8 +558,10 @@ private fun ModernDateField(
                     style = MaterialTheme.typography.labelSmall,
                     color = BorrowColors.TextMuted
                 )
+
                 if (value.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
+
                     Text(
                         text = value,
                         style = MaterialTheme.typography.bodyLarge,
@@ -464,6 +569,7 @@ private fun ModernDateField(
                     )
                 }
             }
+
             Icon(
                 imageVector = Icons.Rounded.CalendarToday,
                 contentDescription = "Select Date",
@@ -511,6 +617,7 @@ private fun ModernGuidelineRow(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium
             )
+
             Text(
                 text = subtitle,
                 color = BorrowColors.TextMuted,
@@ -520,7 +627,6 @@ private fun ModernGuidelineRow(
     }
 }
 
-// Kept untouched to preserve existing logic
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerModal(
@@ -535,10 +641,12 @@ private fun DatePickerModal(
             TextButton(
                 onClick = {
                     val selectedMillis = datePickerState.selectedDateMillis
+
                     if (selectedMillis != null) {
                         val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                         onDateSelected(formatter.format(Date(selectedMillis)))
                     }
+
                     onDismiss()
                 }
             ) {
@@ -584,9 +692,12 @@ private fun validateBorrowRequestInput(
         null
     }
 
-    if (borrowDateParsed == null || dueDateParsed == null) return "Invalid date selected"
+    if (borrowDateParsed == null || dueDateParsed == null) {
+        return "Invalid date selected"
+    }
 
     val todayString = format.format(System.currentTimeMillis())
+
     val todayParsed = try {
         format.parse(todayString)
     } catch (_: Exception) {
@@ -604,14 +715,11 @@ private fun validateBorrowRequestInput(
     val diffMillis = dueDateParsed.time - borrowDateParsed.time
     val diffDays = diffMillis / (1000 * 60 * 60 * 24)
 
-    if (diffDays > 14) return "Borrow period cannot be more than 14 days"
+    if (diffDays > 14) {
+        return "Borrow period cannot be more than 14 days"
+    }
 
     return null
-}
-
-private fun getFallbackImageRes(imageName: String): Int {
-    val mappedRes = EquipmentImageMapper.getImageRes(imageName.trim())
-    return if (mappedRes != 0) mappedRes else R.drawable.ic_launcher_foreground
 }
 
 private fun formatEquipmentName(name: String): String {
@@ -622,7 +730,11 @@ private fun formatEquipmentName(name: String): String {
         .filter { it.isNotBlank() }
         .joinToString(" ") { word ->
             word.lowercase().replaceFirstChar { ch ->
-                if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
+                if (ch.isLowerCase()) {
+                    ch.titlecase(Locale.getDefault())
+                } else {
+                    ch.toString()
+                }
             }
         }
 }
