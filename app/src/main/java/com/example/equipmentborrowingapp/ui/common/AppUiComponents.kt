@@ -1,47 +1,44 @@
 package com.example.equipmentborrowingapp.ui.common
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.equipmentborrowingapp.ui.theme.DividerLight
-import com.example.equipmentborrowingapp.ui.theme.Primary
-import com.example.equipmentborrowingapp.ui.theme.PrimaryDark
-import com.example.equipmentborrowingapp.ui.theme.SurfaceWhite
-import com.example.equipmentborrowingapp.ui.theme.TextLight
-import com.example.equipmentborrowingapp.ui.theme.TextPrimary
-import com.example.equipmentborrowingapp.ui.theme.TextSecondary
-import androidx.compose.foundation.layout.ColumnScope
-import com.example.equipmentborrowingapp.ui.theme.Success
-import com.example.equipmentborrowingapp.ui.theme.SuccessLight
-import com.example.equipmentborrowingapp.ui.theme.Warning
-import com.example.equipmentborrowingapp.ui.theme.WarningLight
+import androidx.compose.ui.unit.sp
+import com.example.equipmentborrowingapp.ui.theme.*
 import com.example.equipmentborrowingapp.ui.theme.Error as AppError
-import com.example.equipmentborrowingapp.ui.theme.ErrorLight
-import com.example.equipmentborrowingapp.ui.theme.Info
-import com.example.equipmentborrowingapp.ui.theme.InfoLight
+
+@Composable
+fun AppButtonEffectModifier(interactionSource: MutableInteractionSource): Modifier {
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = tween(durationMillis = 100),
+        label = "ButtonScale"
+    )
+    return Modifier.scale(scale)
+}
+
 @Composable
 fun GradientHeaderCard(
     title: String,
@@ -54,35 +51,36 @@ fun GradientHeaderCard(
             .fillMaxWidth()
             .background(
                 brush = Brush.horizontalGradient(
-                    listOf(Primary, PrimaryDark)
+                    listOf(Primary, Secondary)
                 ),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
-            .padding(20.dp)
+            .padding(18.dp)
     ) {
         Column {
             Text(
                 text = title,
-                color = TextLight.copy(alpha = 0.92f),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                color = TextLight.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = subtitle,
                 color = TextLight,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = description,
-                color = TextLight.copy(alpha = 0.92f),
-                style = MaterialTheme.typography.bodyMedium
+                color = TextLight.copy(alpha = 0.90f),
+                fontSize = 13.sp,
+                lineHeight = 18.sp
             )
         }
     }
@@ -96,23 +94,22 @@ fun SummaryStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.height(90.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(bgColor.copy(alpha = 0.45f))
-                .padding(horizontal = 12.dp, vertical = 14.dp),
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
 
@@ -120,9 +117,11 @@ fun SummaryStatCard(
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodySmall,
+                fontSize = 12.sp,
                 color = TextSecondary,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -137,14 +136,46 @@ fun AppStatusBadge(
 ) {
     Box(
         modifier = modifier
-            .background(backgroundColor, RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
-            text = text,
+            text = text.uppercase(),
             color = textColor,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun ProfessionalStatusBadge(
+    text: String,
+    type: String,
+    modifier: Modifier = Modifier
+) {
+    val (bgColor, textColor) = when (type.trim().lowercase()) {
+        "success", "approved", "returned", "active", "available" -> Pair(SuccessLight, Success)
+        "warning", "pending", "low stock", "maintenance", "low" -> Pair(WarningLight, Warning)
+        "error", "rejected", "overdue", "problematic", "out of stock", "out", "damaged", "lost" -> Pair(ErrorLight, AppError)
+        "info" -> Pair(InfoLight, Info)
+        else -> Pair(BorderLight, TextSecondary)
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text.uppercase(),
+            color = textColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -156,21 +187,27 @@ fun PrimaryActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Primary,
             contentColor = TextLight,
-            disabledContainerColor = Color(0xFFBDBDBD),
+            disabledContainerColor = TextMuted,
             disabledContentColor = TextLight
-        )
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .then(AppButtonEffectModifier(interactionSource)),
+        interactionSource = interactionSource
     ) {
         Text(
             text = text,
-            fontWeight = FontWeight.Bold
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -181,22 +218,25 @@ fun SecondaryActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = SurfaceWhite,
             contentColor = TextPrimary
         ),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            DividerLight
-        )
+        border = BorderStroke(1.dp, BorderLight),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .then(AppButtonEffectModifier(interactionSource)),
+        interactionSource = interactionSource
     ) {
         Text(
             text = text,
-            fontWeight = FontWeight.SemiBold
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -208,23 +248,26 @@ fun CompactActionBox(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     val bg = if (filled) Primary else SurfaceWhite
     val textColor = if (filled) TextLight else TextPrimary
-    val borderColor = if (filled) Primary else DividerLight
+    val borderColor = if (filled) Primary else BorderLight
 
     Box(
         modifier = modifier
-            .height(42.dp)
-            .background(bg, RoundedCornerShape(14.dp))
-            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-            .clickable { onClick() },
+            .height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(bg)
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .then(AppButtonEffectModifier(interactionSource))
+            .clickable(interactionSource = interactionSource, indication = null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             color = textColor,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -237,9 +280,9 @@ fun SectionTitle(
     Text(
         text = text,
         modifier = modifier,
-        style = MaterialTheme.typography.titleMedium,
-        color = TextSecondary,
-        fontWeight = FontWeight.ExtraBold
+        fontSize = 16.sp,
+        color = TextPrimary,
+        fontWeight = FontWeight.SemiBold
     )
 }
 
@@ -249,14 +292,16 @@ fun EmptyStateText(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge,
+            fontSize = 14.sp,
             color = TextSecondary,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Normal
         )
     }
 }
@@ -270,15 +315,16 @@ fun LabeledValue(
     Column(modifier = modifier) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary
+            fontSize = 12.sp,
+            color = TextSecondary,
+            fontWeight = FontWeight.Normal
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
             color = TextPrimary,
             fontWeight = FontWeight.Medium
         )
@@ -299,16 +345,17 @@ fun TwoColumnInfoRow(
     ) {
         LabeledValue(
             title = leftTitle,
-            value = leftValue
+            value = leftValue,
+            modifier = Modifier.weight(1f)
         )
-
+        Spacer(modifier = Modifier.width(16.dp))
         LabeledValue(
             title = rightTitle,
-            value = rightValue
+            value = rightValue,
+            modifier = Modifier.weight(1f)
         )
     }
 }
-
 
 @Composable
 fun AlertInfoCard(
@@ -319,15 +366,15 @@ fun AlertInfoCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = InfoLight),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
-                color = PrimaryDark,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold
+                color = Info,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -335,49 +382,13 @@ fun AlertInfoCard(
             Text(
                 text = message,
                 color = TextSecondary,
-                style = MaterialTheme.typography.bodyMedium
+                fontSize = 13.sp,
+                lineHeight = 18.sp
             )
         }
     }
 }
 
-@Composable
-fun ProfessionalStatusBadge(
-    text: String,
-    type: String,
-    modifier: Modifier = Modifier
-) {
-    val (bgColor, textColor) = when (type.trim().lowercase()) {
-        "success", "approved", "returned", "active", "available" ->
-            Pair(SuccessLight, Success)
-
-        "warning", "pending", "low", "maintenance" ->
-            Pair(WarningLight, Warning)
-
-        "error", "rejected", "overdue", "problematic", "out" ->
-            Pair(ErrorLight, AppError)
-
-        "info" ->
-            Pair(InfoLight, Info)
-
-        else ->
-            Pair(DividerLight, TextSecondary)
-    }
-
-    Box(
-        modifier = modifier
-            .background(bgColor, RoundedCornerShape(50))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = textColor,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
 @Composable
 fun NotificationCard(
     title: String,
@@ -385,32 +396,25 @@ fun NotificationCard(
     type: String,
     modifier: Modifier = Modifier
 ) {
-    val bgColor = when (type.lowercase()) {
-        "warning" -> WarningLight
-        "error" -> ErrorLight
-        "success" -> SuccessLight
-        else -> InfoLight
-    }
-
-    val textColor = when (type.lowercase()) {
-        "warning" -> Warning
-        "error" -> AppError
-        "success" -> Success
-        else -> Info
+    val (bgColor, textColor) = when (type.lowercase()) {
+        "warning" -> Pair(WarningLight, Warning)
+        "error" -> Pair(ErrorLight, AppError)
+        "success" -> Pair(SuccessLight, Success)
+        else -> Pair(InfoLight, Info)
     }
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = bgColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 text = title,
                 color = textColor,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -418,8 +422,30 @@ fun NotificationCard(
             Text(
                 text = message,
                 color = TextPrimary,
-                style = MaterialTheme.typography.bodySmall
+                fontSize = 13.sp,
+                lineHeight = 18.sp
             )
         }
+    }
+}
+
+@Composable
+fun AnimatedListItem(
+    index: Int,
+    content: @Composable () -> Unit
+) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = index * 30)) +
+                slideInVertically(
+                    initialOffsetY = { 30 },
+                    animationSpec = tween(durationMillis = 200, delayMillis = index * 30)
+                )
+    ) {
+        content()
     }
 }

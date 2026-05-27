@@ -11,5 +11,6 @@ data class AppUser(
     val department: String = "",
     val semester: String = "",
     val phone: String = "",
+    val profileImageUrl: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

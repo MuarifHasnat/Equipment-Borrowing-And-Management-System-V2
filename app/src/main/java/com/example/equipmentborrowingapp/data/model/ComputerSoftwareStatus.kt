@@ -7,6 +7,7 @@ data class ComputerSoftwareStatus(
     val computerId: String = "",
     val softwareName: String = "",
     val version: String = "",
+    val softwareLogoUrl: String = "",
     val installed: Boolean = false,
     val launchesProperly: Boolean = false,
     val compileWorks: Boolean = false,

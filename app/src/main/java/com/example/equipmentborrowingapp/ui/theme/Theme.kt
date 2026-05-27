@@ -9,7 +9,7 @@ private val DarkColorScheme = darkColorScheme(
     primary = Primary,
     secondary = Secondary,
     tertiary = Warning,
-    background = TextPrimary,
+    background = ColorDarkSurface,
     surface = ColorDarkSurface,
     onPrimary = TextLight,
     onSecondary = TextLight,
@@ -30,7 +30,8 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = TextPrimary,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
-    error = Error
+    error = Error,
+    outline = BorderLight
 )
 
 @Composable
@@ -39,8 +40,10 @@ fun EquipmentBorrowingAppTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val colors = if (darkTheme) DarkColorScheme else LightColorScheme
+
     MaterialTheme(
-        colorScheme = LightColorScheme,
+        colorScheme = colors,
         typography = Typography,
         content = content
     )

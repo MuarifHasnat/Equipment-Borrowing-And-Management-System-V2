@@ -8,6 +8,7 @@ data class LabComputer(
     val labRoom: String = "",
     val locationNote: String = "",
     val ipAddress: String = "",
+    val computerImageUrl: String = "",
     val status: String = "Active",
     val remarks: String = "",
     val lastCheckedAt: Long = System.currentTimeMillis()

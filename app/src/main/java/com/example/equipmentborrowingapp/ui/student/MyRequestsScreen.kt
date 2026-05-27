@@ -2,6 +2,11 @@ package com.example.equipmentborrowingapp.ui.student
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,10 +133,24 @@ fun MyRequestsScreen(
         .sortedByDescending { it.requestTimestamp }
 
     val pendingCount = requestList.count { it.status.equals("Pending", ignoreCase = true) }
-    val activeCount = requestList.count {
-        it.status.equals("Approved", ignoreCase = true) ||
-                it.status.equals("Issued", ignoreCase = true) ||
-                it.status.equals("Overdue", ignoreCase = true)
+    val activeCount = requestList.count { request ->
+        val status = request.status.trim().lowercase()
+        val fineStatus = request.fineStatus.trim().lowercase()
+
+        val isActive =
+            status == "approved" ||
+                    status == "issued" ||
+                    status == "overdue"
+
+        val hasPendingFine =
+            request.fineAmount > 0 &&
+                    fineStatus != "paid" &&
+                    fineStatus != "waived"
+
+        val isLostOrDamagedWithPendingFine =
+            (status == "lost" || status == "damaged") && hasPendingFine
+
+        isActive || isLostOrDamagedWithPendingFine
     }
     val completedCount = requestList.count { it.status.equals("Returned", ignoreCase = true) }
 
@@ -139,18 +158,17 @@ fun MyRequestsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MyReqColors.ModernBg)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier
+                    .size(42.dp)
                     .background(MyReqColors.CardWhite, RoundedCornerShape(12.dp))
                     .shadow(
                         elevation = 2.dp,
@@ -165,19 +183,19 @@ fun MyRequestsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column {
                 Text(
                     text = "My Requests",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MyReqColors.TextDark
                 )
 
                 Text(
                     text = "Track your equipment borrowing history",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MyReqColors.TextMuted
                 )
             }
@@ -212,48 +230,30 @@ fun MyRequestsScreen(
             )
         }
 
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = {
-                searchText = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = MyReqColors.TextMuted
-                )
-            },
-            label = {
-                Text("Search equipment, status or date")
-            }
-        )
-
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            statusFilters.forEach { status ->
-                RequestStatusFilterChip(
-                    text = status,
-                    selected = selectedStatus == status,
-                    onClick = {
-                        selectedStatus = status
-                    }
-                )
-            }
+            MyRequestSearchBox(
+                value = searchText,
+                onValueChange = { searchText = it },
+                modifier = Modifier.weight(1.45f)
+            )
+
+            MyRequestStatusDropdown(
+                selectedStatus = selectedStatus,
+                statusFilters = statusFilters,
+                onStatusSelected = { selectedStatus = it },
+                modifier = Modifier.weight(0.9f)
+            )
         }
 
         Text(
-            text = "Requests Found: ${filteredRequests.size}",
-            style = MaterialTheme.typography.titleMedium,
+            text = "Showing ${filteredRequests.size} request(s)",
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = MyReqColors.TextDark
+            color = MyReqColors.TextMuted
         )
 
         if (filteredRequests.isEmpty()) {
@@ -297,6 +297,115 @@ fun MyRequestsScreen(
 }
 
 @Composable
+private fun MyRequestSearchBox(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            color = MyReqColors.TextDark
+        ),
+        modifier = modifier
+            .height(42.dp)
+            .background(MyReqColors.CardWhite, RoundedCornerShape(14.dp))
+            .shadow(1.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.04f))
+            .padding(horizontal = 11.dp),
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = MyReqColors.TextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Box(modifier = Modifier.weight(1f)) {
+                    if (value.isBlank()) {
+                        Text(
+                            text = "Search requests...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MyReqColors.TextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun MyRequestStatusDropdown(
+    selectedStatus: String,
+    statusFilters: List<String>,
+    onStatusSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .background(MyReqColors.CardWhite, RoundedCornerShape(14.dp))
+                .shadow(1.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.04f))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = selectedStatus,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MyReqColors.TextDark,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowDown,
+                contentDescription = null,
+                tint = MyReqColors.TextMuted,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            statusFilters.forEach { status ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = status,
+                            fontWeight = if (status == selectedStatus) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    onClick = {
+                        onStatusSelected(status)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MyRequestStatCard(
     title: String,
     value: String,
@@ -305,7 +414,7 @@ private fun MyRequestStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(74.dp),
+        modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MyReqColors.CardWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -313,7 +422,7 @@ private fun MyRequestStatCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
@@ -327,8 +436,8 @@ private fun MyRequestStatCard(
                 text = value,
                 modifier = Modifier
                     .background(bgColor, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.titleMedium,
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
+                style = MaterialTheme.typography.titleSmall,
                 color = textColor,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -492,7 +601,10 @@ private fun StudentRequestHistoryCard(
             )
             if (request.fineAmount > 0) {
                 RequestMessageBox(
-                    message = "Fine: ${request.fineAmount} taka • Status: ${request.fineStatus.ifBlank { "Pending" }}",
+                    message = "Fine: ${request.fineAmount} taka • Status: ${
+                        request.fineStatus.ifBlank { "Pending" }
+                            .replaceFirstChar { it.uppercase() }
+                    }",
                     backgroundColor = MyReqColors.RedLight,
                     textColor = MyReqColors.RedText
                 )

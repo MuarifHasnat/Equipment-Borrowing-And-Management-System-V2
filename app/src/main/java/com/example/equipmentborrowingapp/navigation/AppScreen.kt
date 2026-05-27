@@ -1,7 +1,7 @@
 package com.example.equipmentborrowingapp.navigation
 
 sealed class AppScreen(val route: String) {
-
+    object Splash : AppScreen("splash")
     object StudentProfile : AppScreen("student_profile")
     object AdminProfile : AppScreen("admin_profile")
     object Login : AppScreen("login")
@@ -24,7 +24,8 @@ sealed class AppScreen(val route: String) {
     object LabComputerList : AppScreen("lab_computer_list")
     object ReportSoftwareIssue : AppScreen("report_software_issue")
     object MySoftwareIssues : AppScreen("my_software_issues")
-
+    object SoftwareInstallRequest : AppScreen("software_install_request")
+    object MySoftwareInstallRequests : AppScreen("my_software_install_requests")
     object AdminDashboard : AppScreen("admin_dashboard")
     object PendingStudents : AppScreen("pending_students")
     object ManageStudents : AppScreen("manage_students")
@@ -44,7 +45,7 @@ sealed class AppScreen(val route: String) {
     object ManageSoftwareStatus : AppScreen("manage_software_status")
     object SoftwareIssueReports : AppScreen("software_issue_reports")
 
-
+    object SoftwareInstallRequestsAdmin : AppScreen("software_install_requests_admin")
     object ReportsDashboard : AppScreen("reports_dashboard")
     object RoomWiseEquipmentReport : AppScreen("room_wise_equipment_report")
     object StudentBorrowHistoryReport : AppScreen("student_borrow_history_report")

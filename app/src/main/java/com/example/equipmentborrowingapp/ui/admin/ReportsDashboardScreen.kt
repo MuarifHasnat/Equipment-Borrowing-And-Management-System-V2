@@ -1,10 +1,11 @@
 package com.example.equipmentborrowingapp.ui.admin
-import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,23 +21,30 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.draw.shadow
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 private object ReportColors {
@@ -45,7 +54,6 @@ private object ReportColors {
     val TextMuted = Color(0xFF64748B)
 
     val PrimaryIndigo = Color(0xFF4F46E5)
-    val PurpleAccent = Color(0xFF7C3AED)
 
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
@@ -61,6 +69,9 @@ private object ReportColors {
 
     val PurpleLight = Color(0xFFF5F3FF)
     val PurpleText = Color(0xFF7C3AED)
+
+    val SlateLight = Color(0xFFF1F5F9)
+    val SlateText = Color(0xFF475569)
 }
 
 @Composable
@@ -88,8 +99,8 @@ fun ReportsDashboardScreen(
     onSoftwareIssueReportClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    val totalActiveRequests = approvedRequestsCount + issuedItemsCount + overdueItemsCount
-    val totalProblemItems = overdueItemsCount + lostDamagedItemsCount + lowStockCount + softwareIssuesCount
+    val activeRequestsCount = approvedRequestsCount + issuedItemsCount + overdueItemsCount
+    val attentionCount = overdueItemsCount + lostDamagedItemsCount + lowStockCount + softwareIssuesCount
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -99,381 +110,381 @@ fun ReportsDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            ReportsTopBar(
-                onBackClick = onBackClick
+            ReportsHeader(onBackClick = onBackClick)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ReportsSummaryCard(
+                totalEquipmentCount = totalEquipmentCount,
+                activeRequestsCount = activeRequestsCount,
+                attentionCount = attentionCount,
+                totalStudentsCount = totalStudentsCount
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            ReportsHeroCard(
-                totalActiveRequests = totalActiveRequests,
-                totalProblemItems = totalProblemItems
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            ReportsSectionTitle(
-                title = "Report Overview",
-                subtitle = "Quick summary before opening detailed reports"
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ReportStatCard(
-                    title = "Rooms",
-                    value = totalRoomsCount.toString(),
-                    bgColor = ReportColors.BlueLight,
-                    contentColor = ReportColors.BlueText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                ReportStatCard(
-                    title = "Equipment",
-                    value = totalEquipmentCount.toString(),
-                    bgColor = ReportColors.GreenLight,
-                    contentColor = ReportColors.GreenText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ReportStatCard(
-                    title = "Students",
-                    value = totalStudentsCount.toString(),
-                    bgColor = ReportColors.PurpleLight,
-                    contentColor = ReportColors.PurpleText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                ReportStatCard(
-                    title = "Active",
-                    value = totalActiveRequests.toString(),
-                    bgColor = ReportColors.OrangeLight,
-                    contentColor = ReportColors.OrangeText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (totalProblemItems > 0) {
-                ReportNoticeCard(
-                    title = "Attention Needed",
-                    message = "$totalProblemItems report item(s) need review: overdue, lost/damaged, low stock or software issues.",
-                    bgColor = ReportColors.RedLight,
-                    textColor = ReportColors.RedText
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            ReportsSectionTitle(
+            ReportSectionTitle(
                 title = "Inventory Reports",
-                subtitle = "Room-wise and stock-related reports"
+                subtitle = "Rooms, equipment and stock overview"
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            ReportsGroupCard {
-                ReportActionRow(
-                    title = "Room-wise Equipment Report",
-                    subtitle = "View equipment grouped by room or lab",
-                    countText = "$totalRoomsCount rooms",
-                    dotColor = ReportColors.BlueText,
-                    dotBgColor = ReportColors.BlueLight,
+            ReportGroupCard {
+                ReportMenuRow(
+                    title = "Room-wise Equipment",
+                    subtitle = "$totalRoomsCount room(s) available",
+                    countText = totalRoomsCount.toString(),
+                    icon = Icons.Filled.Inventory,
+                    iconBgColor = ReportColors.BlueLight,
+                    iconColor = ReportColors.BlueText,
                     onClick = onRoomWiseEquipmentReportClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
-                    title = "Low Stock Equipment Report",
-                    subtitle = "Equipment with low available quantity",
-                    countText = "$lowStockCount items",
-                    dotColor = ReportColors.OrangeText,
-                    dotBgColor = ReportColors.OrangeLight,
+                ReportMenuRow(
+                    title = "Low Stock Equipment",
+                    subtitle = "$lowStockCount item(s) need restock",
+                    countText = lowStockCount.toString(),
+                    icon = Icons.Filled.ReportProblem,
+                    iconBgColor = ReportColors.OrangeLight,
+                    iconColor = ReportColors.OrangeText,
                     onClick = onLowStockReportClick
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            ReportsSectionTitle(
+            ReportSectionTitle(
                 title = "Borrow Request Reports",
-                subtitle = "Track complete borrow request lifecycle"
+                subtitle = "Track request lifecycle and item condition"
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            ReportsGroupCard {
-                ReportActionRow(
-                    title = "Pending Request Report",
-                    subtitle = "Requests waiting for admin approval",
-                    countText = "$pendingRequestsCount pending",
-                    dotColor = ReportColors.OrangeText,
-                    dotBgColor = ReportColors.OrangeLight,
+            ReportGroupCard {
+                ReportMenuRow(
+                    title = "Pending Requests",
+                    subtitle = "Waiting for admin approval",
+                    countText = pendingRequestsCount.toString(),
+                    icon = Icons.Filled.ListAlt,
+                    iconBgColor = ReportColors.OrangeLight,
+                    iconColor = ReportColors.OrangeText,
                     onClick = onPendingRequestReportClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
-                    title = "Approved Request Report",
-                    subtitle = "Approved requests waiting to be issued",
-                    countText = "$approvedRequestsCount approved",
-                    dotColor = ReportColors.BlueText,
-                    dotBgColor = ReportColors.BlueLight,
+                ReportMenuRow(
+                    title = "Approved Requests",
+                    subtitle = "Approved but not fully completed",
+                    countText = approvedRequestsCount.toString(),
+                    icon = Icons.Filled.ListAlt,
+                    iconBgColor = ReportColors.BlueLight,
+                    iconColor = ReportColors.BlueText,
                     onClick = onApprovedRequestReportClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
-                    title = "Issued Item Report",
+                ReportMenuRow(
+                    title = "Issued Items",
                     subtitle = "Items currently issued to students",
-                    countText = "$issuedItemsCount issued",
-                    dotColor = ReportColors.PurpleText,
-                    dotBgColor = ReportColors.PurpleLight,
+                    countText = issuedItemsCount.toString(),
+                    icon = Icons.Filled.Widgets,
+                    iconBgColor = ReportColors.PurpleLight,
+                    iconColor = ReportColors.PurpleText,
                     onClick = onIssuedItemReportClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
-                    title = "Returned Item Report",
-                    subtitle = "Completed returned borrow records",
-                    countText = "$returnedItemsCount returned",
-                    dotColor = ReportColors.GreenText,
-                    dotBgColor = ReportColors.GreenLight,
+                ReportMenuRow(
+                    title = "Returned Items",
+                    subtitle = "Completed borrow requests",
+                    countText = returnedItemsCount.toString(),
+                    icon = Icons.Filled.Widgets,
+                    iconBgColor = ReportColors.GreenLight,
+                    iconColor = ReportColors.GreenText,
                     onClick = onReturnedItemReportClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
-                    title = "Overdue Item Report",
-                    subtitle = "Issued items past due date",
-                    countText = "$overdueItemsCount overdue",
-                    dotColor = ReportColors.RedText,
-                    dotBgColor = ReportColors.RedLight,
+                ReportMenuRow(
+                    title = "Overdue Items",
+                    subtitle = "Due date passed and not returned",
+                    countText = overdueItemsCount.toString(),
+                    icon = Icons.Filled.ReportProblem,
+                    iconBgColor = ReportColors.RedLight,
+                    iconColor = ReportColors.RedText,
                     onClick = onOverdueItemReportClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
+                ReportMenuRow(
                     title = "Lost / Damaged Report",
                     subtitle = "Items marked as lost or damaged",
-                    countText = "$lostDamagedItemsCount records",
-                    dotColor = ReportColors.RedText,
-                    dotBgColor = ReportColors.RedLight,
+                    countText = lostDamagedItemsCount.toString(),
+                    icon = Icons.Filled.ReportProblem,
+                    iconBgColor = ReportColors.RedLight,
+                    iconColor = ReportColors.RedText,
                     onClick = onLostDamagedReportClick
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            ReportsSectionTitle(
-                title = "Student and Lab Reports",
-                subtitle = "Student borrowing history and software issues"
+            ReportSectionTitle(
+                title = "Student & Lab Reports",
+                subtitle = "Student history and software issue records"
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            ReportsGroupCard {
-                ReportActionRow(
+            ReportGroupCard {
+                ReportMenuRow(
                     title = "Student Borrow History",
-                    subtitle = "View student-wise borrowing records",
-                    countText = "$totalStudentsCount students",
-                    dotColor = ReportColors.PurpleText,
-                    dotBgColor = ReportColors.PurpleLight,
+                    subtitle = "$totalStudentsCount student(s) in system",
+                    countText = totalStudentsCount.toString(),
+                    icon = Icons.Filled.History,
+                    iconBgColor = ReportColors.PurpleLight,
+                    iconColor = ReportColors.PurpleText,
                     onClick = onStudentBorrowHistoryClick
                 )
 
                 ReportDivider()
 
-                ReportActionRow(
+                ReportMenuRow(
                     title = "Software Issue Report",
-                    subtitle = "Software problems reported from lab computers",
-                    countText = "$softwareIssuesCount issues",
-                    dotColor = ReportColors.RedText,
-                    dotBgColor = ReportColors.RedLight,
+                    subtitle = "$softwareIssuesCount issue(s) reported",
+                    countText = softwareIssuesCount.toString(),
+                    icon = Icons.Filled.Computer,
+                    iconBgColor = ReportColors.RedLight,
+                    iconColor = ReportColors.RedText,
                     onClick = onSoftwareIssueReportClick
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
+
 @Composable
-private fun ReportsTopBar(
+private fun ReportsHeader(
     onBackClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 6.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
-                .size(46.dp)
+                .size(42.dp)
                 .background(
                     color = ReportColors.CardWhite,
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(14.dp)
                 )
                 .shadow(
-                    elevation = 3.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    spotColor = Color.Black.copy(alpha = 0.06f)
+                    elevation = 2.dp,
+                    shape = RoundedCornerShape(14.dp),
+                    spotColor = Color.Black.copy(alpha = 0.05f)
                 )
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = "Back",
-                tint = ReportColors.TextDark
+                tint = ReportColors.TextDark,
+                modifier = Modifier.size(20.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Box(
             modifier = Modifier
-                .size(46.dp)
-                .background(ReportColors.PurpleLight, RoundedCornerShape(16.dp)),
+                .size(42.dp)
+                .background(ReportColors.PurpleLight, RoundedCornerShape(14.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Assessment,
                 contentDescription = null,
                 tint = ReportColors.PrimaryIndigo,
-                modifier = Modifier.size(27.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Reports",
                 color = ReportColors.TextDark,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                maxLines = 1
             )
 
             Text(
-                text = "Admin analytics center",
+                text = "Choose a report to review",
                 color = ReportColors.TextMuted,
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
             )
         }
     }
 }
+
 @Composable
-private fun ReportsHeroCard(
-    totalActiveRequests: Int,
-    totalProblemItems: Int
+private fun ReportsSummaryCard(
+    totalEquipmentCount: Int,
+    activeRequestsCount: Int,
+    attentionCount: Int,
+    totalStudentsCount: Int
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(170.dp)
-            .shadow(
-                elevation = 10.dp,
-                shape = RoundedCornerShape(28.dp),
-                spotColor = ReportColors.PrimaryIndigo.copy(alpha = 0.25f)
-            )
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        ReportColors.PrimaryIndigo,
-                        ReportColors.PurpleAccent
-                    )
-                ),
-                shape = RoundedCornerShape(28.dp)
-            )
-            .padding(24.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = ReportColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column {
-            Surface(
-                color = Color.White.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(50.dp)
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Reports Center",
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Report Overview",
+                        color = ReportColors.TextDark,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+
+                    Text(
+                        text = "Quick summary of system activity",
+                        color = ReportColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(ReportColors.BlueLight, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Assessment,
+                        contentDescription = null,
+                        tint = ReportColors.BlueText,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Admin Reports and History",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SummaryMiniCard(
+                    title = "Equipment",
+                    value = totalEquipmentCount.toString(),
+                    bgColor = ReportColors.BlueLight,
+                    textColor = ReportColors.BlueText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                SummaryMiniCard(
+                    title = "Active",
+                    value = activeRequestsCount.toString(),
+                    bgColor = ReportColors.PurpleLight,
+                    textColor = ReportColors.PurpleText,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SummaryMiniCard(
+                    title = "Need Review",
+                    value = attentionCount.toString(),
+                    bgColor = if (attentionCount > 0) ReportColors.RedLight else ReportColors.GreenLight,
+                    textColor = if (attentionCount > 0) ReportColors.RedText else ReportColors.GreenText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                SummaryMiniCard(
+                    title = "Students",
+                    value = totalStudentsCount.toString(),
+                    bgColor = ReportColors.GreenLight,
+                    textColor = ReportColors.GreenText,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryMiniCard(
+    title: String,
+    value: String,
+    bgColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.height(52.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
-                text = "Review inventory, borrow lifecycle, student history and lab software issue reports.",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyMedium
+                text = title,
+                color = textColor.copy(alpha = 0.75f),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
-
             Text(
-                text = if (totalProblemItems > 0) {
-                    "$totalProblemItems issue-related item(s) need review. Active borrow records: $totalActiveRequests."
-                } else {
-                    "No urgent report issue found. Active borrow records: $totalActiveRequests."
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = Color.White.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .padding(12.dp),
-                color = Color.White,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
+                text = value,
+                color = textColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
             )
         }
     }
 }
 
 @Composable
-private fun ReportsSectionTitle(
+private fun ReportSectionTitle(
     title: String,
     subtitle: String
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold,
             color = ReportColors.TextDark
         )
@@ -481,194 +492,104 @@ private fun ReportsSectionTitle(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodySmall,
-            color = ReportColors.TextMuted
+            color = ReportColors.TextMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 @Composable
-private fun ReportStatCard(
-    title: String,
-    value: String,
-    bgColor: Color,
-    contentColor: Color,
-    modifier: Modifier = Modifier
+private fun ReportGroupCard(
+    content: @Composable () -> Unit
 ) {
     Card(
-        modifier = modifier.height(110.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = ReportColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(vertical = 4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(bgColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(contentColor)
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Text(
-                    text = title,
-                    color = ReportColors.TextMuted,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Text(
-                    text = value,
-                    color = ReportColors.TextDark,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black
-                )
-            }
+            content()
         }
     }
 }
 
 @Composable
-private fun ReportNoticeCard(
-    title: String,
-    message: String,
-    bgColor: Color,
-    textColor: Color
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = bgColor,
-                shape = RoundedCornerShape(18.dp)
-            )
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = textColor
-        )
-
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = textColor
-        )
-    }
-}
-
-@Composable
-private fun ReportsGroupCard(
-    content: @Composable () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = Color.Black.copy(alpha = 0.05f)
-            )
-            .background(
-                color = ReportColors.CardWhite,
-                shape = RoundedCornerShape(24.dp)
-            )
-            .padding(8.dp)
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun ReportActionRow(
+private fun ReportMenuRow(
     title: String,
     subtitle: String,
     countText: String,
-    dotColor: Color,
-    dotBgColor: Color,
+    icon: ImageVector,
+    iconBgColor: Color,
+    iconColor: Color,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .height(62.dp)
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 14.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(dotBgColor)
-                .padding(14.dp),
+                .size(38.dp)
+                .background(iconBgColor, RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(dotColor)
-                    .padding(6.dp)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp)
             )
         }
 
-        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 color = ReportColors.TextDark,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-
-            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = subtitle,
                 color = ReportColors.TextMuted,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Text(
             text = countText,
             modifier = Modifier
-                .background(
-                    color = dotBgColor,
-                    shape = RoundedCornerShape(50.dp)
-                )
-                .padding(horizontal = 10.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelSmall,
+                .background(iconBgColor, RoundedCornerShape(50.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            color = iconColor,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = dotColor
+            maxLines = 1
         )
 
-        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+        Spacer(modifier = Modifier.width(6.dp))
 
-        Text(
-            text = "›",
-            color = Color(0xFFCBD5E1),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+        Icon(
+            imageVector = Icons.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color(0xFFCBD5E1),
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -676,7 +597,7 @@ private fun ReportActionRow(
 @Composable
 private fun ReportDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = 12.dp),
         color = ReportColors.Background
     )
 }

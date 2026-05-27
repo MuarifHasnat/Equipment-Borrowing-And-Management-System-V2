@@ -32,9 +32,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -52,7 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.compose.ui.text.style.TextAlign
 private object AdminDashColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -94,6 +93,8 @@ fun AdminDashboardScreen(
     verifiedStudentsCount: Int = 0,
     totalLabComputersCount: Int = 0,
     openSoftwareIssuesCount: Int = 0,
+    softwareInstallRequestsCount: Int = 0,
+    hasUnreadNotifications: Boolean = false,
     onManageRoomsClick: () -> Unit,
     onVerifyStudentsClick: () -> Unit,
     onAddEquipmentClick: () -> Unit,
@@ -102,6 +103,7 @@ fun AdminDashboardScreen(
     onManageEquipmentClick: () -> Unit,
     onManageLabComputersClick: () -> Unit,
     onViewSoftwareReportsClick: () -> Unit,
+    onSoftwareInstallRequestsClick: () -> Unit,
     onReportsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onNotificationClick: () -> Unit,
@@ -118,8 +120,10 @@ fun AdminDashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             AdminTopBar(
+                hasUnreadNotifications = hasUnreadNotifications,
                 onNotificationClick = onNotificationClick,
-                onProfileClick = onProfileClick
+                onProfileClick = onProfileClick,
+                onLogout = onLogout
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -205,7 +209,7 @@ fun AdminDashboardScreen(
 
                     AdminActionCard(
                         title = "Add Item",
-                        subtitle = "New equipment",
+                        subtitle = "New Item",
                         icon = Icons.Filled.AddBox,
                         iconBg = AdminDashColors.GreenLight,
                         iconColor = AdminDashColors.GreenText,
@@ -288,6 +292,30 @@ fun AdminDashboardScreen(
                         onClick = onViewSoftwareReportsClick
                     )
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    AdminActionCard(
+                        title = "Install Req.",
+                        subtitle = "$softwareInstallRequestsCount pending",
+                        icon = Icons.Filled.Download,
+                        iconBg = AdminDashColors.GreenLight,
+                        iconColor = AdminDashColors.GreenText,
+                        modifier = Modifier.weight(1f),
+                        onClick = onSoftwareInstallRequestsClick
+                    )
+
+                    AdminActionCard(
+                        title = "Reports",
+                        subtitle = "View summary",
+                        icon = Icons.Filled.Assessment,
+                        iconBg = AdminDashColors.BlueLight,
+                        iconColor = AdminDashColors.BlueText,
+                        modifier = Modifier.weight(1f),
+                        onClick = onReportsClick
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -318,42 +346,16 @@ fun AdminDashboardScreen(
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-
-            Button(
-                onClick = onLogout,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AdminDashColors.RedLight,
-                    contentColor = AdminDashColors.RedText
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Logout,
-                    contentDescription = "Logout",
-                    modifier = Modifier.size(19.dp)
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = "Logout Account",
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
 
 @Composable
 private fun AdminTopBar(
+    hasUnreadNotifications: Boolean,
     onNotificationClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -409,12 +411,14 @@ private fun AdminTopBar(
                 modifier = Modifier.size(25.dp)
             )
 
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .align(Alignment.TopEnd)
-                    .background(AdminDashColors.RedText, CircleShape)
-            )
+            if (hasUnreadNotifications) {
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .align(Alignment.TopEnd)
+                        .background(AdminDashColors.RedText, CircleShape)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -430,7 +434,24 @@ private fun AdminTopBar(
                 imageVector = Icons.Filled.Person,
                 contentDescription = "Profile",
                 tint = AdminDashColors.BlueText,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(AdminDashColors.RedLight, CircleShape)
+                .clickable { onLogout() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Logout,
+                contentDescription = "Logout",
+                tint = AdminDashColors.RedText,
+                modifier = Modifier.size(21.dp)
             )
         }
     }
@@ -445,10 +466,10 @@ private fun AdminHeroCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(154.dp)
+            .height(108.dp)
             .shadow(
                 elevation = 10.dp,
-                shape = RoundedCornerShape(26.dp),
+                shape = RoundedCornerShape(24.dp),
                 spotColor = AdminDashColors.PrimaryIndigo.copy(alpha = 0.25f)
             )
             .background(
@@ -459,17 +480,19 @@ private fun AdminHeroCard(
                         AdminDashColors.PurpleAccent
                     )
                 ),
-                shape = RoundedCornerShape(26.dp)
+                shape = RoundedCornerShape(24.dp)
             )
-            .padding(20.dp)
+            .padding(14.dp)
     ) {
         Column(
-            modifier = Modifier.align(Alignment.CenterStart)
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .fillMaxWidth(0.72f)
         ) {
             Text(
-                text = "Admin Dashboard 👋",
+                text = "Admin Dashboard",
                 color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -478,13 +501,13 @@ private fun AdminHeroCard(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Manage equipment, requests,\nstudents and lab resources.",
+                text = "Manage equipment, requests and lab resources.",
                 color = Color.White.copy(alpha = 0.88f),
                 style = MaterialTheme.typography.bodyMedium,
-                lineHeight = 20.sp
+                lineHeight = 18.sp
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier
@@ -517,7 +540,7 @@ private fun AdminHeroCard(
             contentDescription = null,
             tint = Color.White.copy(alpha = 0.14f),
             modifier = Modifier
-                .size(112.dp)
+                .size(74.dp)
                 .align(Alignment.CenterEnd)
         )
     }
@@ -577,55 +600,64 @@ private fun CompactStatCard(
         modifier = modifier
             .height(104.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = AdminDashColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(11.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
+                .padding(horizontal = 8.dp, vertical = 7.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        )  {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .background(bgColor, RoundedCornerShape(12.dp)),
+                    .size(32.dp)
+                    .background(bgColor, RoundedCornerShape(11.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = textColor,
-                    modifier = Modifier.size(21.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
-            Column {
-                Text(
-                    text = value,
-                    color = AdminDashColors.TextDark,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1
-                )
+            Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = title,
-                    color = AdminDashColors.TextDark,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
+            Text(
+                text = value,
+                color = AdminDashColors.TextDark,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
-                Text(
-                    text = subtitle,
-                    color = AdminDashColors.TextMuted,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = title,
+                color = AdminDashColors.TextDark,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = subtitle,
+                color = AdminDashColors.TextMuted,
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -642,7 +674,7 @@ private fun AdminActionCard(
 ) {
     Card(
         modifier = modifier
-            .height(86.dp)
+            .height(76.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = AdminDashColors.CardWhite),
@@ -651,12 +683,12 @@ private fun AdminActionCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(horizontal = 11.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(36.dp)
                     .background(iconBg, RoundedCornerShape(13.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -664,7 +696,7 @@ private fun AdminActionCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
 

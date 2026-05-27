@@ -61,7 +61,7 @@ fun EquipmentDetailsScreen(
     val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
     val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
     val inStock = equipment.availableQuantity > 0
-
+    val isLabUseOnly = !equipment.isBorrowable || equipment.borrowType == "LabUseOnly"
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = EqDetailsColors.ModernBg
@@ -233,7 +233,11 @@ fun EquipmentDetailsScreen(
 
                 ModernFeatureChip(
                     icon = Icons.Rounded.SettingsInputComponent,
-                    title = if (equipment.isBorrowable) "Borrowable" else "Lab Only",
+                    title = if (equipment.isBorrowable && equipment.borrowType != "LabUseOnly") {
+                        "Borrowable"
+                    } else {
+                        "Lab Only"
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -261,8 +265,12 @@ fun EquipmentDetailsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { onBorrowClick(equipment) },
-                enabled = equipment.isBorrowable && equipment.availableQuantity > 0,
+                onClick = {
+                    if (inStock && !isLabUseOnly) {
+                        onBorrowClick(equipment)
+                    }
+                },
+                enabled = inStock && !isLabUseOnly,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -304,16 +312,10 @@ fun EquipmentDetailsScreen(
                 ) {
                     Text(
                         text = when {
-                            !equipment.isBorrowable -> "For Lab Use Only"
+                            isLabUseOnly -> "For Lab Use Only"
                             !inStock -> "Currently Unavailable"
                             else -> "Borrow Equipment"
                         },
-                        color = if (equipment.isBorrowable && equipment.availableQuantity > 0) {
-                            Color.White
-                        } else {
-                            EqDetailsColors.TextMuted
-                        },
-                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }

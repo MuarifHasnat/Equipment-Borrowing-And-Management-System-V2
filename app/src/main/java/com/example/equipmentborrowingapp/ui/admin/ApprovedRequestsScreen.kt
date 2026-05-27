@@ -2,6 +2,7 @@ package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,17 +20,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -61,16 +63,14 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
-import com.example.equipmentborrowingapp.ui.common.ProfessionalStatusBadge
 import kotlinx.coroutines.launch
 
 private object ApprovedColors {
-    val ModernBg = Color(0xFFF4F7FB)
-    val CardWhite = Color(0xFFFFFFFF)
+    val Bg = Color(0xFFF4F7FB)
+    val Card = Color.White
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
-
-    val PrimaryIndigo = Color(0xFF4F46E5)
+    val Primary = Color(0xFF4F46E5)
 
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
@@ -78,14 +78,17 @@ private object ApprovedColors {
     val GreenLight = Color(0xFFF0FDF4)
     val GreenText = Color(0xFF16A34A)
 
-    val RedLight = Color(0xFFFEF2F2)
-    val RedText = Color(0xFFDC2626)
-
     val OrangeLight = Color(0xFFFFF7ED)
     val OrangeText = Color(0xFFEA580C)
 
+    val RedLight = Color(0xFFFEF2F2)
+    val RedText = Color(0xFFDC2626)
+
     val PurpleLight = Color(0xFFF5F3FF)
     val PurpleText = Color(0xFF7C3AED)
+
+    val GrayLight = Color(0xFFF1F5F9)
+    val GrayText = Color(0xFF475569)
 }
 
 @Composable
@@ -99,9 +102,9 @@ private fun RequestCardImage(
     val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
 
     val imageModifier = Modifier
-        .size(85.dp)
-        .clip(RoundedCornerShape(12.dp))
-        .background(ApprovedColors.ModernBg)
+        .size(88.dp)
+        .clip(RoundedCornerShape(18.dp))
+        .background(ApprovedColors.GrayLight)
 
     if (hasImageUrl) {
         AsyncImage(
@@ -117,7 +120,7 @@ private fun RequestCardImage(
         Image(
             painter = painterResource(id = fallbackImageResId),
             contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
             modifier = imageModifier.padding(8.dp)
         )
     }
@@ -136,32 +139,11 @@ fun ApprovedRequestsScreen(
 ) {
     var selectedRequest by remember { mutableStateOf<BorrowRequest?>(null) }
     var selectedAction by remember { mutableStateOf("") }
-
     var searchText by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All") }
-    var selectedDepartment by remember { mutableStateOf("All") }
-    var selectedCategory by remember { mutableStateOf("All") }
-    var selectedSort by remember { mutableStateOf("Newest First") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(false) }
-
-    val departmentList = remember(requestList) {
-        listOf("All") + requestList
-            .map { it.department.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-    }
-
-    val categoryList = remember(requestList) {
-        listOf("All") + requestList
-            .map { it.equipmentCategory.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-    }
 
     val filteredRequests = requestList
         .filter { request ->
@@ -176,66 +158,27 @@ fun ApprovedRequestsScreen(
                         request.equipmentName.lowercase().contains(query) ||
                         request.equipmentCategory.lowercase().contains(query) ||
                         request.status.lowercase().contains(query) ||
-                        request.borrowDate.lowercase().contains(query) ||
-                        request.dueDate.lowercase().contains(query) ||
                         request.fineReason.lowercase().contains(query)
 
             val matchesStatus =
                 selectedStatus == "All" ||
                         request.status.equals(selectedStatus, ignoreCase = true)
 
-            val matchesDepartment =
-                selectedDepartment == "All" ||
-                        request.department.equals(selectedDepartment, ignoreCase = true)
-
-            val matchesCategory =
-                selectedCategory == "All" ||
-                        request.equipmentCategory.equals(selectedCategory, ignoreCase = true)
-
-            matchesSearch && matchesStatus && matchesDepartment && matchesCategory
+            matchesSearch && matchesStatus
         }
-        .let { list ->
-            when (selectedSort) {
-                "Oldest First" -> list.sortedBy { it.requestTimestamp }
+        .sortedWith(
+            compareBy<BorrowRequest> { activeStatusOrder(it.status) }
+                .thenByDescending { it.requestTimestamp }
+        )
 
-                "Student A-Z" -> list.sortedBy { it.userName.lowercase() }
-
-                "Equipment A-Z" -> list.sortedBy { it.equipmentName.lowercase() }
-
-                "Quantity High-Low" -> list.sortedWith(
-                    compareByDescending<BorrowRequest> { it.quantity }
-                        .thenBy { it.equipmentName.lowercase() }
-                )
-
-                "Due Date" -> list.sortedBy { it.dueDate }
-
-                "Status" -> list.sortedWith(
-                    compareBy<BorrowRequest> { activeStatusOrder(it.status) }
-                        .thenByDescending { it.requestTimestamp }
-                )
-
-                "Fine High-Low" -> list.sortedWith(
-                    compareByDescending<BorrowRequest> { it.fineAmount }
-                        .thenByDescending { it.requestTimestamp }
-                )
-
-                else -> list.sortedByDescending { it.requestTimestamp }
-            }
-        }
-
-    val approvedCount = requestList.count {
-        it.status.equals("Approved", ignoreCase = true)
+    val approvedCount = requestList.count { it.status.equals("Approved", ignoreCase = true) }
+    val issuedCount = requestList.count { it.status.equals("Issued", ignoreCase = true) }
+    val overdueCount = requestList.count { it.status.equals("Overdue", ignoreCase = true) }
+    val pendingFineCount = requestList.count {
+        it.fineAmount > 0 &&
+                !it.fineStatus.equals("Paid", ignoreCase = true) &&
+                !it.fineStatus.equals("Waived", ignoreCase = true)
     }
-
-    val issuedCount = requestList.count {
-        it.status.equals("Issued", ignoreCase = true)
-    }
-
-    val overdueCount = requestList.count {
-        it.status.equals("Overdue", ignoreCase = true)
-    }
-
-    val totalQuantity = requestList.sumOf { it.quantity }
 
     selectedRequest?.let { request ->
         ConfirmLifecycleActionDialog(
@@ -246,8 +189,6 @@ fun ApprovedRequestsScreen(
                 selectedAction = ""
             },
             onConfirm = { fineAmount, fineReason ->
-                isLoading = true
-
                 when (selectedAction) {
                     "issue" -> onIssuedClick(request)
                     "return" -> onReturnedClick(request)
@@ -255,7 +196,7 @@ fun ApprovedRequestsScreen(
                     "damaged" -> onDamagedClick(request, fineAmount, fineReason)
                 }
 
-                val snackbarText = when (selectedAction) {
+                val message = when (selectedAction) {
                     "issue" -> "Request marked as issued"
                     "return" -> "Item marked as returned"
                     "lost" -> "Request marked as lost"
@@ -267,301 +208,175 @@ fun ApprovedRequestsScreen(
                 selectedAction = ""
 
                 scope.launch {
-                    snackbarHostState.showSnackbar(snackbarText)
-                    isLoading = false
+                    snackbarHostState.showSnackbar(message)
                 }
             }
         )
     }
 
     Scaffold(
-        snackbarHost = {
-            SnackbarHost(snackbarHostState)
-        },
-        containerColor = ApprovedColors.ModernBg
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = ApprovedColors.Bg
     ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = ApprovedColors.PrimaryIndigo)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            ActiveRequestTopBar(
+                totalCount = requestList.size,
+                onBackClick = onBackClick
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActiveMiniStat("Approved", approvedCount.toString(), ApprovedColors.BlueLight, ApprovedColors.BlueText, Modifier.weight(1f))
+                ActiveMiniStat("Issued", issuedCount.toString(), ApprovedColors.PurpleLight, ApprovedColors.PurpleText, Modifier.weight(1f))
+                ActiveMiniStat("Overdue", overdueCount.toString(), ApprovedColors.RedLight, ApprovedColors.RedText, Modifier.weight(1f))
             }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-            ) {
-                Row(
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (pendingFineCount > 0) {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp, top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(42.dp),
+                    color = ApprovedColors.OrangeLight,
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .background(
-                                color = ApprovedColors.CardWhite,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(12.dp),
-                                spotColor = Color.Black.copy(alpha = 0.05f)
-                            )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back",
-                            tint = ApprovedColors.TextDark
+                            imageVector = Icons.Rounded.WarningAmber,
+                            contentDescription = null,
+                            tint = ApprovedColors.OrangeText,
+                            modifier = Modifier.size(18.dp)
                         )
-                    }
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text(
-                            text = "Active Borrow Requests",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = ApprovedColors.TextDark,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        Spacer(modifier = Modifier.width(8.dp))
 
                         Text(
-                            text = "Search, filter, sort and manage lifecycle",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ApprovedColors.TextMuted
+                            text = "$pendingFineCount pending fine request(s)",
+                            color = ApprovedColors.OrangeText,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = ApprovedColors.TextMuted
+                    )
+                },
+                placeholder = {
+                    Text(
+                        text = "Search request",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("All", "Approved", "Issued", "Overdue", "Lost", "Damaged").forEach { status ->
+                    ActiveFilterChip(
+                        text = status,
+                        selected = selectedStatus == status,
+                        onClick = { selectedStatus = status }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Showing ${filteredRequests.size} of ${requestList.size} request(s)",
+                style = MaterialTheme.typography.titleSmall,
+                color = ApprovedColors.TextDark,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (filteredRequests.isEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = ApprovedColors.Card),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    ActiveMiniStatCard(
-                        title = "Approved",
-                        value = approvedCount.toString(),
-                        bgColor = ApprovedColors.BlueLight,
-                        textColor = ApprovedColors.BlueText,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    ActiveMiniStatCard(
-                        title = "Issued",
-                        value = issuedCount.toString(),
-                        bgColor = ApprovedColors.PurpleLight,
-                        textColor = ApprovedColors.PurpleText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ActiveMiniStatCard(
-                        title = "Overdue",
-                        value = overdueCount.toString(),
-                        bgColor = ApprovedColors.RedLight,
-                        textColor = ApprovedColors.RedText,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    ActiveMiniStatCard(
-                        title = "Total Qty",
-                        value = totalQuantity.toString(),
-                        bgColor = ApprovedColors.GreenLight,
-                        textColor = ApprovedColors.GreenText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = searchText,
-                    onValueChange = {
-                        searchText = it
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    label = {
-                        Text("Search student, ID, department, equipment, status or fine reason")
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                ActiveFilterTitle("Status")
-
-                ActiveHorizontalFilterRow {
-                    listOf(
-                        "All",
-                        "Approved",
-                        "Issued",
-                        "Overdue"
-                    ).forEach { status ->
-                        ActiveFilterChip(
-                            text = status,
-                            selected = selectedStatus == status,
-                            onClick = {
-                                selectedStatus = status
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                ActiveFilterTitle("Department")
-
-                ActiveHorizontalFilterRow {
-                    departmentList.forEach { department ->
-                        ActiveFilterChip(
-                            text = department,
-                            selected = selectedDepartment == department,
-                            onClick = {
-                                selectedDepartment = department
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                ActiveFilterTitle("Category")
-
-                ActiveHorizontalFilterRow {
-                    categoryList.forEach { category ->
-                        ActiveFilterChip(
-                            text = category,
-                            selected = selectedCategory == category,
-                            onClick = {
-                                selectedCategory = category
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                ActiveFilterTitle("Sort")
-
-                ActiveHorizontalFilterRow {
-                    listOf(
-                        "Newest First",
-                        "Oldest First",
-                        "Due Date",
-                        "Status",
-                        "Fine High-Low",
-                        "Student A-Z",
-                        "Equipment A-Z",
-                        "Quantity High-Low"
-                    ).forEach { sort ->
-                        ActiveFilterChip(
-                            text = sort,
-                            selected = selectedSort == sort,
-                            onClick = {
-                                selectedSort = sort
-                            }
-                        )
-                    }
-                }
-
-                if (
-                    searchText.isNotBlank() ||
-                    selectedStatus != "All" ||
-                    selectedDepartment != "All" ||
-                    selectedCategory != "All" ||
-                    selectedSort != "Newest First"
-                ) {
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedButton(
-                        onClick = {
-                            searchText = ""
-                            selectedStatus = "All"
-                            selectedDepartment = "All"
-                            selectedCategory = "All"
-                            selectedSort = "Newest First"
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("Clear Search, Filters and Sort")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Showing ${filteredRequests.size} of ${requestList.size} active request(s)",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = ApprovedColors.TextDark,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                if (filteredRequests.isEmpty()) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (requestList.isEmpty()) {
-                                "No active borrow requests found."
-                            } else {
-                                "No active request matches your search/filter."
-                            },
+                            text = "No active borrow request found.",
                             color = ApprovedColors.TextMuted,
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        contentPadding = PaddingValues(bottom = 20.dp)
-                    ) {
-                        items(filteredRequests) { request ->
-                            BorrowLifecycleRequestCard(
-                                request = request,
-                                onIssueClick = {
-                                    selectedRequest = request
-                                    selectedAction = "issue"
-                                },
-                                onReturnClick = {
-                                    selectedRequest = request
-                                    selectedAction = "return"
-                                },
-                                onLostClick = {
-                                    selectedRequest = request
-                                    selectedAction = "lost"
-                                },
-                                onDamagedClick = {
-                                    selectedRequest = request
-                                    selectedAction = "damaged"
-                                },
-                                onFinePaidClick = {
-                                    onFinePaidClick(request)
-                                },
-                                onFineWaivedClick = {
-                                    onFineWaivedClick(request)
-                                }
-                            )
-                        }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(filteredRequests) { request ->
+                        BorrowLifecycleRequestCard(
+                            request = request,
+                            onIssueClick = {
+                                selectedRequest = request
+                                selectedAction = "issue"
+                            },
+                            onReturnClick = {
+                                selectedRequest = request
+                                selectedAction = "return"
+                            },
+                            onLostClick = {
+                                selectedRequest = request
+                                selectedAction = "lost"
+                            },
+                            onDamagedClick = {
+                                selectedRequest = request
+                                selectedAction = "damaged"
+                            },
+                            onFinePaidClick = {
+                                onFinePaidClick(request)
+                            },
+                            onFineWaivedClick = {
+                                onFineWaivedClick(request)
+                            }
+                        )
                     }
                 }
             }
@@ -570,71 +385,93 @@ fun ApprovedRequestsScreen(
 }
 
 @Composable
-private fun ActiveMiniStatCard(
+private fun ActiveRequestTopBar(
+    totalCount: Int,
+    onBackClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(42.dp)
+                .background(ApprovedColors.Card, RoundedCornerShape(14.dp))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = ApprovedColors.TextDark
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(ApprovedColors.PurpleLight, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Inventory2,
+                contentDescription = null,
+                tint = ApprovedColors.Primary,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Active Requests",
+                color = ApprovedColors.TextDark,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
+            Text(
+                text = "$totalCount request(s) need tracking",
+                color = ApprovedColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActiveMiniStat(
     title: String,
     value: String,
     bgColor: Color,
     textColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.height(76.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = ApprovedColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    Surface(
+        modifier = modifier.height(52.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(18.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(
                 text = title,
+                color = textColor.copy(alpha = 0.75f),
                 style = MaterialTheme.typography.labelSmall,
-                color = ApprovedColors.TextMuted,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
                 text = value,
-                modifier = Modifier
-                    .background(
-                        color = bgColor,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.titleMedium,
                 color = textColor,
-                fontWeight = FontWeight.ExtraBold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black
             )
         }
-    }
-}
-
-@Composable
-private fun ActiveFilterTitle(
-    text: String
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = ApprovedColors.TextMuted,
-        fontWeight = FontWeight.Bold
-    )
-}
-
-@Composable
-private fun ActiveHorizontalFilterRow(
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        content()
     }
 }
 
@@ -647,18 +484,22 @@ private fun ActiveFilterChip(
     if (selected) {
         Button(
             onClick = onClick,
+            modifier = Modifier.height(32.dp),
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ApprovedColors.PrimaryIndigo,
+                containerColor = ApprovedColors.Primary,
                 contentColor = Color.White
-            )
+            ),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
             Text(text)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50.dp)
+            modifier = Modifier.height(32.dp),
+            shape = RoundedCornerShape(50.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
             Text(text)
         }
@@ -674,23 +515,23 @@ private fun BorrowLifecycleRequestCard(
     onDamagedClick: () -> Unit,
     onFinePaidClick: () -> Unit,
     onFineWaivedClick: () -> Unit
-
 ) {
-    val status = request.status.trim()
+    val status = request.status.ifBlank { "Approved" }
+    val statusColor = statusTextColor(status)
+    val statusBg = statusBackgroundColor(status)
+
+    val fineStatus = request.fineStatus.trim().ifBlank { "Pending" }
+    val hasPendingFine = request.fineAmount > 0 &&
+            !fineStatus.equals("Paid", ignoreCase = true) &&
+            !fineStatus.equals("Waived", ignoreCase = true)
 
     Card(
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = ApprovedColors.CardWhite),
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(16.dp),
-                spotColor = Color.Black.copy(alpha = 0.05f)
-            )
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = ApprovedColors.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 RequestCardImage(
                     imageName = request.equipmentImageName,
@@ -698,214 +539,158 @@ private fun BorrowLifecycleRequestCard(
                     contentDescription = request.equipmentName
                 )
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = request.equipmentName.ifBlank { "Unknown Equipment" },
+                            modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = ApprovedColors.TextDark,
-                            modifier = Modifier.weight(1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        ProfessionalStatusBadge(
-                            text = status.ifBlank { "Approved" },
-                            type = status.ifBlank { "Approved" }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = ApprovedColors.TextMuted
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
                         Text(
-                            text = "${request.userName.ifBlank { "Unknown Student" }} • Qty: ${request.quantity}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ApprovedColors.TextMuted
+                            text = status,
+                            modifier = Modifier
+                                .background(statusBg, RoundedCornerShape(50.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = statusColor,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(5.dp))
+
+                    Text(
+                        text = "${request.userName.ifBlank { "Unknown Student" }} • Qty: ${request.quantity}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ApprovedColors.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Borrow: ${request.borrowDate.ifBlank { "N/A" }} • Due: ${request.dueDate.ifBlank { "N/A" }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (status.equals("Overdue", ignoreCase = true)) ApprovedColors.RedText else ApprovedColors.TextMuted,
+                        fontWeight = if (status.equals("Overdue", ignoreCase = true)) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     if (request.studentId.isNotBlank() || request.department.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
                             text = buildString {
-                                if (request.studentId.isNotBlank()) {
-                                    append("ID: ${request.studentId}")
-                                }
-
+                                if (request.studentId.isNotBlank()) append("ID: ${request.studentId}")
                                 if (request.department.isNotBlank()) {
                                     if (isNotBlank()) append(" • ")
                                     append(request.department)
                                 }
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = ApprovedColors.TextMuted
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = ApprovedColors.TextMuted
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            text = "Borrow: ${request.borrowDate.ifBlank { "N/A" }}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ApprovedColors.TextMuted
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = ApprovedColors.TextMuted
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            text = "Due: ${request.dueDate.ifBlank { "N/A" }}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (status.equals("Overdue", ignoreCase = true)) {
-                                ApprovedColors.RedText
-                            } else {
-                                ApprovedColors.TextMuted
-                            },
-                            fontWeight = if (status.equals("Overdue", ignoreCase = true)) {
-                                FontWeight.Bold
-                            } else {
-                                FontWeight.Normal
-                            }
-                        )
-                    }
-
-                    if (request.approvedAt > 0L) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Approved and stock already reserved",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = ApprovedColors.GreenText,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    if (request.issuedAt > 0L) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Issued to student",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = ApprovedColors.BlueText,
-                            fontWeight = FontWeight.SemiBold
+                            color = ApprovedColors.TextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     if (status.equals("Overdue", ignoreCase = true)) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "⚠ Overdue item. Return is required.",
+                            text = "Overdue item. Return is required.",
+                            modifier = Modifier
+                                .background(ApprovedColors.RedLight, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
                             color = ApprovedColors.RedText,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    if (request.fineAmount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "Fine: ${request.fineAmount} taka • ${request.fineStatus.ifBlank { "Pending" }}",
-                            color = when (request.fineStatus.lowercase()) {
-                                "paid" -> ApprovedColors.GreenText
-                                "waived" -> ApprovedColors.BlueText
-                                else -> ApprovedColors.RedText
-                            },
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
 
-                        if (request.fineReason.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(2.dp))
+            if (request.fineAmount > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-                            Text(
-                                text = request.fineReason,
-                                color = ApprovedColors.TextMuted,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                Text(
+                    text = "Fine: ${request.fineAmount} taka • $fineStatus",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            when (fineStatus.lowercase()) {
+                                "paid" -> ApprovedColors.GreenLight
+                                "waived" -> ApprovedColors.BlueLight
+                                else -> ApprovedColors.RedLight
+                            },
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    color = when (fineStatus.lowercase()) {
+                        "paid" -> ApprovedColors.GreenText
+                        "waived" -> ApprovedColors.BlueText
+                        else -> ApprovedColors.RedText
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (request.fineReason.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Reason: ${request.fineReason}",
+                        color = ApprovedColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (hasPendingFine) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onFinePaidClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ApprovedColors.GreenText,
+                                contentColor = Color.White
                             )
+                        ) {
+                            Text("Paid", fontWeight = FontWeight.Bold)
                         }
 
-                        if (request.fineStatus.equals("Pending", ignoreCase = true)) {
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = onFinePaidClick,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = ApprovedColors.GreenText
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Mark Paid",
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = onFineWaivedClick,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = ApprovedColors.BlueText
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Waive",
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                        OutlinedButton(
+                            onClick = onFineWaivedClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = ApprovedColors.BlueText
+                            )
+                        ) {
+                            Text("Waive", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = ApprovedColors.ModernBg)
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = ApprovedColors.Bg)
+            Spacer(modifier = Modifier.height(8.dp))
 
             when {
                 status.equals("Approved", ignoreCase = true) -> {
@@ -913,11 +698,11 @@ private fun BorrowLifecycleRequestCard(
                         onClick = onIssueClick,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(40.dp),
+                        shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ApprovedColors.BlueLight,
-                            contentColor = ApprovedColors.BlueText
+                            containerColor = ApprovedColors.BlueText,
+                            contentColor = Color.White
                         )
                     ) {
                         Icon(
@@ -928,10 +713,7 @@ private fun BorrowLifecycleRequestCard(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        Text(
-                            text = "Mark as Issued",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Mark as Issued", fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -942,60 +724,44 @@ private fun BorrowLifecycleRequestCard(
                             onClick = onReturnClick,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp),
-                            shape = RoundedCornerShape(12.dp),
+                                .height(42.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ApprovedColors.GreenLight,
-                                contentColor = ApprovedColors.GreenText
+                                containerColor = ApprovedColors.GreenText,
+                                contentColor = Color.White
                             )
                         ) {
-                            Text(
-                                text = "Mark as Returned",
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text("Mark as Returned", fontWeight = FontWeight.Bold)
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = onDamagedClick,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = ApprovedColors.OrangeText
                                 )
                             ) {
-                                Text(
-                                    text = "Damaged",
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text("Damaged", fontWeight = FontWeight.Bold)
                             }
 
                             OutlinedButton(
                                 onClick = onLostClick,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = ApprovedColors.RedText
                                 )
                             ) {
-                                Text(
-                                    text = "Lost",
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text("Lost", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
-                }
-
-                else -> {
-                    Text(
-                        text = "No action available for this request status.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ApprovedColors.TextMuted
-                    )
                 }
             }
         }
@@ -1012,9 +778,8 @@ private fun ConfirmLifecycleActionDialog(
     var fineAmountText by remember { mutableStateOf("") }
     var fineReason by remember { mutableStateOf("") }
 
-    val isPenaltyAction =
-        action.equals("lost", ignoreCase = true) ||
-                action.equals("damaged", ignoreCase = true)
+    val isPenaltyAction = action.equals("lost", ignoreCase = true) ||
+            action.equals("damaged", ignoreCase = true)
 
     val title = when (action) {
         "issue" -> "Confirm Issue"
@@ -1025,33 +790,17 @@ private fun ConfirmLifecycleActionDialog(
     }
 
     val message = when (action) {
-        "issue" -> "Are you sure you want to mark this approved request as issued?"
-        "return" -> "Are you sure you want to mark this item as returned?"
-        "lost" -> "Are you sure you want to mark this item as lost? Available quantity will not increase."
-        "damaged" -> "Are you sure you want to mark this item as damaged? Available quantity will not increase."
-        else -> "Are you sure you want to update this request?"
-    }
-
-    val buttonText = when (action) {
-        "issue" -> "Issue"
-        "return" -> "Return"
-        "lost" -> "Mark Lost"
-        "damaged" -> "Mark Damaged"
-        else -> "Confirm"
-    }
-
-    val buttonColor = when (action) {
-        "issue" -> ApprovedColors.BlueText
-        "return" -> ApprovedColors.GreenText
-        "lost" -> ApprovedColors.RedText
-        "damaged" -> ApprovedColors.OrangeText
-        else -> ApprovedColors.PrimaryIndigo
+        "issue" -> "Mark this approved request as issued?"
+        "return" -> "Mark this item as returned?"
+        "lost" -> "Mark this item as lost? Stock will not increase."
+        "damaged" -> "Mark this item as damaged? Stock will not increase."
+        else -> "Update this request?"
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
-        containerColor = ApprovedColors.CardWhite,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = ApprovedColors.Card,
         title = {
             Text(
                 text = title,
@@ -1060,96 +809,49 @@ private fun ConfirmLifecycleActionDialog(
             )
         },
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = message,
                     color = ApprovedColors.TextMuted
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
                 Surface(
-                    color = ApprovedColors.ModernBg,
-                    shape = RoundedCornerShape(12.dp),
+                    color = ApprovedColors.Bg,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "Student: ${request.userName.ifBlank { "N/A" }}",
-                            fontWeight = FontWeight.SemiBold,
+                            text = request.equipmentName.ifBlank { "Unknown Equipment" },
+                            fontWeight = FontWeight.Bold,
                             color = ApprovedColors.TextDark
                         )
 
                         Text(
-                            text = "Equipment: ${request.equipmentName.ifBlank { "N/A" }}",
-                            color = ApprovedColors.TextDark
+                            text = "${request.userName.ifBlank { "Unknown Student" }} • Qty: ${request.quantity}",
+                            color = ApprovedColors.TextMuted,
+                            style = MaterialTheme.typography.bodySmall
                         )
-
-                        Text(
-                            text = "Qty: ${request.quantity}",
-                            color = ApprovedColors.TextDark
-                        )
-
-                        Text(
-                            text = "Current Status: ${request.status.ifBlank { "N/A" }}",
-                            color = ApprovedColors.TextDark
-                        )
-
-                        if (request.fineAmount > 0) {
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "Current Fine: ${request.fineAmount} taka",
-                                color = ApprovedColors.RedText,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
                 }
 
                 if (isPenaltyAction) {
-                    Spacer(modifier = Modifier.height(14.dp))
-
                     OutlinedTextField(
                         value = fineAmountText,
-                        onValueChange = { value ->
-                            fineAmountText = value.filter { it.isDigit() }
-                        },
-                        label = {
-                            Text("Fine Amount (optional)")
-                        },
+                        onValueChange = { value -> fineAmountText = value.filter { it.isDigit() } },
+                        label = { Text("Fine Amount (optional)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
                     OutlinedTextField(
                         value = fineReason,
-                        onValueChange = {
-                            fineReason = it
-                        },
-                        label = {
-                            Text(
-                                if (action == "lost") {
-                                    "Fine Reason / Lost Note"
-                                } else {
-                                    "Fine Reason / Damage Note"
-                                }
-                            )
-                        },
+                        onValueChange = { fineReason = it },
+                        label = { Text(if (action == "lost") "Lost Note / Reason" else "Damage Note / Reason") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        minLines = 2
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "If no fine is needed, keep amount empty or 0.",
-                        color = ApprovedColors.TextMuted,
-                        style = MaterialTheme.typography.bodySmall
+                        minLines = 2,
+                        shape = RoundedCornerShape(14.dp)
                     )
                 }
             }
@@ -1158,7 +860,6 @@ private fun ConfirmLifecycleActionDialog(
             Button(
                 onClick = {
                     val fineAmount = fineAmountText.toIntOrNull() ?: 0
-
                     val finalReason = fineReason.trim().ifBlank {
                         when (action) {
                             "lost" -> "Item marked as lost"
@@ -1166,23 +867,24 @@ private fun ConfirmLifecycleActionDialog(
                             else -> ""
                         }
                     }
-
                     onConfirm(fineAmount, finalReason)
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor,
+                    containerColor = when (action) {
+                        "lost" -> ApprovedColors.RedText
+                        "damaged" -> ApprovedColors.OrangeText
+                        "return" -> ApprovedColors.GreenText
+                        else -> ApprovedColors.Primary
+                    },
                     contentColor = Color.White
                 )
             ) {
-                Text(buttonText)
+                Text("Confirm")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(
-                    text = "Cancel",
-                    color = ApprovedColors.TextMuted
-                )
+                Text("Cancel", color = ApprovedColors.TextMuted)
             }
         }
     )
@@ -1193,6 +895,32 @@ private fun activeStatusOrder(status: String): Int {
         "approved" -> 0
         "issued" -> 1
         "overdue" -> 2
-        else -> 3
+        "damaged" -> 3
+        "lost" -> 4
+        else -> 5
+    }
+}
+
+private fun statusTextColor(status: String): Color {
+    return when (status.trim().lowercase()) {
+        "approved" -> ApprovedColors.BlueText
+        "issued" -> ApprovedColors.PurpleText
+        "overdue" -> ApprovedColors.RedText
+        "returned" -> ApprovedColors.GreenText
+        "lost" -> ApprovedColors.RedText
+        "damaged" -> ApprovedColors.OrangeText
+        else -> ApprovedColors.GrayText
+    }
+}
+
+private fun statusBackgroundColor(status: String): Color {
+    return when (status.trim().lowercase()) {
+        "approved" -> ApprovedColors.BlueLight
+        "issued" -> ApprovedColors.PurpleLight
+        "overdue" -> ApprovedColors.RedLight
+        "returned" -> ApprovedColors.GreenLight
+        "lost" -> ApprovedColors.RedLight
+        "damaged" -> ApprovedColors.OrangeLight
+        else -> ApprovedColors.GrayLight
     }
 }

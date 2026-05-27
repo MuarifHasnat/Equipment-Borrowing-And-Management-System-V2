@@ -46,6 +46,7 @@ class EquipmentRepository {
             imageName = imageName.trim(),
             imageUrl = imageUrl.trim(),
             isBorrowable = isBorrowable,
+            borrowType = if (isBorrowable) "OutsideLab" else "LabUseOnly",
             addedBy = "",
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis()

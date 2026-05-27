@@ -1,7 +1,9 @@
 package com.example.equipmentborrowingapp.ui.student
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,12 +35,15 @@ import com.example.equipmentborrowingapp.data.model.SoftwareIssueReport
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import coil.compose.AsyncImage
 private object MyIssueColors {
     val ModernBg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
+    val BorderSoft = Color(0xFFE2E8F0)
 
     val PrimaryIndigo = Color(0xFF4F46E5)
     val PurpleAccent = Color(0xFF7C3AED)
@@ -69,6 +74,23 @@ fun MySoftwareIssuesScreen(
     var selectedReport by remember { mutableStateOf<SoftwareIssueReport?>(null) }
     var feedbackText by remember { mutableStateOf("") }
     var feedbackError by remember { mutableStateOf("") }
+    var selectedStatus by remember { mutableStateOf("All") }
+
+    val statusOptions = listOf("All", "Open", "In Progress", "Solved", "Rejected")
+    val filteredIssues = remember(issueList, selectedStatus) {
+        if (selectedStatus == "All") {
+            issueList
+        } else {
+            issueList.filter { report ->
+                val status = report.status.trim().lowercase()
+                when (selectedStatus) {
+                    "Open" -> status.isBlank() || status == "open" || status == "pending"
+                    "Solved" -> status == "solved" || status == "resolved"
+                    else -> report.status.equals(selectedStatus, ignoreCase = true)
+                }
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -77,27 +99,43 @@ fun MySoftwareIssuesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             MySoftwareIssueTopBar(
                 onBackClick = onBackClick,
                 onRefreshClick = onRefreshClick
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            MySoftwareIssueHeroCard(totalIssues = issueList.size)
+            MySoftwareIssueSummaryCard(issueList = issueList)
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            if (issueList.isEmpty()) {
-                EmptySoftwareIssueState()
+            StatusFilterCard(
+                statusOptions = statusOptions,
+                selectedStatus = selectedStatus,
+                onStatusSelected = { selectedStatus = it },
+                filteredCount = filteredIssues.size
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (filteredIssues.isEmpty()) {
+                EmptySoftwareIssueState(
+                    title = if (issueList.isEmpty()) "No software issues yet" else "No $selectedStatus issues",
+                    subtitle = if (issueList.isEmpty()) {
+                        "Your submitted software issue reports will appear here."
+                    } else {
+                        "Try another status filter to see your submitted reports."
+                    }
+                )
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 28.dp)
                 ) {
-                    items(issueList, key = { it.id }) { report ->
+                    items(filteredIssues, key = { it.id }) { report ->
                         StudentSoftwareIssueCard(
                             report = report,
                             onFeedbackClick = {
@@ -148,7 +186,12 @@ fun MySoftwareIssuesScreen(
                             .fillMaxWidth()
                             .height(130.dp),
                         shape = RoundedCornerShape(14.dp),
-                        singleLine = false
+                        singleLine = false,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MyIssueColors.PrimaryIndigo,
+                            focusedLabelColor = MyIssueColors.PrimaryIndigo,
+                            cursorColor = MyIssueColors.PrimaryIndigo
+                        )
                     )
 
                     if (feedbackError.isNotBlank()) {
@@ -195,7 +238,7 @@ fun MySoftwareIssuesScreen(
                         feedbackError = ""
                     }
                 ) {
-                    Text("Cancel")
+                    Text("Cancel", color = MyIssueColors.TextMuted)
                 }
             },
             shape = RoundedCornerShape(20.dp),
@@ -212,14 +255,15 @@ private fun MySoftwareIssueTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
+            .padding(top = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
-                .background(MyIssueColors.CardWhite, RoundedCornerShape(12.dp))
-                .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                .size(42.dp)
+                .shadow(2.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                .background(MyIssueColors.CardWhite, RoundedCornerShape(14.dp))
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -228,7 +272,7 @@ private fun MySoftwareIssueTopBar(
             )
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -238,8 +282,8 @@ private fun MySoftwareIssueTopBar(
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                text = "Track issue status and admin response",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Track status and admin response",
+                style = MaterialTheme.typography.bodySmall,
                 color = MyIssueColors.TextMuted
             )
         }
@@ -247,8 +291,9 @@ private fun MySoftwareIssueTopBar(
         IconButton(
             onClick = onRefreshClick,
             modifier = Modifier
-                .background(MyIssueColors.CardWhite, RoundedCornerShape(12.dp))
-                .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                .size(42.dp)
+                .shadow(2.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                .background(MyIssueColors.CardWhite, RoundedCornerShape(14.dp))
         ) {
             Icon(
                 imageVector = Icons.Rounded.Refresh,
@@ -260,46 +305,174 @@ private fun MySoftwareIssueTopBar(
 }
 
 @Composable
-private fun MySoftwareIssueHeroCard(totalIssues: Int) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = MyIssueColors.PrimaryIndigo.copy(alpha = 0.18f)),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MyIssueColors.CardWhite)
+private fun MySoftwareIssueSummaryCard(issueList: List<SoftwareIssueReport>) {
+    val openCount = issueList.count {
+        val status = it.status.trim().lowercase()
+        status.isBlank() || status == "open" || status == "pending"
+    }
+    val progressCount = issueList.count { it.status.equals("In Progress", ignoreCase = true) }
+    val solvedCount = issueList.count {
+        it.status.equals("Solved", ignoreCase = true) ||
+                it.status.equals("Resolved", ignoreCase = true)
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        MiniCountChip(
+            label = "Open",
+            count = openCount,
+            bgColor = MyIssueColors.BlueLight,
+            textColor = MyIssueColors.BlueText,
+            modifier = Modifier.weight(1f)
+        )
+        MiniCountChip(
+            label = "Progress",
+            count = progressCount,
+            bgColor = MyIssueColors.OrangeLight,
+            textColor = MyIssueColors.OrangeText,
+            modifier = Modifier.weight(1f)
+        )
+        MiniCountChip(
+            label = "Solved",
+            count = solvedCount,
+            bgColor = MyIssueColors.GreenLight,
+            textColor = MyIssueColors.GreenText,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun MiniCountChip(
+    label: String,
+    count: Int,
+    bgColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .height(52.dp)
+            .background(bgColor, RoundedCornerShape(16.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = count.toString(),
+            color = textColor,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Text(
+            text = label,
+            color = textColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun StatusFilterCard(
+    statusOptions: List<String>,
+    selectedStatus: String,
+    onStatusSelected: (String) -> Unit,
+    filteredCount: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CompactStatusDropdown(
+            options = statusOptions,
+            selectedStatus = selectedStatus,
+            onStatusSelected = onStatusSelected,
+            modifier = Modifier.weight(1f)
+        )
+
+        Box(
+            modifier = Modifier
+                .height(42.dp)
+                .width(104.dp)
+                .background(MyIssueColors.CardWhite, RoundedCornerShape(15.dp))
+                .border(1.dp, MyIssueColors.BorderSoft.copy(alpha = 0.7f), RoundedCornerShape(15.dp))
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$filteredCount shown",
+                color = MyIssueColors.TextMuted,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactStatusDropdown(
+    options: List<String>,
+    selectedStatus: String,
+    onStatusSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
         Row(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .background(MyIssueColors.CardWhite, RoundedCornerShape(15.dp))
+                .border(1.dp, MyIssueColors.BorderSoft.copy(alpha = 0.7f), RoundedCornerShape(15.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .background(MyIssueColors.PrimaryIndigo.copy(alpha = 0.12f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.BugReport,
-                    contentDescription = null,
-                    tint = MyIssueColors.PrimaryIndigo,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Submitted Reports",
+                    text = "Status",
                     color = MyIssueColors.TextMuted,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "$totalIssues issue${if (totalIssues == 1) "" else "s"} found",
+                    text = selectedStatus,
                     color = MyIssueColors.TextDark,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                text = "▾",
+                color = MyIssueColors.TextMuted,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MyIssueColors.CardWhite
+        ) {
+            options.forEach { status ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = status,
+                            color = MyIssueColors.TextDark,
+                            fontWeight = if (selectedStatus == status) FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    onClick = {
+                        onStatusSelected(status)
+                        expanded = false
+                    }
                 )
             }
         }
@@ -313,28 +486,42 @@ private fun StudentSoftwareIssueCard(
 ) {
     val statusStyle = issueStatusStyle(report.status)
     val severityStyle = severityStyle(report.severity)
+    val canGiveFeedback = report.status.equals("Solved", ignoreCase = true) ||
+            report.status.equals("Resolved", ignoreCase = true)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MyIssueColors.CardWhite)
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .background(MyIssueColors.BlueLight, CircleShape),
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MyIssueColors.BlueLight),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Computer,
-                        contentDescription = null,
-                        tint = MyIssueColors.BlueText,
-                        modifier = Modifier.size(23.dp)
-                    )
+                    if (report.computerImageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = report.computerImageUrl.trim(),
+                            contentDescription = report.computerName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Computer,
+                            contentDescription = null,
+                            tint = MyIssueColors.BlueText,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -366,7 +553,7 @@ private fun StudentSoftwareIssueCard(
 
                 IssueBadge(
                     text = report.severity.ifBlank { "Medium" },
-                    icon = Icons.Rounded.Warning,
+                    icon = severityStyle.icon,
                     bgColor = severityStyle.bgColor,
                     textColor = severityStyle.textColor
                 )
@@ -374,35 +561,39 @@ private fun StudentSoftwareIssueCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            IssueInfoRow(label = "Issue Type", value = report.issueType.ifBlank { "N/A" })
-            IssueInfoRow(label = "Description", value = report.description.ifBlank { "No description" })
-            IssueInfoRow(label = "Submitted", value = formatIssueDate(report.timestamp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MyIssueColors.GrayLight.copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                    .padding(12.dp)
+            ) {
+                IssueInfoRow(label = "Issue Type", value = report.issueType.ifBlank { "N/A" })
+                IssueInfoRow(label = "Description", value = report.description.ifBlank { "No description" })
+                IssueInfoRow(label = "Submitted", value = formatIssueDate(report.timestamp))
 
-            if (report.adminComment.isNotBlank()) {
-                IssueInfoRow(label = "Admin Comment", value = report.adminComment)
-            }
+                if (report.adminComment.isNotBlank()) {
+                    IssueInfoRow(label = "Admin Comment", value = report.adminComment)
+                }
 
-            if (report.resolvedAt > 0L) {
-                IssueInfoRow(label = "Resolved At", value = formatIssueDate(report.resolvedAt))
+                if (report.resolvedAt > 0L) {
+                    IssueInfoRow(label = "Resolved At", value = formatIssueDate(report.resolvedAt))
+                }
             }
 
             if (report.studentFeedback.isNotBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 FeedbackBox(feedback = report.studentFeedback)
             }
 
-            if (report.status.equals("Solved", ignoreCase = true)) {
-                Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-                OutlinedButton(
+            if (canGiveFeedback) {
+                Button(
                     onClick = onFeedbackClick,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MyIssueColors.PrimaryIndigo
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(MyIssueColors.PrimaryIndigo.copy(alpha = 0.45f))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MyIssueColors.PrimaryIndigo
                     )
                 ) {
                     Icon(
@@ -412,8 +603,24 @@ private fun StudentSoftwareIssueCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (report.studentFeedback.isBlank()) "Add Feedback" else "Update Feedback",
+                        text = if (report.studentFeedback.isBlank()) "Submit Feedback" else "Update Feedback",
                         fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { },
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, MyIssueColors.BorderSoft),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        disabledContentColor = MyIssueColors.TextMuted
+                    )
+                ) {
+                    Text(
+                        text = "Feedback available after issue is solved",
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -506,43 +713,54 @@ private fun IssueBadge(
 }
 
 @Composable
-private fun EmptySoftwareIssueState() {
-    Column(
+private fun EmptySoftwareIssueState(
+    title: String,
+    subtitle: String
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 60.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(top = 24.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MyIssueColors.CardWhite)
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .size(76.dp)
-                .background(MyIssueColors.GrayLight, CircleShape),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(vertical = 34.dp, horizontal = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Info,
-                contentDescription = null,
-                tint = MyIssueColors.GrayText,
-                modifier = Modifier.size(36.dp)
+            Box(
+                modifier = Modifier
+                    .size(76.dp)
+                    .background(MyIssueColors.GrayLight, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    tint = MyIssueColors.GrayText,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = title,
+                color = MyIssueColors.TextDark,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = subtitle,
+                color = MyIssueColors.TextMuted,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = "No software issues yet",
-            color = MyIssueColors.TextDark,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Your submitted software issue reports will appear here.",
-            color = MyIssueColors.TextMuted,
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
 
@@ -554,7 +772,7 @@ private data class IssueVisualStyle(
 
 private fun issueStatusStyle(status: String): IssueVisualStyle {
     return when (status.lowercase()) {
-        "open" -> IssueVisualStyle(
+        "open", "pending", "" -> IssueVisualStyle(
             icon = Icons.Rounded.Pending,
             bgColor = MyIssueColors.BlueLight,
             textColor = MyIssueColors.BlueText
@@ -566,7 +784,7 @@ private fun issueStatusStyle(status: String): IssueVisualStyle {
             textColor = MyIssueColors.OrangeText
         )
 
-        "solved" -> IssueVisualStyle(
+        "solved", "resolved" -> IssueVisualStyle(
             icon = Icons.Rounded.CheckCircle,
             bgColor = MyIssueColors.GreenLight,
             textColor = MyIssueColors.GreenText

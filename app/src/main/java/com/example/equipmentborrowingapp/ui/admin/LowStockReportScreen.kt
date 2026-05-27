@@ -1,29 +1,40 @@
 package com.example.equipmentborrowingapp.ui.admin
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,21 +45,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.data.model.Room
+import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
 private object LowStockColors {
-    val Background = Color(0xFFF4F7FB)
-    val CardWhite = Color.White
+    val Bg = Color(0xFFF4F7FB)
+    val Card = Color.White
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
-
-    val PrimaryIndigo = Color(0xFF4F46E5)
-    val PurpleAccent = Color(0xFF7C3AED)
+    val Primary = Color(0xFF4F46E5)
 
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
@@ -96,11 +109,11 @@ fun LowStockReportScreen(
                     room?.building.orEmpty().lowercase().contains(query)
 
         val matchesFilter = when (selectedFilter) {
-            "Low Stock" -> equipment.availableQuantity in 1..2
-            "Out of Stock" -> equipment.availableQuantity == 0
+            "Low" -> equipment.availableQuantity in 1..2
+            "Out" -> equipment.availableQuantity == 0
             "Available" -> equipment.availableQuantity > 0
-            "Borrowable" -> equipment.isBorrowable
-            "Lab-use-only" -> !equipment.isBorrowable
+            "Borrow" -> equipment.isBorrowable
+            "Lab Only" -> !equipment.isBorrowable
             else -> true
         }
 
@@ -117,78 +130,60 @@ fun LowStockReportScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = LowStockColors.Background
+        color = LowStockColors.Bg
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            LowStockHeroCard(
-                lowStockCount = lowStockCount,
-                outOfStockCount = outOfStockCount
+            LowStockTopBar(onBackClick = onBackClick)
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LowMiniStat("Total", totalEquipment.toString(), LowStockColors.BlueLight, LowStockColors.BlueText, Modifier.weight(1f))
+                LowMiniStat("Low", lowStockCount.toString(), LowStockColors.OrangeLight, LowStockColors.OrangeText, Modifier.weight(1f))
+                LowMiniStat("Out", outOfStockCount.toString(), LowStockColors.RedLight, LowStockColors.RedText, Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            LowMiniStat(
+                title = "Available Quantity",
+                value = totalAvailableQuantity.toString(),
+                bgColor = LowStockColors.GreenLight,
+                textColor = LowStockColors.GreenText,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                LowStockStatCard(
-                    title = "Equipment",
-                    value = totalEquipment.toString(),
-                    bgColor = LowStockColors.BlueLight,
-                    textColor = LowStockColors.BlueText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                LowStockStatCard(
-                    title = "Available Qty",
-                    value = totalAvailableQuantity.toString(),
-                    bgColor = LowStockColors.GreenLight,
-                    textColor = LowStockColors.GreenText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                LowStockStatCard(
-                    title = "Low Stock",
-                    value = lowStockCount.toString(),
-                    bgColor = LowStockColors.OrangeLight,
-                    textColor = LowStockColors.OrangeText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                LowStockStatCard(
-                    title = "Out Stock",
-                    value = outOfStockCount.toString(),
-                    bgColor = LowStockColors.RedLight,
-                    textColor = LowStockColors.RedText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                label = {
-                    Text("Search equipment, category, condition or room")
+                shape = RoundedCornerShape(14.dp),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = LowStockColors.TextMuted
+                    )
+                },
+                placeholder = {
+                    Text(
+                        text = "Search equipment",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
                 modifier = Modifier
@@ -196,366 +191,159 @@ fun LowStockReportScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(
-                    "Low Stock",
-                    "Out of Stock",
-                    "Available",
-                    "Borrowable",
-                    "Lab-use-only",
-                    "All"
-                ).forEach { filter ->
-                    LowStockFilterChip(
+                listOf("Low Stock", "Out of Stock", "Available", "Borrowable", "Lab-use-only", "All").forEach { filter ->
+                    LowFilterChip(
                         text = filter,
                         selected = selectedFilter == filter,
-                        onClick = {
-                            selectedFilter = filter
-                        }
+                        onClick = { selectedFilter = filter }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Low Stock Equipment Report",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = LowStockColors.TextDark
+                text = "Showing ${reportList.size} item(s)",
+                color = LowStockColors.TextDark,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
             )
 
-            Text(
-                text = "Showing ${reportList.size} equipment record(s)",
-                style = MaterialTheme.typography.bodySmall,
-                color = LowStockColors.TextMuted
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             if (reportList.isEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = LowStockColors.CardWhite),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = LowStockColors.Card),
                     elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No equipment found for selected search/filter.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LowStockColors.TextMuted
+                            text = "No equipment found.",
+                            color = LowStockColors.TextMuted,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
                     items(reportList) { equipment ->
-                        LowStockEquipmentCard(
+                        LowStockItemCard(
                             equipment = equipment,
                             room = roomById[equipment.roomId]
                         )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(
-                    text = "Back to Reports",
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun LowStockHeroCard(
-    lowStockCount: Int,
-    outOfStockCount: Int
+private fun LowStockTopBar(
+    onBackClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        LowStockColors.PrimaryIndigo,
-                        LowStockColors.PurpleAccent
-                    )
-                ),
-                shape = RoundedCornerShape(28.dp)
-            )
-            .padding(22.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Surface(
-                color = Color.White.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text(
-                    text = "Inventory Report",
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(42.dp)
+                .background(LowStockColors.Card, RoundedCornerShape(15.dp))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = LowStockColors.TextDark
+            )
+        }
 
-            Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(LowStockColors.OrangeLight, RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.WarningAmber,
+                contentDescription = null,
+                tint = LowStockColors.OrangeText,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Low Stock Equipment",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
+                text = "Low Stock Report",
+                color = LowStockColors.TextDark,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = "$lowStockCount low stock item(s), $outOfStockCount out of stock item(s)",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyMedium
+                text = "Review stock status",
+                color = LowStockColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
 }
 
 @Composable
-private fun LowStockStatCard(
+private fun LowMiniStat(
     title: String,
     value: String,
     bgColor: Color,
     textColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.height(88.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = LowStockColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    Surface(
+        modifier = modifier.height(52.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(18.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = LowStockColors.TextMuted,
-                fontWeight = FontWeight.SemiBold
+                color = textColor.copy(alpha = 0.75f),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
 
             Text(
                 text = value,
-                modifier = Modifier
-                    .background(
-                        color = bgColor,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.titleLarge,
                 color = textColor,
-                fontWeight = FontWeight.ExtraBold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
             )
         }
     }
 }
 
 @Composable
-private fun LowStockEquipmentCard(
-    equipment: Equipment,
-    room: Room?
-) {
-    val statusText = when {
-        equipment.availableQuantity == 0 -> "Out of Stock"
-        equipment.availableQuantity in 1..2 -> "Low Stock"
-        else -> "Available"
-    }
-
-    val statusBg = when {
-        equipment.availableQuantity == 0 -> LowStockColors.RedLight
-        equipment.availableQuantity in 1..2 -> LowStockColors.OrangeLight
-        else -> LowStockColors.GreenLight
-    }
-
-    val statusColor = when {
-        equipment.availableQuantity == 0 -> LowStockColors.RedText
-        equipment.availableQuantity in 1..2 -> LowStockColors.OrangeText
-        else -> LowStockColors.GreenText
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = LowStockColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = equipment.name.ifBlank { "Unnamed Equipment" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = LowStockColors.TextDark
-                    )
-
-                    Text(
-                        text = equipment.category.ifBlank { "No category" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LowStockColors.TextMuted
-                    )
-                }
-
-                Text(
-                    text = statusText,
-                    modifier = Modifier
-                        .background(
-                            color = statusBg,
-                            shape = RoundedCornerShape(50.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = statusColor
-                )
-            }
-
-            HorizontalDivider(color = LowStockColors.Background)
-
-            LowStockInfoRow(
-                label = "Room/Lab",
-                value = room?.name?.ifBlank { "Unnamed Room" } ?: "No room assigned"
-            )
-
-            LowStockInfoRow(
-                label = "Department",
-                value = room?.department?.ifBlank { "N/A" } ?: "N/A"
-            )
-
-            LowStockInfoRow(
-                label = "Condition",
-                value = equipment.condition.ifBlank { "N/A" }
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                LowStockSmallBadge(
-                    text = "Total: ${equipment.totalQuantity}",
-                    bgColor = LowStockColors.BlueLight,
-                    textColor = LowStockColors.BlueText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                LowStockSmallBadge(
-                    text = "Available: ${equipment.availableQuantity}",
-                    bgColor = statusBg,
-                    textColor = statusColor,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            LowStockSmallBadge(
-                text = if (equipment.isBorrowable) {
-                    "Borrowable Item"
-                } else {
-                    "Lab-use-only Item"
-                },
-                bgColor = if (equipment.isBorrowable) {
-                    LowStockColors.GreenLight
-                } else {
-                    LowStockColors.PurpleLight
-                },
-                textColor = if (equipment.isBorrowable) {
-                    LowStockColors.GreenText
-                } else {
-                    LowStockColors.PurpleText
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
-private fun LowStockInfoRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "$label:",
-            modifier = Modifier.weight(0.38f),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = LowStockColors.TextMuted
-        )
-
-        Text(
-            text = value.ifBlank { "N/A" },
-            modifier = Modifier.weight(0.62f),
-            style = MaterialTheme.typography.bodySmall,
-            color = LowStockColors.TextDark,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun LowStockSmallBadge(
-    text: String,
-    bgColor: Color,
-    textColor: Color,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = text,
-        modifier = modifier
-            .background(
-                color = bgColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = textColor
-    )
-}
-
-@Composable
-private fun LowStockFilterChip(
+private fun LowFilterChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -563,20 +351,166 @@ private fun LowStockFilterChip(
     if (selected) {
         Button(
             onClick = onClick,
+            modifier = Modifier.height(32.dp),
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = LowStockColors.BlueText,
+                containerColor = LowStockColors.Primary,
                 contentColor = Color.White
-            )
+            ),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
-            Text(text)
+            Text(text = text, maxLines = 1)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50.dp)
+            modifier = Modifier.height(32.dp),
+            shape = RoundedCornerShape(50.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
-            Text(text)
+            Text(text = text, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun LowStockItemCard(
+    equipment: Equipment,
+    room: Room?
+) {
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(equipment.imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
+
+    val badgeBg = when {
+        equipment.availableQuantity <= 0 -> LowStockColors.RedLight
+        equipment.availableQuantity <= 2 -> LowStockColors.OrangeLight
+        else -> LowStockColors.GreenLight
+    }
+
+    val badgeText = when {
+        equipment.availableQuantity <= 0 -> LowStockColors.RedText
+        equipment.availableQuantity <= 2 -> LowStockColors.OrangeText
+        else -> LowStockColors.GreenText
+    }
+
+    val badgeLabel = when {
+        equipment.availableQuantity <= 0 -> "Out"
+        equipment.availableQuantity <= 2 -> "Low"
+        else -> "Available"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = LowStockColors.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(LowStockColors.GrayLight),
+                contentAlignment = Alignment.Center
+            ) {
+                if (hasImageUrl) {
+                    AsyncImage(
+                        model = safeImageUrl,
+                        contentDescription = equipment.name,
+                        placeholder = painterResource(id = fallbackImageResId),
+                        error = painterResource(id = fallbackImageResId),
+                        fallback = painterResource(id = fallbackImageResId),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = fallbackImageResId),
+                        contentDescription = equipment.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(7.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = equipment.name.ifBlank { "Unknown Equipment" },
+                        modifier = Modifier.weight(1f),
+                        color = LowStockColors.TextDark,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = badgeLabel,
+                        modifier = Modifier
+                            .background(badgeBg, RoundedCornerShape(50.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = badgeText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(5.dp))
+
+                Text(
+                    text = "${equipment.category.ifBlank { "General" }} • ${equipment.condition.ifBlank { "N/A" }}",
+                    color = LowStockColors.TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(5.dp))
+
+                Text(
+                    text = "Room: ${room?.name ?: "N/A"}",
+                    color = LowStockColors.TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Stock ${equipment.availableQuantity}/${equipment.totalQuantity}",
+                        modifier = Modifier
+                            .background(LowStockColors.BlueLight, RoundedCornerShape(50.dp))
+                            .padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = LowStockColors.BlueText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        text = if (equipment.isBorrowable) "Borrowable" else "Lab-use-only",
+                        modifier = Modifier
+                            .background(
+                                if (equipment.isBorrowable) LowStockColors.PurpleLight else LowStockColors.GrayLight,
+                                RoundedCornerShape(50.dp)
+                            )
+                            .padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = if (equipment.isBorrowable) LowStockColors.PurpleText else LowStockColors.GrayText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }

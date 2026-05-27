@@ -2,6 +2,8 @@ package com.example.equipmentborrowingapp.ui.student
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +20,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,7 +34,9 @@ private object EqListColors {
     val CardWhite = Color(0xFFFFFFFF)
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
+    val BorderSoft = Color(0xFFE2E8F0)
     val PrimaryIndigo = Color(0xFF4F46E5)
+    val PrimaryPurple = Color(0xFF7C3AED)
     val PrimaryIndigoLight = Color(0xFFE0E7FF)
 
     val GreenLight = Color(0xFFF0FDF4)
@@ -69,27 +74,33 @@ fun EquipmentListScreen(
     val borrowableOptions = listOf("All", "Borrowable", "Lab Use Only")
 
     val filteredEquipmentList = equipmentList.filter { equipment ->
+        val query = searchQuery.trim()
         val matchesSearch =
-            searchQuery.isBlank() ||
-                    equipment.name.trim().contains(searchQuery.trim(), ignoreCase = true) ||
-                    equipment.description.trim().contains(searchQuery.trim(), ignoreCase = true)
+            query.isBlank() ||
+                    equipment.name.trim().contains(query, ignoreCase = true) ||
+                    equipment.description.trim().contains(query, ignoreCase = true) ||
+                    equipment.category.trim().contains(query, ignoreCase = true)
 
         val matchesCategory =
             selectedCategory == "All" ||
                     equipment.category.equals(selectedCategory, ignoreCase = true)
 
+        val isActuallyBorrowable =
+            equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
+
         val matchesBorrowableStatus = when (selectedBorrowableStatus) {
-            "Borrowable" -> equipment.isBorrowable
-            "Lab Use Only" -> !equipment.isBorrowable
+            "Borrowable" -> isActuallyBorrowable
+            "Lab Use Only" -> !isActuallyBorrowable
             else -> true
         }
-
         matchesSearch && matchesCategory && matchesBorrowableStatus
     }
 
     val totalCount = equipmentList.size
     val availableCount = equipmentList.count { it.availableQuantity > 0 }
-    val borrowableCount = equipmentList.count { it.isBorrowable }
+    val borrowableCount = equipmentList.count {
+        it.isBorrowable && it.borrowType != "LabUseOnly"
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -98,51 +109,15 @@ fun EquipmentListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 14.dp, vertical = 9.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier
-                        .background(EqListColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(
-                            2.dp,
-                            RoundedCornerShape(12.dp),
-                            spotColor = Color.Black.copy(alpha = 0.05f)
-                        )
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = EqListColors.TextDark
-                    )
-                }
+            EquipmentListTopBar(onBackClick = onBackClick)
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        text = "Equipment Browser",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = EqListColors.TextDark,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Find and request lab equipment",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = EqListColors.TextMuted
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(7.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ModernStatCard(
                     title = "Total",
@@ -163,158 +138,39 @@ fun EquipmentListScreen(
                 ModernStatCard(
                     title = "Borrowable",
                     value = borrowableCount.toString(),
-                    bgColor = EqListColors.OrangeLight,
-                    textColor = EqListColors.OrangeText,
+                    bgColor = EqListColors.PrimaryIndigoLight,
+                    textColor = EqListColors.PrimaryIndigo,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(7.dp))
 
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(
-                        4.dp,
-                        RoundedCornerShape(14.dp),
-                        spotColor = Color.Black.copy(alpha = 0.05f)
-                    ),
-                shape = RoundedCornerShape(14.dp),
-                placeholder = {
-                    Text(
-                        text = "Search by name or description...",
-                        color = EqListColors.TextMuted
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Rounded.Search,
-                        contentDescription = "Search",
-                        tint = EqListColors.TextMuted
-                    )
-                },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = EqListColors.CardWhite,
-                    unfocusedContainerColor = EqListColors.CardWhite,
-                    focusedBorderColor = EqListColors.PrimaryIndigo,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = EqListColors.TextDark,
-                    unfocusedTextColor = EqListColors.TextDark
-                )
+            FilterSection(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                selectedCategory = selectedCategory,
+                onCategoryChange = { selectedCategory = it },
+                categoryOptions = categoryOptions,
+                selectedBorrowableStatus = selectedBorrowableStatus,
+                onBorrowableStatusChange = { selectedBorrowableStatus = it },
+                borrowableOptions = borrowableOptions,
+                resultCount = filteredEquipmentList.size
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                var categoryExpanded by remember { mutableStateOf(false) }
-
-                ExposedDropdownMenuBox(
-                    expanded = categoryExpanded,
-                    onExpandedChange = { categoryExpanded = !categoryExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    ModernDropdownField(
-                        label = "Category",
-                        value = selectedCategory,
-                        expanded = categoryExpanded,
-                        modifier = Modifier.menuAnchor()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = categoryExpanded,
-                        onDismissRequest = { categoryExpanded = false },
-                        modifier = Modifier.background(EqListColors.CardWhite)
-                    ) {
-                        categoryOptions.forEach { category ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = category,
-                                        color = EqListColors.TextDark
-                                    )
-                                },
-                                onClick = {
-                                    selectedCategory = category
-                                    categoryExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                var borrowableExpanded by remember { mutableStateOf(false) }
-
-                ExposedDropdownMenuBox(
-                    expanded = borrowableExpanded,
-                    onExpandedChange = { borrowableExpanded = !borrowableExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    ModernDropdownField(
-                        label = "Status",
-                        value = selectedBorrowableStatus,
-                        expanded = borrowableExpanded,
-                        modifier = Modifier.menuAnchor()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = borrowableExpanded,
-                        onDismissRequest = { borrowableExpanded = false },
-                        modifier = Modifier.background(EqListColors.CardWhite)
-                    ) {
-                        borrowableOptions.forEach { option ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = option,
-                                        color = EqListColors.TextDark
-                                    )
-                                },
-                                onClick = {
-                                    selectedBorrowableStatus = option
-                                    borrowableExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "Showing ${filteredEquipmentList.size} item(s)",
-                style = MaterialTheme.typography.bodySmall,
-                color = EqListColors.TextMuted,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (filteredEquipmentList.isEmpty()) {
-                Box(
+                EmptyEquipmentState(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No equipment found",
-                        color = EqListColors.TextMuted,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
+                        .fillMaxWidth()
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 20.dp)
+                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                    contentPadding = PaddingValues(bottom = 14.dp)
                 ) {
                     items(filteredEquipmentList, key = { it.id }) { equipment ->
                         ModernEquipmentCard(
@@ -331,6 +187,247 @@ fun EquipmentListScreen(
 }
 
 @Composable
+private fun EquipmentListTopBar(
+    onBackClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(42.dp)
+                .shadow(
+                    elevation = 3.dp,
+                    shape = RoundedCornerShape(13.dp),
+                    spotColor = Color.Black.copy(alpha = 0.06f)
+                )
+                .background(EqListColors.CardWhite, RoundedCornerShape(13.dp))
+        ) {
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = EqListColors.TextDark
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Browse Equipment",
+                style = MaterialTheme.typography.titleMedium,
+                color = EqListColors.TextDark,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Search, filter and request lab items",
+                style = MaterialTheme.typography.bodySmall,
+                color = EqListColors.TextMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterSection(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    selectedCategory: String,
+    onCategoryChange: (String) -> Unit,
+    categoryOptions: List<String>,
+    selectedBorrowableStatus: String,
+    onBorrowableStatusChange: (String) -> Unit,
+    borrowableOptions: List<String>,
+    resultCount: Int
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        ModernSearchField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            var categoryExpanded by remember { mutableStateOf(false) }
+
+            ExposedDropdownMenuBox(
+                expanded = categoryExpanded,
+                onExpandedChange = { categoryExpanded = !categoryExpanded },
+                modifier = Modifier.weight(1f)
+            ) {
+                ModernDropdownField(
+                    label = "Category",
+                    value = selectedCategory,
+                    expanded = categoryExpanded,
+                    modifier = Modifier.menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = categoryExpanded,
+                    onDismissRequest = { categoryExpanded = false },
+                    modifier = Modifier.background(EqListColors.CardWhite)
+                ) {
+                    categoryOptions.forEach { category ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = category,
+                                    color = EqListColors.TextDark
+                                )
+                            },
+                            onClick = {
+                                onCategoryChange(category)
+                                categoryExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            var borrowableExpanded by remember { mutableStateOf(false) }
+
+            ExposedDropdownMenuBox(
+                expanded = borrowableExpanded,
+                onExpandedChange = { borrowableExpanded = !borrowableExpanded },
+                modifier = Modifier.weight(1f)
+            ) {
+                ModernDropdownField(
+                    label = "Use Type",
+                    value = selectedBorrowableStatus,
+                    expanded = borrowableExpanded,
+                    modifier = Modifier.menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = borrowableExpanded,
+                    onDismissRequest = { borrowableExpanded = false },
+                    modifier = Modifier.background(EqListColors.CardWhite)
+                ) {
+                    borrowableOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = option,
+                                    color = EqListColors.TextDark
+                                )
+                            },
+                            onClick = {
+                                onBorrowableStatusChange(option)
+                                borrowableExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Showing $resultCount item(s)",
+                style = MaterialTheme.typography.labelSmall,
+                color = EqListColors.TextMuted,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            if (searchQuery.isNotBlank() || selectedCategory != "All" || selectedBorrowableStatus != "All") {
+                Text(
+                    text = "Filters active",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EqListColors.PrimaryIndigo,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(EqListColors.PrimaryIndigoLight)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+    }
+}
+
+
+
+@Composable
+private fun ModernSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(42.dp),
+        shape = RoundedCornerShape(13.dp),
+        color = EqListColors.ModernBg
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = "Search",
+                tint = EqListColors.TextMuted,
+                modifier = Modifier.size(18.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(
+                    color = EqListColors.TextDark,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (value.isBlank()) {
+                            Text(
+                                text = "Search equipment...",
+                                color = EqListColors.TextMuted,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
 private fun ModernStatCard(
     title: String,
     value: String,
@@ -339,7 +436,7 @@ private fun ModernStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = EqListColors.CardWhite),
         elevation = CardDefaults.cardElevation(0.dp)
@@ -348,23 +445,26 @@ private fun ModernStatCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bgColor)
-                .padding(vertical = 14.dp),
+                .padding(vertical = 6.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
-                fontSize = 24.sp,
+                fontSize = 18.sp,
                 color = textColor,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                maxLines = 1
             )
 
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = title,
-                color = textColor.copy(alpha = 0.8f),
+                color = textColor.copy(alpha = 0.82f),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -378,37 +478,43 @@ private fun ModernDropdownField(
     expanded: Boolean,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        readOnly = true,
-        label = {
-            Text(
-                text = label,
-                color = EqListColors.TextMuted,
-                style = MaterialTheme.typography.bodySmall
-            )
-        },
-        trailingIcon = {
-            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-        },
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(
-                2.dp,
-                RoundedCornerShape(14.dp),
-                spotColor = Color.Black.copy(alpha = 0.05f)
-            ),
-        shape = RoundedCornerShape(14.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = EqListColors.CardWhite,
-            unfocusedContainerColor = EqListColors.CardWhite,
-            focusedBorderColor = EqListColors.PrimaryIndigo,
-            unfocusedBorderColor = Color.Transparent,
-            focusedTextColor = EqListColors.TextDark,
-            unfocusedTextColor = EqListColors.TextDark
-        )
-    )
+            .height(42.dp),
+        shape = RoundedCornerShape(13.dp),
+        color = EqListColors.ModernBg
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    color = EqListColors.TextMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(1.dp))
+
+                Text(
+                    text = value,
+                    color = EqListColors.TextDark,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+        }
+    }
 }
 
 @Composable
@@ -420,24 +526,27 @@ private fun ModernEquipmentCard(
     val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
     val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
     val stockStatus = getStockStatus(equipment.availableQuantity, equipment.totalQuantity)
-
+    val isActuallyBorrowable =
+        equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                4.dp,
-                RoundedCornerShape(20.dp),
+                elevation = 4.dp,
+                shape = RoundedCornerShape(22.dp),
                 spotColor = Color.Black.copy(alpha = 0.05f)
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = EqListColors.CardWhite)
+            )
+            .clickable { onViewDetailsClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = EqListColors.CardWhite),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(13.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(
                     modifier = Modifier
                         .size(90.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(18.dp))
                         .background(EqListColors.ModernBg)
                 ) {
                     if (hasImageUrl) {
@@ -453,22 +562,33 @@ private fun ModernEquipmentCard(
                         Image(
                             painter = painterResource(id = localImageResId),
                             contentDescription = equipment.name,
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(8.dp)
+                                .padding(10.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = equipment.name.ifBlank { "Unnamed Equipment" },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = EqListColors.TextDark,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Text(
+                        text = equipment.category.ifBlank { "General" },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = EqListColors.PrimaryPurple,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -482,32 +602,33 @@ private fun ModernEquipmentCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        ModernEqBadge(
-                            text = stockStatus,
-                            isSuccess = stockStatus == "In Stock" || stockStatus == "Available",
-                            isWarning = stockStatus == "Low Stock"
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        ModernEqBadge(
-                            text = if (equipment.isBorrowable) "Borrowable" else "Lab Use",
-                            isSuccess = equipment.isBorrowable,
-                            isWarning = false
-                        )
-                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(9.dp))
 
-            HorizontalDivider(color = EqListColors.ModernBg)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ModernEqBadge(
+                    text = stockStatus,
+                    isSuccess = stockStatus == "In Stock" || stockStatus == "Available",
+                    isWarning = stockStatus == "Low Stock"
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                ModernEqBadge(
+                    text = if (isActuallyBorrowable) "Borrowable" else "Lab Use Only",
+                    isSuccess = isActuallyBorrowable,
+                    isWarning = false
+                )
+            }
+
+            Spacer(modifier = Modifier.height(9.dp))
+
+            HorizontalDivider(color = EqListColors.BorderSoft.copy(alpha = 0.8f))
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -516,15 +637,17 @@ private fun ModernEquipmentCard(
             ) {
                 Column {
                     Text(
-                        text = "Available Qty",
+                        text = "Available Quantity",
                         style = MaterialTheme.typography.labelSmall,
                         color = EqListColors.TextMuted,
                         fontWeight = FontWeight.Bold
                     )
 
+                    Spacer(modifier = Modifier.height(2.dp))
+
                     Text(
                         text = "${equipment.availableQuantity} / ${equipment.totalQuantity}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = EqListColors.TextDark,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -532,12 +655,12 @@ private fun ModernEquipmentCard(
 
                 Button(
                     onClick = onViewDetailsClick,
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(13.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = EqListColors.PrimaryIndigoLight,
-                        contentColor = EqListColors.PrimaryIndigo
+                        containerColor = EqListColors.PrimaryIndigo,
+                        contentColor = Color.White
                     ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = "View Details",
@@ -570,15 +693,54 @@ private fun ModernEqBadge(
 
     Surface(
         color = bgColor,
-        shape = RoundedCornerShape(6.dp)
+        shape = RoundedCornerShape(999.dp)
     ) {
         Text(
             text = text,
             color = textColor,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun EmptyEquipmentState(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = EqListColors.CardWhite),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 34.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No equipment found",
+                    color = EqListColors.TextDark,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Try changing your search text or filters.",
+                    color = EqListColors.TextMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }
 

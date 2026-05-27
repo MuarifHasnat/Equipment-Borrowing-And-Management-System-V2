@@ -15,12 +15,16 @@ class RequestRepository {
         roomId: String,
         userId: String,
         userName: String,
+        userEmail: String,
+        studentId: String,
+        department: String,
         equipmentId: String,
         equipmentName: String,
         equipmentCategory: String,
         equipmentImageName: String,
         equipmentImageUrl: String,
         quantity: Int,
+        purpose: String,
         borrowDate: String,
         dueDate: String,
         onResult: (Boolean, String) -> Unit
@@ -94,13 +98,17 @@ class RequestRepository {
                             institutionId = institutionId,
                             roomId = roomId,
                             userId = userId,
-                            userName = userName,
+                            userName = userName.trim(),
+                            userEmail = userEmail.trim(),
+                            studentId = studentId.trim(),
+                            department = department.trim(),
                             equipmentId = equipmentId,
                             equipmentName = equipmentName,
                             equipmentCategory = equipmentCategory,
                             equipmentImageName = equipmentImageName.trim(),
                             equipmentImageUrl = equipmentImageUrl.trim(),
                             quantity = quantity,
+                            purpose = purpose.trim(),
                             borrowDate = borrowDate,
                             dueDate = dueDate,
                             returnedDate = "",
@@ -182,12 +190,23 @@ class RequestRepository {
 
                 val activeBorrowedList = allList
                     .map { normalizeRequestStatus(it) }
-                    .filter {
-                        it.status.equals("Approved", ignoreCase = true) ||
-                                it.status.equals("Issued", ignoreCase = true) ||
-                                it.status.equals("Overdue", ignoreCase = true)
-                    }
+                    .filter { request ->
+                        val status = request.status.trim().lowercase()
+                        val fineStatus = request.fineStatus.trim().lowercase()
 
+                        val isActiveRequest =
+                            status == "approved" ||
+                                    status == "issued" ||
+                                    status == "overdue"
+
+                        val isLostOrDamagedWithPendingFine =
+                            (status == "lost" || status == "damaged") &&
+                                    request.fineAmount > 0 &&
+                                    fineStatus != "paid" &&
+                                    fineStatus != "waived"
+
+                        isActiveRequest || isLostOrDamagedWithPendingFine
+                    }
                 onResult(
                     activeBorrowedList.sortedWith(
                         compareBy<BorrowRequest> { requestStatusOrder(it.status) }
@@ -911,7 +930,9 @@ class RequestRepository {
             "approved" -> 0
             "issued" -> 1
             "overdue" -> 2
-            else -> 3
+            "damaged" -> 3
+            "lost" -> 4
+            else -> 5
         }
     }
 

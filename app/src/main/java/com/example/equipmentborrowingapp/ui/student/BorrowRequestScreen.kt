@@ -62,7 +62,7 @@ private object BorrowColors {
 @Composable
 fun BorrowRequestScreen(
     equipment: Equipment,
-    onSubmitClick: (Int, String, String) -> Unit,
+    onSubmitClick: (Int, String, String, String) -> Unit,
     onBackClick: () -> Unit
 ) {
     var quantityText by remember { mutableStateOf("1") }
@@ -409,7 +409,12 @@ fun BorrowRequestScreen(
                         errorMessage = validationMessage
                     } else {
                         errorMessage = ""
-                        onSubmitClick(quantity ?: 1, borrowDate.trim(), dueDate.trim())
+                        onSubmitClick(
+                            quantity ?: 1,
+                            borrowDate.trim(),
+                            dueDate.trim(),
+                            purpose.trim()
+                        )
                     }
                 },
                 enabled = canSubmit,

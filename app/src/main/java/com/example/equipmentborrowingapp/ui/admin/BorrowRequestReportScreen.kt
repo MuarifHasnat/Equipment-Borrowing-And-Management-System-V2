@@ -5,6 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,13 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,37 +32,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
-
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
+import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 private object RequestReportColors {
     val Background = Color(0xFFF4F7FB)
     val CardWhite = Color.White
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
-
     val PrimaryIndigo = Color(0xFF4F46E5)
     val PurpleAccent = Color(0xFF7C3AED)
-
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
-
     val GreenLight = Color(0xFFF0FDF4)
     val GreenText = Color(0xFF16A34A)
-
     val OrangeLight = Color(0xFFFFF7ED)
     val OrangeText = Color(0xFFEA580C)
-
     val RedLight = Color(0xFFFEF2F2)
     val RedText = Color(0xFFDC2626)
-
     val PurpleLight = Color(0xFFF5F3FF)
     val PurpleText = Color(0xFF7C3AED)
-
     val GrayLight = Color(0xFFF1F5F9)
     val GrayText = Color(0xFF475569)
 }
@@ -81,6 +79,8 @@ fun BorrowRequestReportScreen(
     var searchText by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf(fixedStatus) }
 
+    val isLostDamagedReport = fixedStatus.equals("Lost/Damaged", ignoreCase = true)
+
     val statusFilters = listOf(
         "All",
         "Pending",
@@ -97,11 +97,9 @@ fun BorrowRequestReportScreen(
     val baseList = requestList.filter { request ->
         when {
             fixedStatus.equals("All", ignoreCase = true) -> true
-
-            fixedStatus.equals("Lost/Damaged", ignoreCase = true) -> {
+            fixedStatus.equals("Lost/Damaged", ignoreCase = true) ->
                 request.status.equals("Lost", ignoreCase = true) ||
                         request.status.equals("Damaged", ignoreCase = true)
-            }
 
             else -> request.status.equals(fixedStatus, ignoreCase = true)
         }
@@ -118,7 +116,8 @@ fun BorrowRequestReportScreen(
                     request.department.lowercase().contains(query) ||
                     request.equipmentName.lowercase().contains(query) ||
                     request.equipmentCategory.lowercase().contains(query) ||
-                    request.status.lowercase().contains(query)
+                    request.status.lowercase().contains(query) ||
+                    request.fineReason.lowercase().contains(query)
 
         val matchesStatus =
             fixedStatus != "All" ||
@@ -130,25 +129,18 @@ fun BorrowRequestReportScreen(
 
     val totalQty = filteredList.sumOf { it.quantity }
     val totalFineAmount = filteredList.sumOf { it.fineAmount }
-
     val pendingFineAmount = filteredList
-        .filter { it.fineStatus.equals("Pending", ignoreCase = true) }
+        .filter {
+            it.fineAmount > 0 &&
+                    !it.fineStatus.equals("Paid", ignoreCase = true) &&
+                    !it.fineStatus.equals("Waived", ignoreCase = true)
+        }
         .sumOf { it.fineAmount }
 
-    val paidFineAmount = filteredList
-        .filter { it.fineStatus.equals("Paid", ignoreCase = true) }
-        .sumOf { it.fineAmount }
-
-    val finedRequestCount = filteredList.count { it.fineAmount > 0 }
-    val pendingCount = requestList.count { it.status.equals("Pending", ignoreCase = true) }
-    val approvedCount = requestList.count { it.status.equals("Approved", ignoreCase = true) }
-    val issuedCount = requestList.count { it.status.equals("Issued", ignoreCase = true) }
-    val returnedCount = requestList.count { it.status.equals("Returned", ignoreCase = true) }
-    val overdueCount = requestList.count { it.status.equals("Overdue", ignoreCase = true) }
-    val lostDamagedCount = requestList.count {
-        it.status.equals("Lost", ignoreCase = true) ||
-                it.status.equals("Damaged", ignoreCase = true)
-    }
+    val issuedCount = filteredList.count { it.status.equals("Issued", ignoreCase = true) }
+    val overdueCount = filteredList.count { it.status.equals("Overdue", ignoreCase = true) }
+    val lostCount = filteredList.count { it.status.equals("Lost", ignoreCase = true) }
+    val damagedCount = filteredList.count { it.status.equals("Damaged", ignoreCase = true) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -157,96 +149,50 @@ fun BorrowRequestReportScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
             BorrowReportHeroCard(
                 title = title,
                 subtitle = subtitle,
-                totalRecords = filteredList.size
+                totalRecords = filteredList.size,
+                totalFineAmount = totalFineAmount,
+                onBackClick = onBackClick
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                BorrowReportStatCard(
-                    title = "Records",
-                    value = filteredList.size.toString(),
-                    bgColor = RequestReportColors.BlueLight,
-                    textColor = RequestReportColors.BlueText,
-                    modifier = Modifier.weight(1f)
-                )
+            CompactSummaryGrid(
+                records = filteredList.size,
+                totalQty = totalQty,
+                firstTitle = if (isLostDamagedReport) "Lost" else "Issued",
+                firstValue = if (isLostDamagedReport) lostCount.toString() else issuedCount.toString(),
+                firstBg = if (isLostDamagedReport) RequestReportColors.RedLight else RequestReportColors.PurpleLight,
+                firstText = if (isLostDamagedReport) RequestReportColors.RedText else RequestReportColors.PurpleText,
+                secondTitle = if (isLostDamagedReport) "Damaged" else "Overdue",
+                secondValue = if (isLostDamagedReport) damagedCount.toString() else overdueCount.toString(),
+                secondBg = if (isLostDamagedReport) RequestReportColors.OrangeLight else RequestReportColors.RedLight,
+                secondText = if (isLostDamagedReport) RequestReportColors.OrangeText else RequestReportColors.RedText,
+                totalFine = totalFineAmount,
+                pendingFine = pendingFineAmount
+            )
 
-                BorrowReportStatCard(
-                    title = "Total Qty",
-                    value = totalQty.toString(),
-                    bgColor = RequestReportColors.PurpleLight,
-                    textColor = RequestReportColors.PurpleText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                BorrowReportStatCard(
-                    title = "Issued",
-                    value = issuedCount.toString(),
-                    bgColor = RequestReportColors.PurpleLight,
-                    textColor = RequestReportColors.PurpleText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                BorrowReportStatCard(
-                    title = "Overdue",
-                    value = overdueCount.toString(),
-                    bgColor = RequestReportColors.RedLight,
-                    textColor = RequestReportColors.RedText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                BorrowReportStatCard(
-                    title = "Total Fine",
-                    value = "$totalFineAmount Tk",
-                    bgColor = RequestReportColors.RedLight,
-                    textColor = RequestReportColors.RedText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                BorrowReportStatCard(
-                    title = "Pending Fine",
-                    value = "$pendingFineAmount Tk",
-                    bgColor = RequestReportColors.OrangeLight,
-                    textColor = RequestReportColors.OrangeText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 label = {
-                    Text("Search student, ID, department, equipment or status")
+                    Text("Search")
                 }
             )
 
-            if (fixedStatus == "All") {
-                Spacer(modifier = Modifier.height(12.dp))
+            if (fixedStatus.equals("All", ignoreCase = true)) {
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier
@@ -258,49 +204,53 @@ fun BorrowRequestReportScreen(
                         BorrowReportFilterChip(
                             text = status,
                             selected = selectedStatus == status,
-                            onClick = {
-                                selectedStatus = status
-                            }
+                            onClick = { selectedStatus = status }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = RequestReportColors.TextDark
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = RequestReportColors.TextDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-            Text(
-                text = "Showing ${filteredList.size} record(s)",
-                style = MaterialTheme.typography.bodySmall,
-                color = RequestReportColors.TextMuted
-            )
+                Text(
+                    text = "${filteredList.size} record(s)",
+                    color = RequestReportColors.TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (filteredList.isEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = RequestReportColors.CardWhite),
                     elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No request report found for selected search/filter.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "No data found",
                             color = RequestReportColors.TextMuted
                         )
                     }
@@ -308,7 +258,8 @@ fun BorrowRequestReportScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
                     items(filteredList) { request ->
                         BorrowRequestReportCard(
@@ -323,21 +274,6 @@ fun BorrowRequestReportScreen(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(
-                    text = "Back to Reports",
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
@@ -346,11 +282,14 @@ fun BorrowRequestReportScreen(
 private fun BorrowReportHeroCard(
     title: String,
     subtitle: String,
-    totalRecords: Int
+    totalRecords: Int,
+    totalFineAmount: Int,
+    onBackClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(118.dp)
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
@@ -358,82 +297,141 @@ private fun BorrowReportHeroCard(
                         RequestReportColors.PurpleAccent
                     )
                 ),
-                shape = RoundedCornerShape(28.dp)
+                shape = RoundedCornerShape(24.dp)
             )
-            .padding(22.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Column {
-            Surface(
-                color = Color.White.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(50.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Button(
+                    onClick = onBackClick,
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.18f),
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                    modifier = Modifier.height(42.dp)
+                ) {
+                    Text(
+                        text = "Back",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
                 Text(
-                    text = "Borrow Report",
+                    text = "$totalRecords records",
+                    modifier = Modifier
+                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(50.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     color = Color.White,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = title,
                 color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = "$subtitle • $totalRecords record(s)",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyMedium
+                text = "$subtitle • Fine: $totalFineAmount Tk",
+                color = Color.White.copy(alpha = 0.86f),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 @Composable
-private fun BorrowReportStatCard(
+private fun CompactSummaryGrid(
+    records: Int,
+    totalQty: Int,
+    firstTitle: String,
+    firstValue: String,
+    firstBg: Color,
+    firstText: Color,
+    secondTitle: String,
+    secondValue: String,
+    secondBg: Color,
+    secondText: Color,
+    totalFine: Int,
+    pendingFine: Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(108.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = RequestReportColors.CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TinyStat("Records", records.toString(), RequestReportColors.BlueLight, RequestReportColors.BlueText, Modifier.weight(1f))
+                TinyStat("Qty", totalQty.toString(), RequestReportColors.PurpleLight, RequestReportColors.PurpleText, Modifier.weight(1f))
+                TinyStat(firstTitle, firstValue, firstBg, firstText, Modifier.weight(1f))
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TinyStat(secondTitle, secondValue, secondBg, secondText, Modifier.weight(1f))
+                TinyStat("Fine", "$totalFine Tk", RequestReportColors.RedLight, RequestReportColors.RedText, Modifier.weight(1f))
+                TinyStat("Pending", "$pendingFine Tk", RequestReportColors.OrangeLight, RequestReportColors.OrangeText, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TinyStat(
     title: String,
     value: String,
     bgColor: Color,
     textColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.height(88.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = RequestReportColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    Surface(
+        modifier = modifier.height(42.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = RequestReportColors.TextMuted,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.75f),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
 
             Text(
                 text = value,
-                modifier = Modifier
-                    .background(
-                        color = bgColor,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = textColor,
-                fontWeight = FontWeight.ExtraBold
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -445,134 +443,125 @@ private fun BorrowRequestReportCard(
     onFinePaidClick: () -> Unit,
     onFineWaivedClick: () -> Unit
 ) {
-    val statusColor = statusTextColor(request.status)
-    val statusBg = statusBackgroundColor(request.status)
+    val status = request.status.ifBlank { "Pending" }
+    val statusColor = statusTextColor(status)
+    val statusBg = statusBackgroundColor(status)
+    val fineStatus = request.fineStatus.trim().ifBlank { "Pending" }
+    val hasPendingFine = request.fineAmount > 0 &&
+            !fineStatus.equals("Paid", ignoreCase = true) &&
+            !fineStatus.equals("Waived", ignoreCase = true)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = RequestReportColors.CardWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
+                val fallbackImageResId = EquipmentImageMapper.getImageRes(request.equipmentImageName)
+                val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(request.equipmentImageUrl)
+                val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(request.equipmentImageUrl)
+
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(RequestReportColors.GrayLight, RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (hasImageUrl) {
+                        AsyncImage(
+                            model = safeImageUrl,
+                            contentDescription = request.equipmentName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentScale = ContentScale.Fit,
+                            error = painterResource(id = fallbackImageResId),
+                            placeholder = painterResource(id = fallbackImageResId)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = fallbackImageResId),
+                            contentDescription = request.equipmentName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(5.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = request.equipmentName.ifBlank { "Unknown Equipment" },
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.ExtraBold,
-                        color = RequestReportColors.TextDark
+                        color = RequestReportColors.TextDark,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     Text(
-                        text = request.equipmentCategory.ifBlank { "No category" },
+                        text = "${request.userName.ifBlank { "Unknown Student" }} • Qty: ${request.quantity}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = RequestReportColors.TextMuted
+                        color = RequestReportColors.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 Text(
-                    text = request.status.ifBlank { "Pending" },
+                    text = status,
                     modifier = Modifier
-                        .background(
-                            color = statusBg,
-                            shape = RoundedCornerShape(50.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                        .background(statusBg, RoundedCornerShape(50.dp))
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = statusColor
                 )
             }
 
-            HorizontalDivider(color = RequestReportColors.Background)
-
-            BorrowReportInfoRow(
-                label = "Student",
-                value = request.userName.ifBlank { "Unknown Student" }
-            )
-
-            BorrowReportInfoRow(
-                label = "Email",
-                value = request.userEmail.ifBlank { "N/A" }
-            )
-
-            BorrowReportInfoRow(
-                label = "Student ID",
-                value = request.studentId.ifBlank { "N/A" }
-            )
-
-            BorrowReportInfoRow(
-                label = "Department",
-                value = request.department.ifBlank { "N/A" }
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                BorrowSmallBadge(
-                    text = "Qty: ${request.quantity}",
-                    bgColor = RequestReportColors.BlueLight,
-                    textColor = RequestReportColors.BlueText,
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SmallInfoBox(
+                    title = "Borrow",
+                    value = request.borrowDate.ifBlank { "N/A" },
                     modifier = Modifier.weight(1f)
                 )
-
-                BorrowSmallBadge(
-                    text = "Due: ${request.dueDate.ifBlank { "N/A" }}",
-                    bgColor = if (request.status.equals("Overdue", ignoreCase = true)) {
-                        RequestReportColors.RedLight
-                    } else {
-                        RequestReportColors.GrayLight
-                    },
-                    textColor = if (request.status.equals("Overdue", ignoreCase = true)) {
-                        RequestReportColors.RedText
-                    } else {
-                        RequestReportColors.GrayText
-                    },
+                SmallInfoBox(
+                    title = "Due",
+                    value = request.dueDate.ifBlank { "N/A" },
                     modifier = Modifier.weight(1f)
-                )
-            }
-
-            BorrowReportInfoRow(
-                label = "Borrow Date",
-                value = request.borrowDate.ifBlank { "N/A" }
-            )
-
-            if (request.returnedDate.isNotBlank()) {
-                BorrowReportInfoRow(
-                    label = "Returned Date",
-                    value = request.returnedDate
-                )
-            }
-
-            if (request.rejectedReason.isNotBlank()) {
-                BorrowReportMessageBox(
-                    message = "Rejected Reason: ${request.rejectedReason}",
-                    bgColor = RequestReportColors.RedLight,
-                    textColor = RequestReportColors.RedText
                 )
             }
 
             if (request.returnCondition.isNotBlank()) {
-                BorrowReportMessageBox(
-                    message = "Return Condition: ${request.returnCondition}",
-                    bgColor = RequestReportColors.GreenLight,
-                    textColor = RequestReportColors.GreenText
+                MessagePill(
+                    text = "Return: ${request.returnCondition}",
+                    bgColor = when (request.returnCondition.lowercase()) {
+                        "damaged" -> RequestReportColors.OrangeLight
+                        "lost" -> RequestReportColors.RedLight
+                        else -> RequestReportColors.GreenLight
+                    },
+                    textColor = when (request.returnCondition.lowercase()) {
+                        "damaged" -> RequestReportColors.OrangeText
+                        "lost" -> RequestReportColors.RedText
+                        else -> RequestReportColors.GreenText
+                    }
                 )
             }
-            if (request.fineAmount > 0) {
-                val fineStatus = request.fineStatus.ifBlank { "Pending" }
 
-                BorrowReportMessageBox(
-                    message = "Fine: ${request.fineAmount} Tk • Status: $fineStatus",
+            if (request.fineAmount > 0) {
+                MessagePill(
+                    text = "Fine: ${request.fineAmount} Tk • $fineStatus",
                     bgColor = when (fineStatus.lowercase()) {
                         "paid" -> RequestReportColors.GreenLight
                         "waived" -> RequestReportColors.BlueLight
@@ -586,36 +575,43 @@ private fun BorrowRequestReportCard(
                 )
 
                 if (request.fineReason.isNotBlank()) {
-                    BorrowReportMessageBox(
-                        message = "Fine Reason: ${request.fineReason}",
-                        bgColor = RequestReportColors.OrangeLight,
-                        textColor = RequestReportColors.OrangeText
+                    Text(
+                        text = "Reason: ${request.fineReason}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = RequestReportColors.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                if (fineStatus.equals("Pending", ignoreCase = true)) {
+                if (hasPendingFine) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(
+                        Button(
                             onClick = onFinePaidClick,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = RequestReportColors.GreenText
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RequestReportColors.GreenText,
+                                contentColor = Color.White
                             )
                         ) {
                             Text(
-                                text = "Mark Paid",
+                                text = "Paid",
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         OutlinedButton(
                             onClick = onFineWaivedClick,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = RequestReportColors.BlueText
                             )
@@ -628,83 +624,61 @@ private fun BorrowRequestReportCard(
                     }
                 }
             }
-            if (request.adminNote.isNotBlank()) {
-                BorrowReportMessageBox(
-                    message = "Admin Note: ${request.adminNote}",
-                    bgColor = RequestReportColors.GrayLight,
-                    textColor = RequestReportColors.GrayText
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun BorrowReportInfoRow(
-    label: String,
-    value: String
+private fun SmallInfoBox(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = modifier.height(40.dp),
+        color = RequestReportColors.GrayLight,
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Text(
-            text = "$label:",
-            modifier = Modifier.weight(0.38f),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = RequestReportColors.TextMuted
-        )
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = RequestReportColors.TextMuted,
+                fontWeight = FontWeight.Bold
+            )
 
-        Text(
-            text = value.ifBlank { "N/A" },
-            modifier = Modifier.weight(0.62f),
-            style = MaterialTheme.typography.bodySmall,
-            color = RequestReportColors.TextDark,
-            fontWeight = FontWeight.Medium
-        )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                color = RequestReportColors.TextDark,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Composable
-private fun BorrowSmallBadge(
+private fun MessagePill(
     text: String,
-    bgColor: Color,
-    textColor: Color,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = text,
-        modifier = modifier
-            .background(
-                color = bgColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = textColor
-    )
-}
-
-@Composable
-private fun BorrowReportMessageBox(
-    message: String,
     bgColor: Color,
     textColor: Color
 ) {
     Text(
-        text = message,
+        text = text,
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                color = bgColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(10.dp),
+            .background(bgColor, RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
         style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = textColor
+        fontWeight = FontWeight.Bold,
+        color = textColor,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }
 
@@ -719,16 +693,20 @@ private fun BorrowReportFilterChip(
             onClick = onClick,
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = RequestReportColors.BlueText,
+                containerColor = RequestReportColors.PrimaryIndigo,
                 contentColor = Color.White
-            )
+            ),
+            modifier = Modifier.height(32.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
             Text(text)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50.dp)
+            shape = RoundedCornerShape(50.dp),
+            modifier = Modifier.height(32.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
             Text(text)
         }

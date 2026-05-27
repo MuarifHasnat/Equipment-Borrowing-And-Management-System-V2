@@ -2,6 +2,8 @@ package com.example.equipmentborrowingapp.ui.admin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,18 +24,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -54,13 +59,12 @@ import com.example.equipmentborrowingapp.data.model.Equipment
 import com.example.equipmentborrowingapp.data.model.Room
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
 
-private object ManageColors {
-    val ModernBg = Color(0xFFF4F7FB)
-    val CardWhite = Color(0xFFFFFFFF)
+private object ManageEquipColors {
+    val Bg = Color(0xFFF4F7FB)
+    val Card = Color.White
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
-    val PrimaryIndigo = Color(0xFF4F46E5)
-    val PrimaryIndigoLight = Color(0xFFE0E7FF)
+    val Primary = Color(0xFF4F46E5)
 
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
@@ -76,86 +80,9 @@ private object ManageColors {
 
     val PurpleLight = Color(0xFFF5F3FF)
     val PurpleText = Color(0xFF7C3AED)
-}
 
-private fun getStockBadgeColors(
-    available: Int,
-    total: Int
-): Pair<Color, Color> {
-    return when {
-        total <= 0 -> Pair(Color(0xFFF1F5F9), Color(0xFF64748B))
-        available <= 0 -> Pair(ManageColors.RedLight, ManageColors.RedText)
-        available <= 2 -> Pair(ManageColors.OrangeLight, ManageColors.OrangeText)
-        else -> Pair(ManageColors.GreenLight, ManageColors.GreenText)
-    }
-}
-
-private fun getStockText(
-    available: Int,
-    total: Int
-): String {
-    return when {
-        total <= 0 -> "No Stock Data"
-        available <= 0 -> "Out of Stock"
-        available <= 2 -> "Low Stock"
-        else -> "Available"
-    }
-}
-
-@Composable
-private fun StatusBadge(
-    text: String,
-    bgColor: Color,
-    textColor: Color
-) {
-    Surface(
-        color = bgColor,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.padding(end = 8.dp)
-    ) {
-        Text(
-            text = text,
-            color = textColor,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-        )
-    }
-}
-
-@Composable
-private fun EquipmentCardImage(
-    imageName: String,
-    imageUrl: String,
-    contentDescription: String
-) {
-    val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
-    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
-    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
-
-    val modifier = Modifier
-        .size(90.dp)
-        .clip(RoundedCornerShape(14.dp))
-        .background(ManageColors.ModernBg)
-
-    if (hasImageUrl) {
-        AsyncImage(
-            model = safeImageUrl,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = fallbackImageResId),
-            error = painterResource(id = fallbackImageResId),
-            fallback = painterResource(id = fallbackImageResId),
-            modifier = modifier
-        )
-    } else {
-        Image(
-            painter = painterResource(id = fallbackImageResId),
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            modifier = modifier.padding(8.dp)
-        )
-    }
+    val GrayLight = Color(0xFFF1F5F9)
+    val GrayText = Color(0xFF475569)
 }
 
 @Composable
@@ -185,19 +112,8 @@ fun ManageEquipmentScreen(
     }
 
     val roomFilterList = remember(roomList, equipmentList) {
-        val knownRooms = roomList
-            .filter { it.id.isNotBlank() }
-            .sortedBy { it.name.lowercase() }
-
-        val unknownRoomIds = equipmentList
-            .map { it.roomId }
-            .filter { it.isNotBlank() && roomById[it] == null }
-            .distinct()
-            .sorted()
-
-        listOf("All" to "All Rooms") +
-                knownRooms.map { it.id to it.name.ifBlank { "Unnamed Room" } } +
-                unknownRoomIds.map { it to "Unknown Room: $it" }
+        val usedRoomIds = equipmentList.map { it.roomId }.filter { it.isNotBlank() }.distinct()
+        listOf("All") + roomList.filter { it.id in usedRoomIds }.map { it.id }
     }
 
     val filteredEquipment = equipmentList
@@ -210,9 +126,6 @@ fun ManageEquipmentScreen(
                         equipment.name.lowercase().contains(query) ||
                         equipment.category.lowercase().contains(query) ||
                         equipment.condition.lowercase().contains(query) ||
-                        equipment.description.lowercase().contains(query) ||
-                        equipment.assetTag.lowercase().contains(query) ||
-                        equipment.serialNumber.lowercase().contains(query) ||
                         room?.name.orEmpty().lowercase().contains(query) ||
                         room?.department.orEmpty().lowercase().contains(query) ||
                         room?.building.orEmpty().lowercase().contains(query)
@@ -227,319 +140,197 @@ fun ManageEquipmentScreen(
             val matchesStock = when (selectedStock) {
                 "Available" -> equipment.availableQuantity > 2
                 "Low Stock" -> equipment.availableQuantity in 1..2
-                "Out of Stock" -> equipment.availableQuantity == 0
+                "Out of Stock" -> equipment.availableQuantity <= 0
                 else -> true
             }
+
+            val isActuallyBorrowable =
+                equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
 
             val matchesBorrowType = when (selectedBorrowType) {
-                "Borrowable" -> equipment.isBorrowable
-                "Lab-use-only" -> !equipment.isBorrowable
+                "Borrowable" -> isActuallyBorrowable
+                "Lab-use-only" -> !isActuallyBorrowable
                 else -> true
             }
 
-            matchesSearch &&
-                    matchesRoom &&
-                    matchesCategory &&
-                    matchesStock &&
-                    matchesBorrowType
+            matchesSearch && matchesRoom && matchesCategory && matchesStock && matchesBorrowType
         }
         .let { list ->
             when (selectedSort) {
                 "Name Z-A" -> list.sortedByDescending { it.name.lowercase() }
-
-                "Available Low-High" -> list.sortedWith(
-                    compareBy<Equipment> { it.availableQuantity }
-                        .thenBy { it.name.lowercase() }
-                )
-
-                "Available High-Low" -> list.sortedWith(
-                    compareByDescending<Equipment> { it.availableQuantity }
-                        .thenBy { it.name.lowercase() }
-                )
-
-                "Total Qty High-Low" -> list.sortedWith(
-                    compareByDescending<Equipment> { it.totalQuantity }
-                        .thenBy { it.name.lowercase() }
-                )
-
+                "Category A-Z" -> list.sortedBy { it.category.lowercase() }
+                "Stock Low-High" -> list.sortedBy { it.availableQuantity }
+                "Stock High-Low" -> list.sortedByDescending { it.availableQuantity }
                 else -> list.sortedBy { it.name.lowercase() }
             }
         }
 
-    val totalEquipment = equipmentList.size
     val availableCount = equipmentList.count { it.availableQuantity > 0 }
     val lowStockCount = equipmentList.count { it.availableQuantity in 1..2 }
-    val outOfStockCount = equipmentList.count { it.availableQuantity == 0 }
+    val outOfStockCount = equipmentList.count { it.availableQuantity <= 0 }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = ManageColors.ModernBg
+        color = ManageEquipColors.Bg
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier
-                        .background(ManageColors.CardWhite, RoundedCornerShape(12.dp))
-                        .shadow(
-                            elevation = 2.dp,
-                            shape = RoundedCornerShape(12.dp),
-                            spotColor = Color.Black.copy(alpha = 0.05f)
-                        )
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = ManageColors.TextDark
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        text = "Manage Equipment",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = ManageColors.TextDark,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-
-                    Text(
-                        text = "Search, filter, sort and edit inventory",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ManageColors.TextMuted
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                SmallInventoryStatCard(
-                    title = "Total",
-                    value = totalEquipment.toString(),
-                    bgColor = ManageColors.BlueLight,
-                    textColor = ManageColors.BlueText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                SmallInventoryStatCard(
-                    title = "Available",
-                    value = availableCount.toString(),
-                    bgColor = ManageColors.GreenLight,
-                    textColor = ManageColors.GreenText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                SmallInventoryStatCard(
-                    title = "Low Stock",
-                    value = lowStockCount.toString(),
-                    bgColor = ManageColors.OrangeLight,
-                    textColor = ManageColors.OrangeText,
-                    modifier = Modifier.weight(1f)
-                )
-
-                SmallInventoryStatCard(
-                    title = "Out Stock",
-                    value = outOfStockCount.toString(),
-                    bgColor = ManageColors.RedLight,
-                    textColor = ManageColors.RedText,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = { searchText = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                label = {
-                    Text("Search equipment, category, room, asset or serial")
-                }
+            ManageEquipmentTopBar(
+                totalCount = equipmentList.size,
+                onBackClick = onBackClick
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FilterSectionTitle("Room / Lab")
-
-            HorizontalFilterRow {
-                roomFilterList.forEach { roomFilter ->
-                    InventoryFilterChip(
-                        text = roomFilter.second,
-                        selected = selectedRoomId == roomFilter.first,
-                        onClick = {
-                            selectedRoomId = roomFilter.first
-                        }
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(10.dp))
 
-            FilterSectionTitle("Category")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EquipmentMiniStat(
+                    title = "Available",
+                    value = availableCount.toString(),
+                    bgColor = ManageEquipColors.GreenLight,
+                    textColor = ManageEquipColors.GreenText,
+                    modifier = Modifier.weight(1f)
+                )
 
-            HorizontalFilterRow {
-                categoryList.forEach { category ->
-                    InventoryFilterChip(
-                        text = category,
-                        selected = selectedCategory == category,
-                        onClick = {
-                            selectedCategory = category
-                        }
-                    )
-                }
+                EquipmentMiniStat(
+                    title = "Low",
+                    value = lowStockCount.toString(),
+                    bgColor = ManageEquipColors.OrangeLight,
+                    textColor = ManageEquipColors.OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                EquipmentMiniStat(
+                    title = "Out",
+                    value = outOfStockCount.toString(),
+                    bgColor = ManageEquipColors.RedLight,
+                    textColor = ManageEquipColors.RedText,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            FilterSectionTitle("Stock")
-
-            HorizontalFilterRow {
-                listOf(
-                    "All",
-                    "Available",
-                    "Low Stock",
-                    "Out of Stock"
-                ).forEach { stock ->
-                    InventoryFilterChip(
-                        text = stock,
-                        selected = selectedStock == stock,
-                        onClick = {
-                            selectedStock = stock
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            FilterSectionTitle("Borrow Type")
-
-            HorizontalFilterRow {
-                listOf(
-                    "All",
-                    "Borrowable",
-                    "Lab-use-only"
-                ).forEach { borrowType ->
-                    InventoryFilterChip(
-                        text = borrowType,
-                        selected = selectedBorrowType == borrowType,
-                        onClick = {
-                            selectedBorrowType = borrowType
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            FilterSectionTitle("Sort")
-
-            HorizontalFilterRow {
-                listOf(
-                    "Name A-Z",
-                    "Name Z-A",
-                    "Available Low-High",
-                    "Available High-Low",
-                    "Total Qty High-Low"
-                ).forEach { sort ->
-                    InventoryFilterChip(
-                        text = sort,
-                        selected = selectedSort == sort,
-                        onClick = {
-                            selectedSort = sort
-                        }
-                    )
-                }
-            }
-
-            if (
-                searchText.isNotBlank() ||
-                selectedRoomId != "All" ||
-                selectedCategory != "All" ||
-                selectedStock != "All" ||
-                selectedBorrowType != "All" ||
-                selectedSort != "Name A-Z"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.height(10.dp))
+                CompactEquipmentSearchBox(
+                    value = searchText,
+                    onValueChange = { searchText = it },
+                    modifier = Modifier.weight(1.35f)
+                )
 
-                OutlinedButton(
-                    onClick = {
-                        searchText = ""
-                        selectedRoomId = "All"
-                        selectedCategory = "All"
-                        selectedStock = "All"
-                        selectedBorrowType = "All"
-                        selectedSort = "Name A-Z"
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text("Clear Search, Filters and Sort")
-                }
+                CompactEquipmentDropdown(
+                    label = "Stock",
+                    selectedText = selectedStock,
+                    options = listOf("All", "Available", "Low Stock", "Out of Stock"),
+                    onOptionSelected = { selectedStock = it },
+                    modifier = Modifier.weight(1f)
+                )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactEquipmentDropdown(
+                    label = "Category",
+                    selectedText = selectedCategory,
+                    options = categoryList,
+                    onOptionSelected = { selectedCategory = it },
+                    modifier = Modifier.weight(1f)
+                )
+
+                CompactEquipmentDropdown(
+                    label = "Room",
+                    selectedText = if (selectedRoomId == "All") "All Rooms" else roomById[selectedRoomId]?.name ?: "Unknown",
+                    options = roomFilterList.map { roomId ->
+                        if (roomId == "All") "All Rooms" else roomById[roomId]?.name ?: "Unknown Room"
+                    },
+                    onOptionSelected = { selectedLabel ->
+                        selectedRoomId = if (selectedLabel == "All Rooms") {
+                            "All"
+                        } else {
+                            roomFilterList.firstOrNull { roomId -> roomById[roomId]?.name == selectedLabel } ?: "All"
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactEquipmentDropdown(
+                    label = "Type",
+                    selectedText = selectedBorrowType,
+                    options = listOf("All", "Borrowable", "Lab-use-only"),
+                    onOptionSelected = { selectedBorrowType = it },
+                    modifier = Modifier.weight(1f)
+                )
+
+                CompactEquipmentDropdown(
+                    label = "Sort",
+                    selectedText = selectedSort,
+                    options = listOf("Name A-Z", "Name Z-A", "Category A-Z", "Stock Low-High", "Stock High-Low"),
+                    onOptionSelected = { selectedSort = it },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Showing ${filteredEquipment.size} of ${equipmentList.size} equipment",
-                style = MaterialTheme.typography.titleMedium,
-                color = ManageColors.TextDark,
+                text = "Showing ${filteredEquipment.size} of ${equipmentList.size} item(s)",
+                color = ManageEquipColors.TextDark,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             if (filteredEquipment.isEmpty()) {
-                Box(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentAlignment = Alignment.Center
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = ManageEquipColors.Card),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    Text(
-                        text = if (equipmentList.isEmpty()) {
-                            "No equipment found."
-                        } else {
-                            "No equipment matches your search/filter."
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = ManageColors.TextMuted
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No equipment found.",
+                            color = ManageEquipColors.TextMuted,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
                     items(filteredEquipment) { equipment ->
-                        ManageEquipmentCard(
+                        EquipmentCard(
                             equipment = equipment,
                             room = roomById[equipment.roomId],
-                            onEditClick = {
-                                onEditClick(equipment)
-                            }
+                            onEditClick = { onEditClick(equipment) }
                         )
                     }
                 }
@@ -549,58 +340,223 @@ fun ManageEquipmentScreen(
 }
 
 @Composable
-private fun SmallInventoryStatCard(
-    title: String,
-    value: String,
-    bgColor: Color,
-    textColor: Color,
-    modifier: Modifier = Modifier
+private fun ManageEquipmentTopBar(
+    totalCount: Int,
+    onBackClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier.height(76.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = ManageColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
+        IconButton(
+            onClick = onBackClick,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .size(42.dp)
+                .background(ManageEquipColors.Card, RoundedCornerShape(14.dp))
         ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = ManageEquipColors.TextDark
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(ManageEquipColors.PurpleLight, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Inventory2,
+                contentDescription = null,
+                tint = ManageEquipColors.Primary,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = ManageColors.TextMuted,
-                fontWeight = FontWeight.Bold
+                text = "Manage Equipment",
+                color = ManageEquipColors.TextDark,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
             )
 
             Text(
-                text = value,
-                modifier = Modifier
-                    .background(
-                        color = bgColor,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = textColor,
-                fontWeight = FontWeight.ExtraBold
+                text = "$totalCount item(s) in inventory",
+                color = ManageEquipColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
 }
 
 @Composable
-private fun FilterSectionTitle(
-    text: String
+private fun EquipmentMiniStat(
+    title: String,
+    value: String,
+    bgColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
 ) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = ManageColors.TextMuted,
-        fontWeight = FontWeight.Bold
-    )
+    Surface(
+        modifier = modifier.height(52.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+        ) {
+            Text(
+                text = title,
+                color = textColor.copy(alpha = 0.75f),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = value,
+                color = textColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactEquipmentSearchBox(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.height(42.dp),
+        color = ManageEquipColors.Card,
+        shape = RoundedCornerShape(14.dp),
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = null,
+                tint = ManageEquipColors.TextMuted,
+                modifier = Modifier.size(18.dp)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = ManageEquipColors.TextDark,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    if (value.isBlank()) {
+                        Text(
+                            text = "Search",
+                            color = ManageEquipColors.TextMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactEquipmentDropdown(
+    label: String,
+    selectedText: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .clickable { expanded = true },
+            color = ManageEquipColors.Card,
+            shape = RoundedCornerShape(14.dp),
+            shadowElevation = 1.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = label,
+                        color = ManageEquipColors.TextMuted,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+
+                    Text(
+                        text = selectedText.ifBlank { "All" },
+                        color = ManageEquipColors.TextDark,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Text(
+                    text = "▼",
+                    color = ManageEquipColors.TextMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.distinct().forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = option,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -618,7 +574,7 @@ private fun HorizontalFilterRow(
 }
 
 @Composable
-private fun InventoryFilterChip(
+private fun FilterChipButton(
     text: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -626,62 +582,128 @@ private fun InventoryFilterChip(
     if (selected) {
         Button(
             onClick = onClick,
+            modifier = Modifier.height(34.dp),
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ManageColors.PrimaryIndigo,
+                containerColor = ManageEquipColors.Primary,
                 contentColor = Color.White
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
-            Text(text)
+            Text(text = text, maxLines = 1)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50.dp)
+            modifier = Modifier.height(34.dp),
+            shape = RoundedCornerShape(50.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
-            Text(text)
+            Text(text = text, maxLines = 1)
         }
     }
 }
 
 @Composable
-private fun ManageEquipmentCard(
+private fun EquipmentCard(
     equipment: Equipment,
     room: Room?,
     onEditClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = ManageColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(20.dp),
-                spotColor = Color.Black.copy(alpha = 0.05f)
-            )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                EquipmentCardImage(
-                    imageName = equipment.imageName,
-                    imageUrl = equipment.imageUrl,
-                    contentDescription = equipment.name
-                )
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(equipment.imageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(equipment.imageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(equipment.imageUrl)
 
-                Spacer(modifier = Modifier.width(16.dp))
+    val stockBg: Color
+    val stockText: Color
+    val stockLabel: String
+
+    when {
+        equipment.availableQuantity <= 0 -> {
+            stockBg = ManageEquipColors.RedLight
+            stockText = ManageEquipColors.RedText
+            stockLabel = "Out"
+        }
+        equipment.availableQuantity <= 2 -> {
+            stockBg = ManageEquipColors.OrangeLight
+            stockText = ManageEquipColors.OrangeText
+            stockLabel = "Low"
+        }
+        else -> {
+            stockBg = ManageEquipColors.GreenLight
+            stockText = ManageEquipColors.GreenText
+            stockLabel = "Available"
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = ManageEquipColors.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(82.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(ManageEquipColors.GrayLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (hasImageUrl) {
+                        AsyncImage(
+                            model = safeImageUrl,
+                            contentDescription = equipment.name,
+                            placeholder = painterResource(id = fallbackImageResId),
+                            error = painterResource(id = fallbackImageResId),
+                            fallback = painterResource(id = fallbackImageResId),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = fallbackImageResId),
+                            contentDescription = equipment.name,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(9.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = equipment.name.ifBlank { "Unknown Equipment" },
+                            modifier = Modifier.weight(1f),
+                            color = ManageEquipColors.TextDark,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Text(
+                            text = stockLabel,
+                            modifier = Modifier
+                                .background(stockBg, RoundedCornerShape(50.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = stockText,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
-                        text = equipment.name.ifBlank { "Unnamed Equipment" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = ManageColors.TextDark,
+                        text = "${equipment.category.ifBlank { "General" }} • ${equipment.condition.ifBlank { "N/A" }}",
+                        color = ManageEquipColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -689,109 +711,69 @@ private fun ManageEquipmentCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "${equipment.category.ifBlank { "No category" }} • ${equipment.condition.ifBlank { "No condition" }}",
+                        text = "Room: ${room?.name ?: "N/A"}",
+                        color = ManageEquipColors.TextMuted,
                         style = MaterialTheme.typography.bodySmall,
-                        color = ManageColors.TextMuted,
-                        fontWeight = FontWeight.Medium
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = "Room: ${
-                            room?.name?.ifBlank { "Unnamed Room" }
-                                ?: equipment.roomId.ifBlank { "No room assigned" }
-                        }",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ManageColors.TextMuted
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState())
-                    ) {
-                        val stockColors = getStockBadgeColors(
-                            available = equipment.availableQuantity,
-                            total = equipment.totalQuantity
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Stock ${equipment.availableQuantity}/${equipment.totalQuantity}",
+                            modifier = Modifier
+                                .background(ManageEquipColors.BlueLight, RoundedCornerShape(50.dp))
+                                .padding(horizontal = 9.dp, vertical = 5.dp),
+                            color = ManageEquipColors.BlueText,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        StatusBadge(
-                            text = "${getStockText(equipment.availableQuantity, equipment.totalQuantity)}: ${equipment.availableQuantity}/${equipment.totalQuantity}",
-                            bgColor = stockColors.first,
-                            textColor = stockColors.second
-                        )
+                        val isActuallyBorrowable =
+                            equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
 
-                        StatusBadge(
-                            text = if (equipment.isBorrowable) {
-                                "Borrowable"
-                            } else {
-                                "Lab-use-only"
-                            },
-                            bgColor = if (equipment.isBorrowable) {
-                                ManageColors.PurpleLight
-                            } else {
-                                ManageColors.OrangeLight
-                            },
-                            textColor = if (equipment.isBorrowable) {
-                                ManageColors.PurpleText
-                            } else {
-                                ManageColors.OrangeText
-                            }
+                        Text(
+                            text = if (isActuallyBorrowable) "Borrowable" else "Lab-use-only",
+                            modifier = Modifier
+                                .background(
+                                    if (isActuallyBorrowable) ManageEquipColors.PurpleLight else ManageEquipColors.GrayLight,
+                                    RoundedCornerShape(50.dp)
+                                )
+                                .padding(horizontal = 9.dp, vertical = 5.dp),
+                            color = if (isActuallyBorrowable) ManageEquipColors.PurpleText else ManageEquipColors.GrayText,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
-            if (equipment.assetTag.isNotBlank() || equipment.serialNumber.isNotBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = buildString {
-                        if (equipment.assetTag.isNotBlank()) {
-                            append("Asset: ${equipment.assetTag}")
-                        }
-
-                        if (equipment.serialNumber.isNotBlank()) {
-                            if (isNotBlank()) append(" • ")
-                            append("Serial: ${equipment.serialNumber}")
-                        }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = ManageColors.TextMuted
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            HorizontalDivider(color = ManageColors.ModernBg)
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = ManageEquipColors.Bg)
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(
                 onClick = onEditClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .height(40.dp),
+                shape = RoundedCornerShape(13.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = ManageColors.PrimaryIndigoLight,
-                    contentColor = ManageColors.PrimaryIndigo
-                ),
-                elevation = ButtonDefaults.buttonElevation(0.dp)
+                    containerColor = ManageEquipColors.Primary,
+                    contentColor = Color.White
+                )
             ) {
                 Icon(
-                    Icons.Rounded.Edit,
-                    contentDescription = "Edit",
+                    imageVector = Icons.Rounded.Edit,
+                    contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Text(
-                    text = "Edit Equipment",
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "Edit Equipment", fontWeight = FontWeight.Bold)
             }
         }
     }

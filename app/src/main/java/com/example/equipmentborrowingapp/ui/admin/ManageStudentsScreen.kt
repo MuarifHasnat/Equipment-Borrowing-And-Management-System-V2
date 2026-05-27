@@ -5,23 +5,38 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,8 +47,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.data.model.AppUser
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import androidx.compose.ui.draw.clip
+private object StudentManageColors {
+    val Bg = Color(0xFFF4F7FB)
+    val Card = Color.White
+    val TextDark = Color(0xFF1E293B)
+    val TextMuted = Color(0xFF64748B)
+    val Primary = Color(0xFF4F46E5)
+
+    val BlueLight = Color(0xFFEFF6FF)
+    val BlueText = Color(0xFF2563EB)
+
+    val GreenLight = Color(0xFFF0FDF4)
+    val GreenText = Color(0xFF16A34A)
+
+    val OrangeLight = Color(0xFFFFF7ED)
+    val OrangeText = Color(0xFFEA580C)
+
+    val RedLight = Color(0xFFFEF2F2)
+    val RedText = Color(0xFFDC2626)
+
+    val PurpleLight = Color(0xFFF5F3FF)
+}
 
 @Composable
 fun ManageStudentsScreen(
@@ -43,29 +83,6 @@ fun ManageStudentsScreen(
 ) {
     var searchText by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All") }
-    var selectedDepartment by remember { mutableStateOf("All") }
-    var selectedSemester by remember { mutableStateOf("All") }
-    var selectedStudent by remember { mutableStateOf<AppUser?>(null) }
-
-    val departmentList = listOf("All") + studentList
-        .map { it.department.trim() }
-        .filter { it.isNotBlank() }
-        .distinct()
-        .sorted()
-
-    val semesterList = listOf("All") + studentList
-        .map { it.semester.trim() }
-        .filter { it.isNotBlank() }
-        .distinct()
-        .sorted()
-
-    val statusList = listOf(
-        "All",
-        "pending",
-        "verified",
-        "rejected",
-        "suspended"
-    )
 
     val filteredStudents = studentList.filter { student ->
         val query = searchText.trim().lowercase()
@@ -74,505 +91,226 @@ fun ManageStudentsScreen(
             query.isBlank() ||
                     student.name.lowercase().contains(query) ||
                     student.email.lowercase().contains(query) ||
-                    student.studentId.lowercase().contains(query)
+                    student.studentId.lowercase().contains(query) ||
+                    student.department.lowercase().contains(query) ||
+                    student.phone.lowercase().contains(query)
 
         val matchesStatus =
             selectedStatus == "All" ||
                     student.verificationStatus.equals(selectedStatus, ignoreCase = true)
 
-        val matchesDepartment =
-            selectedDepartment == "All" ||
-                    student.department.equals(selectedDepartment, ignoreCase = true)
+        matchesSearch && matchesStatus
+    }.sortedBy { it.name.lowercase() }
 
-        val matchesSemester =
-            selectedSemester == "All" ||
-                    student.semester.equals(selectedSemester, ignoreCase = true)
+    val verifiedCount = studentList.count {
+        it.verificationStatus.equals("Verified", ignoreCase = true)
+    }
 
-        matchesSearch && matchesStatus && matchesDepartment && matchesSemester
-    }.sortedWith(
-        compareBy<AppUser> { statusSortOrder(it.verificationStatus) }
-            .thenBy { it.name.lowercase() }
-    )
+    val pendingCount = studentList.count {
+        it.verificationStatus.equals("Pending", ignoreCase = true)
+    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF4F7FB))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = StudentManageColors.Bg
     ) {
-        Text(
-            text = "Manage Students",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
-        )
-
-        Text(
-            text = "Search, filter and manage pending, verified, rejected and suspended students.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF6B7280)
-        )
-
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = {
-                searchText = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = {
-                Text("Search by name, email or student ID")
-            },
-            shape = RoundedCornerShape(14.dp)
-        )
-
-        Text(
-            text = "Status",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF374151)
-        )
-
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            statusList.forEach { status ->
-                StudentFilterChip(
-                    text = displayStatus(status),
-                    selected = selectedStatus == status,
-                    onClick = {
-                        selectedStatus = status
-                    }
-                )
-            }
-        }
-
-        Text(
-            text = "Department",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF374151)
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            departmentList.forEach { department ->
-                StudentFilterChip(
-                    text = department,
-                    selected = selectedDepartment == department,
-                    onClick = {
-                        selectedDepartment = department
-                    }
-                )
-            }
-        }
-
-        Text(
-            text = "Semester",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF374151)
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            semesterList.forEach { semester ->
-                StudentFilterChip(
-                    text = semester,
-                    selected = selectedSemester == semester,
-                    onClick = {
-                        selectedSemester = semester
-                    }
-                )
-            }
-        }
-
-        if (
-            searchText.isNotBlank() ||
-            selectedStatus != "All" ||
-            selectedDepartment != "All" ||
-            selectedSemester != "All"
-        ) {
-            OutlinedButton(
-                onClick = {
-                    searchText = ""
-                    selectedStatus = "All"
-                    selectedDepartment = "All"
-                    selectedSemester = "All"
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Text("Clear Search and Filters")
-            }
-        }
-
-        selectedStudent?.let { student ->
-            StudentDetailsCard(
-                student = student,
-                onStatusChangeClick = onStatusChangeClick,
-                onCloseClick = {
-                    selectedStudent = null
-                }
+            ManageStudentsTopBar(
+                totalCount = studentList.size,
+                onBackClick = onBackClick
             )
-        }
 
-        Text(
-            text = "Students Found: ${filteredStudents.size}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
-        )
+            Spacer(modifier = Modifier.height(6.dp))
 
-        if (filteredStudents.isEmpty()) {
-            Card(
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StudentMiniStat("Total", studentList.size.toString(), StudentManageColors.BlueLight, StudentManageColors.BlueText, Modifier.weight(1f))
+                StudentMiniStat("Verified", verifiedCount.toString(), StudentManageColors.GreenLight, StudentManageColors.GreenText, Modifier.weight(1f))
+                StudentMiniStat("Pending", pendingCount.toString(), StudentManageColors.OrangeLight, StudentManageColors.OrangeText, Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No students found for the selected filter.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
+                    .height(50.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = StudentManageColors.TextMuted
                     )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(filteredStudents) { student ->
-                    StudentManagementCard(
-                        student = student,
-                        onViewDetailsClick = {
-                            selectedStudent = student
-                        },
-                        onStatusChangeClick = onStatusChangeClick
-                    )
-                }
-            }
-        }
-
-        OutlinedButton(
-            onClick = onBackClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text("Back")
-        }
-    }
-}
-
-@Composable
-fun StudentDetailsScreen(
-    student: AppUser,
-    onStatusChangeClick: (AppUser, String) -> Unit,
-    onBackClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF4F7FB))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Student Details",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
-        )
-
-        StudentDetailsCard(
-            student = student,
-            onStatusChangeClick = onStatusChangeClick,
-            onCloseClick = onBackClick
-        )
-    }
-}
-
-@Composable
-private fun StudentManagementCard(
-    student: AppUser,
-    onViewDetailsClick: () -> Unit,
-    onStatusChangeClick: (AppUser, String) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = student.name.ifBlank { "Unnamed Student" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF111827)
-                    )
-
-                    Text(
-                        text = student.email.ifBlank { "No email found" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-
-                StudentStatusBadge(status = student.verificationStatus)
-            }
-
-            StudentInfoRow(
-                label = "Student ID",
-                value = student.studentId.ifBlank { "N/A" }
+                },
+                placeholder = { Text("Search student") }
             )
 
-            StudentInfoRow(
-                label = "Department",
-                value = student.department.ifBlank { "N/A" }
-            )
-
-            StudentInfoRow(
-                label = "Semester",
-                value = student.semester.ifBlank { "N/A" }
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
-                    onClick = onViewDetailsClick,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text("Details")
+                listOf("All", "Verified", "Pending", "Rejected", "Block").forEach { status ->
+                    StudentStatusChip(
+                        text = status.replaceFirstChar { it.uppercase() },
+                        selected = selectedStatus == if (status == "Block") "Blocked" else status,
+                        onClick = { selectedStatus = if (status == "Block") "Blocked" else status }
+                    )
                 }
+            }
 
-                StudentStatusActionButtons(
-                    student = student,
-                    modifier = Modifier.weight(2f),
-                    onStatusChangeClick = onStatusChangeClick
-                )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Showing ${filteredStudents.size} of ${studentList.size} student(s)",
+                color = StudentManageColors.TextDark,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            if (filteredStudents.isEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = StudentManageColors.Card),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No student found.",
+                            color = StudentManageColors.TextMuted,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(filteredStudents) { student ->
+                        StudentManageCard(
+                            student = student,
+                            onStatusChangeClick = onStatusChangeClick
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StudentDetailsCard(
-    student: AppUser,
-    onStatusChangeClick: (AppUser, String) -> Unit,
-    onCloseClick: () -> Unit
+private fun ManageStudentsTopBar(
+    totalCount: Int,
+    onBackClick: () -> Unit
 ) {
-    Card(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(42.dp)
+                .background(StudentManageColors.Card, RoundedCornerShape(14.dp))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = StudentManageColors.TextDark
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(StudentManageColors.PurpleLight, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.VerifiedUser,
+                contentDescription = null,
+                tint = StudentManageColors.Primary,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Manage Students",
+                color = StudentManageColors.TextDark,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
+            Text(
+                text = "$totalCount student account(s)",
+                color = StudentManageColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun StudentMiniStat(
+    title: String,
+    value: String,
+    bgColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.height(52.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(18.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = student.name.ifBlank { "Unnamed Student" },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF111827)
-                    )
-
-                    Text(
-                        text = student.email.ifBlank { "No email found" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-
-                StudentStatusBadge(status = student.verificationStatus)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            StudentInfoRow("UID", student.uid.ifBlank { "N/A" })
-            StudentInfoRow("Institution ID", student.institutionId.ifBlank { "N/A" })
-            StudentInfoRow("Student ID", student.studentId.ifBlank { "N/A" })
-            StudentInfoRow("Department", student.department.ifBlank { "N/A" })
-            StudentInfoRow("Semester", student.semester.ifBlank { "N/A" })
-            StudentInfoRow("Phone", student.phone.ifBlank { "N/A" })
-
-            StudentStatusActionButtons(
-                student = student,
-                modifier = Modifier.fillMaxWidth(),
-                onStatusChangeClick = onStatusChangeClick
+            Text(
+                text = title,
+                color = textColor.copy(alpha = 0.75f),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
             )
 
-            OutlinedButton(
-                onClick = onCloseClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Text("Close")
-            }
+            Text(
+                text = value,
+                color = textColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black
+            )
         }
     }
 }
 
 @Composable
-private fun StudentStatusActionButtons(
-    student: AppUser,
-    modifier: Modifier = Modifier,
-    onStatusChangeClick: (AppUser, String) -> Unit
-) {
-    val currentStatus = student.verificationStatus.trim().lowercase()
-
-    val actions = when (currentStatus) {
-        "pending" -> listOf(
-            "verified" to "Verify",
-            "rejected" to "Reject"
-        )
-
-        "verified" -> listOf(
-            "suspended" to "Suspend",
-            "rejected" to "Reject"
-        )
-
-        "rejected" -> listOf(
-            "verified" to "Verify"
-        )
-
-        "suspended" -> listOf(
-            "verified" to "Verify"
-        )
-
-        else -> listOf(
-            "verified" to "Verify"
-        )
-    }
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        actions.forEach { action ->
-            val targetStatus = action.first
-            val buttonText = action.second
-
-            Button(
-                onClick = {
-                    onStatusChangeClick(student, targetStatus)
-                },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = actionColor(targetStatus),
-                    contentColor = Color.White
-                )
-            ) {
-                Text(buttonText)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StudentStatusBadge(status: String) {
-    val normalizedStatus = status.trim().lowercase().ifBlank { "pending" }
-
-    val backgroundColor = when (normalizedStatus) {
-        "pending" -> Color(0xFFFEF3C7)
-        "verified" -> Color(0xFFDCFCE7)
-        "rejected" -> Color(0xFFFEE2E2)
-        "suspended" -> Color(0xFFEDE9FE)
-        else -> Color(0xFFE5E7EB)
-    }
-
-    val textColor = when (normalizedStatus) {
-        "pending" -> Color(0xFF92400E)
-        "verified" -> Color(0xFF166534)
-        "rejected" -> Color(0xFFB91C1C)
-        "suspended" -> Color(0xFF6D28D9)
-        else -> Color(0xFF374151)
-    }
-
-    Text(
-        text = displayStatus(normalizedStatus),
-        modifier = Modifier
-            .background(
-                color = backgroundColor,
-                shape = RoundedCornerShape(50.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = textColor
-    )
-}
-
-@Composable
-private fun StudentInfoRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "$label:",
-            modifier = Modifier.weight(0.38f),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF6B7280)
-        )
-
-        Text(
-            text = value.ifBlank { "N/A" },
-            modifier = Modifier.weight(0.62f),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF111827)
-        )
-    }
-}
-
-@Composable
-private fun StudentFilterChip(
+private fun StudentStatusChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -580,50 +318,194 @@ private fun StudentFilterChip(
     if (selected) {
         Button(
             onClick = onClick,
+            modifier = Modifier.height(32.dp),
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2563EB),
+                containerColor = StudentManageColors.Primary,
                 contentColor = Color.White
-            )
+            ),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
         ) {
             Text(text)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50.dp)
+            modifier = Modifier.height(32.dp),
+            shape = RoundedCornerShape(50.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
         ) {
             Text(text)
         }
     }
 }
 
-private fun actionColor(status: String): Color {
-    return when (status.trim().lowercase()) {
-        "verified" -> Color(0xFF16A34A)
-        "rejected" -> Color(0xFFDC2626)
-        "suspended" -> Color(0xFF7C3AED)
-        else -> Color(0xFF2563EB)
+@Composable
+private fun StudentManageCard(
+    student: AppUser,
+    onStatusChangeClick: (AppUser, String) -> Unit
+) {
+    val status = student.verificationStatus.ifBlank { "Pending" }
+    val bgColor = when (status.lowercase()) {
+        "verified" -> StudentManageColors.GreenLight
+        "rejected", "blocked" -> StudentManageColors.RedLight
+        "pending" -> StudentManageColors.OrangeLight
+        else -> StudentManageColors.BlueLight
     }
-}
-
-private fun displayStatus(status: String): String {
-    return when (status.trim().lowercase()) {
-        "all" -> "All"
-        "pending" -> "Pending"
-        "verified" -> "Verified"
-        "rejected" -> "Rejected"
-        "suspended" -> "Suspended"
-        else -> status.ifBlank { "Unknown" }
+    val textColor = when (status.lowercase()) {
+        "verified" -> StudentManageColors.GreenText
+        "rejected", "blocked" -> StudentManageColors.RedText
+        "pending" -> StudentManageColors.OrangeText
+        else -> StudentManageColors.BlueText
     }
-}
 
-private fun statusSortOrder(status: String): Int {
-    return when (status.trim().lowercase()) {
-        "pending" -> 0
-        "verified" -> 1
-        "rejected" -> 2
-        "suspended" -> 3
-        else -> 4
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = StudentManageColors.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(StudentManageColors.BlueLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (student.profileImageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = student.profileImageUrl.trim(),
+                            contentDescription = student.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Person,
+                            contentDescription = null,
+                            tint = StudentManageColors.BlueText,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = student.name.ifBlank { "Unknown Student" },
+                        color = StudentManageColors.TextDark,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = student.email.ifBlank { "No email" },
+                        color = StudentManageColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Text(text = status.replaceFirstChar { it.uppercase() },
+                    modifier = Modifier
+                        .background(bgColor, RoundedCornerShape(50.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    color = textColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            HorizontalDivider(color = StudentManageColors.Bg)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "ID: ${student.studentId.ifBlank { "N/A" }} • ${student.department.ifBlank { "Department N/A" }}",
+                color = StudentManageColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (student.semester.isNotBlank() || student.phone.isNotBlank()) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = buildString {
+                        if (student.semester.isNotBlank()) append("Semester: ${student.semester}")
+                        if (student.phone.isNotBlank()) {
+                            if (isNotBlank()) append(" • ")
+                            append(student.phone)
+                        }
+                    },
+                    color = StudentManageColors.TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!status.equals("Verified", ignoreCase = true)) {
+                    Button(
+                        onClick = { onStatusChangeClick(student, "verified") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StudentManageColors.GreenText,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Text("Verify", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { onStatusChangeClick(student, "blocked") },
+                    modifier = Modifier
+                        .then(
+                            if (status.equals("Verified", ignoreCase = true)) {
+                                Modifier.fillMaxWidth()
+                            } else {
+                                Modifier.weight(1f)
+                            }
+                        )
+                        .height(38.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = StudentManageColors.RedText
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Block,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Text("Block", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }

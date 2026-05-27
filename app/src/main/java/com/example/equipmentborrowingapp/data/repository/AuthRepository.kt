@@ -1,6 +1,5 @@
 package com.example.equipmentborrowingapp.data.repository
 
-import com.example.equipmentborrowingapp.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,12 +15,20 @@ class AuthRepository {
         password: String,
         role: String,
         institutionId: String,
+        studentId: String = "",
+        department: String = "",
+        semester: String = "",
+        phone: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         val normalizedName = name.trim()
         val normalizedEmail = email.trim()
         val normalizedRole = role.trim().lowercase()
         val normalizedInstitutionId = institutionId.trim()
+        val normalizedStudentId = studentId.trim()
+        val normalizedDepartment = department.trim()
+        val normalizedSemester = semester.trim()
+        val normalizedPhone = phone.trim()
 
         if (
             normalizedName.isBlank() ||
@@ -50,10 +57,10 @@ class AuthRepository {
                     "role" to normalizedRole,
                     "institutionId" to normalizedInstitutionId,
                     "verificationStatus" to "pending",
-                    "studentId" to "",
-                    "department" to "",
-                    "semester" to "",
-                    "phone" to "",
+                    "studentId" to normalizedStudentId,
+                    "department" to normalizedDepartment,
+                    "semester" to normalizedSemester,
+                    "phone" to normalizedPhone,
                     "createdAt" to System.currentTimeMillis()
                 )
 
@@ -104,31 +111,27 @@ class AuthRepository {
                     return@addOnSuccessListener
                 }
 
-                val uid = firebaseUser.uid
-                val email = firebaseUser.email?.trim() ?: ""
-                val name = firebaseUser.displayName?.trim().orEmpty().ifBlank { "Student" }
+                val uid = firebaseUser.uid.trim()
+
+                if (uid.isBlank()) {
+                    onResult(false, "Google user ID not found")
+                    return@addOnSuccessListener
+                }
 
                 val userRef = firestore.collection("users").document(uid)
 
                 userRef.get()
                     .addOnSuccessListener { document ->
                         if (document.exists()) {
-                            onResult(true, "Google login successful")
-                        } else {
-                            val user = User(
-                                uid = uid,
-                                name = name,
-                                email = email,
-                                role = "student"
-                            )
+                            val institutionId = document.getString("institutionId")?.trim().orEmpty()
 
-                            userRef.set(user)
-                                .addOnSuccessListener {
-                                    onResult(true, "Google account created successfully")
-                                }
-                                .addOnFailureListener { e ->
-                                    onResult(false, e.message ?: "Failed to save Google user")
-                                }
+                            if (institutionId.isBlank()) {
+                                onResult(false, "GOOGLE_PROFILE_REQUIRED")
+                            } else {
+                                onResult(true, "Google login successful")
+                            }
+                        } else {
+                            onResult(false, "GOOGLE_PROFILE_REQUIRED")
                         }
                     }
                     .addOnFailureListener { e ->
@@ -137,6 +140,72 @@ class AuthRepository {
             }
             .addOnFailureListener { e ->
                 onResult(false, e.message ?: "Google login failed")
+            }
+    }
+
+    fun completeGoogleRegistration(
+        name: String,
+        email: String,
+        institutionId: String,
+        studentId: String,
+        department: String,
+        semester: String,
+        phone: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val firebaseUser = auth.currentUser
+
+        if (firebaseUser == null) {
+            onResult(false, "Google user not found. Please try again.")
+            return
+        }
+
+        val uid = firebaseUser.uid.trim()
+        val normalizedName = name.trim().ifBlank {
+            firebaseUser.displayName?.trim().orEmpty().ifBlank { "Student" }
+        }
+        val normalizedEmail = email.trim().ifBlank {
+            firebaseUser.email?.trim().orEmpty()
+        }
+        val normalizedInstitutionId = institutionId.trim()
+        val normalizedStudentId = studentId.trim()
+        val normalizedDepartment = department.trim()
+        val normalizedSemester = semester.trim()
+        val normalizedPhone = phone.trim()
+
+        if (
+            uid.isBlank() ||
+            normalizedEmail.isBlank() ||
+            normalizedInstitutionId.isBlank() ||
+            normalizedStudentId.isBlank() ||
+            normalizedDepartment.isBlank()
+        ) {
+            onResult(false, "Required fields are missing")
+            return
+        }
+
+        val userMap = hashMapOf(
+            "uid" to uid,
+            "name" to normalizedName,
+            "email" to normalizedEmail,
+            "role" to "student",
+            "institutionId" to normalizedInstitutionId,
+            "verificationStatus" to "pending",
+            "studentId" to normalizedStudentId,
+            "department" to normalizedDepartment,
+            "semester" to normalizedSemester,
+            "phone" to normalizedPhone,
+            "createdAt" to System.currentTimeMillis()
+        )
+
+        firestore.collection("users")
+            .document(uid)
+            .set(userMap)
+            .addOnSuccessListener {
+                onResult(true, "Registration completed. Please wait for admin verification.")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to complete Google registration")
             }
     }
 
@@ -173,7 +242,7 @@ class AuthRepository {
     }
 
     fun getCurrentUser(
-        onResult: (User?) -> Unit
+        onResult: (com.example.equipmentborrowingapp.data.model.User?) -> Unit
     ) {
         val uid = auth.currentUser?.uid
         if (uid.isNullOrBlank()) {
@@ -185,7 +254,7 @@ class AuthRepository {
             .document(uid)
             .get()
             .addOnSuccessListener { document ->
-                val user = document.toObject(User::class.java)
+                val user = document.toObject(com.example.equipmentborrowingapp.data.model.User::class.java)
                 onResult(
                     user?.copy(
                         uid = user.uid.trim(),
@@ -223,7 +292,7 @@ class AuthRepository {
             .addOnSuccessListener {
                 onResult(
                     true,
-                    "If an account exists with this email, a password reset link has been sent."
+                    "Password reset link sent. Please check Inbox, Spam, or Promotions folder."
                 )
             }
             .addOnFailureListener { e ->
@@ -235,7 +304,7 @@ class AuthRepository {
                         "Network error. Please check your internet connection"
 
                     else ->
-                        "Unable to send reset email. Please try again later."
+                        "Unable to send reset email. Make sure this email was registered with Email/Password, not only Google Sign-In."
                 }
 
                 onResult(false, errorMessage)

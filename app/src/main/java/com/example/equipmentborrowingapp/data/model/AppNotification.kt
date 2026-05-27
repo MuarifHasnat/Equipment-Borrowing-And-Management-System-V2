@@ -8,6 +8,8 @@ data class AppNotification(
     val title: String = "",
     val message: String = "",
     val type: String = "info",
+    val targetId: String = "",
+    val targetScreen: String = "",
     val read: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )

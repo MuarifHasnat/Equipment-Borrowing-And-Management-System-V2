@@ -1,6 +1,5 @@
 package com.example.equipmentborrowingapp.ui.admin
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -22,25 +21,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,12 +43,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -63,15 +56,13 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.equipmentborrowingapp.data.model.BorrowRequest
 import com.example.equipmentborrowingapp.ui.common.EquipmentImageMapper
-import com.example.equipmentborrowingapp.ui.common.ProfessionalStatusBadge
-import kotlinx.coroutines.launch
 
-private object PendingColors {
-    val ModernBg = Color(0xFFF4F7FB)
-    val CardWhite = Color(0xFFFFFFFF)
+private object PendingReqColors {
+    val Bg = Color(0xFFF4F7FB)
+    val Card = Color.White
     val TextDark = Color(0xFF1E293B)
     val TextMuted = Color(0xFF64748B)
-    val PrimaryIndigo = Color(0xFF4F46E5)
+    val Primary = Color(0xFF4F46E5)
 
     val BlueLight = Color(0xFFEFF6FF)
     val BlueText = Color(0xFF2563EB)
@@ -87,41 +78,8 @@ private object PendingColors {
 
     val PurpleLight = Color(0xFFF5F3FF)
     val PurpleText = Color(0xFF7C3AED)
-}
 
-@Composable
-private fun RequestCardImage(
-    imageName: String,
-    imageUrl: String,
-    contentDescription: String
-) {
-    val fallbackImageResId = EquipmentImageMapper.getImageRes(imageName)
-    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(imageUrl)
-    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(imageUrl)
-
-    val imageModifier = Modifier
-        .size(85.dp)
-        .clip(RoundedCornerShape(12.dp))
-        .background(PendingColors.ModernBg)
-
-    if (hasImageUrl) {
-        AsyncImage(
-            model = safeImageUrl,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = fallbackImageResId),
-            error = painterResource(id = fallbackImageResId),
-            fallback = painterResource(id = fallbackImageResId),
-            modifier = imageModifier
-        )
-    } else {
-        Image(
-            painter = painterResource(id = fallbackImageResId),
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            modifier = imageModifier.padding(8.dp)
-        )
-    }
+    val GrayLight = Color(0xFFF1F5F9)
 }
 
 @Composable
@@ -131,25 +89,10 @@ fun PendingRequestsScreen(
     onRejectClick: (BorrowRequest) -> Unit,
     onBackClick: () -> Unit
 ) {
-    var selectedRequest by remember { mutableStateOf<BorrowRequest?>(null) }
-    var dialogType by remember { mutableStateOf("") }
-
     var searchText by remember { mutableStateOf("") }
-    var selectedDepartment by remember { mutableStateOf("All") }
     var selectedCategory by remember { mutableStateOf("All") }
-    var selectedSort by remember { mutableStateOf("Newest First") }
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(false) }
-
-    val departmentList = remember(requestList) {
-        listOf("All") + requestList
-            .map { it.department.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-    }
+    var selectedRequest by remember { mutableStateOf<BorrowRequest?>(null) }
+    var selectedAction by remember { mutableStateOf("") }
 
     val categoryList = remember(requestList) {
         listOf("All") + requestList
@@ -174,403 +117,168 @@ fun PendingRequestsScreen(
                         request.borrowDate.lowercase().contains(query) ||
                         request.dueDate.lowercase().contains(query)
 
-            val matchesDepartment =
-                selectedDepartment == "All" ||
-                        request.department.equals(selectedDepartment, ignoreCase = true)
-
             val matchesCategory =
                 selectedCategory == "All" ||
                         request.equipmentCategory.equals(selectedCategory, ignoreCase = true)
 
-            matchesSearch && matchesDepartment && matchesCategory
+            matchesSearch && matchesCategory
         }
-        .let { list ->
-            when (selectedSort) {
-                "Oldest First" -> list.sortedBy { it.requestTimestamp }
-
-                "Student A-Z" -> list.sortedBy { it.userName.lowercase() }
-
-                "Equipment A-Z" -> list.sortedBy { it.equipmentName.lowercase() }
-
-                "Quantity High-Low" -> list.sortedWith(
-                    compareByDescending<BorrowRequest> { it.quantity }
-                        .thenBy { it.equipmentName.lowercase() }
-                )
-
-                "Due Date" -> list.sortedBy { it.dueDate }
-
-                else -> list.sortedByDescending { it.requestTimestamp }
-            }
-        }
-
-    val totalQuantity = requestList.sumOf { it.quantity }
-    val uniqueStudents = requestList
-        .map { it.userId.ifBlank { it.userName } }
-        .filter { it.isNotBlank() }
-        .distinct()
-        .size
+        .sortedByDescending { it.requestTimestamp }
 
     selectedRequest?.let { request ->
-        val isApprove = dialogType == "approve"
-
-        AlertDialog(
-            onDismissRequest = {
+        PendingRequestConfirmDialog(
+            request = request,
+            action = selectedAction,
+            onDismiss = {
                 selectedRequest = null
-                dialogType = ""
+                selectedAction = ""
             },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = PendingColors.CardWhite,
-            title = {
-                Text(
-                    text = if (isApprove) "Confirm Approval" else "Confirm Rejection",
-                    fontWeight = FontWeight.Bold,
-                    color = PendingColors.TextDark
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = if (isApprove) {
-                            "Are you sure you want to approve this request?"
-                        } else {
-                            "Are you sure you want to reject this request?"
-                        },
-                        color = PendingColors.TextMuted
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Surface(
-                        color = PendingColors.ModernBg,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Student: ${request.userName.ifBlank { "Unknown Student" }}",
-                                fontWeight = FontWeight.SemiBold,
-                                color = PendingColors.TextDark
-                            )
-
-                            Text(
-                                text = "Equipment: ${request.equipmentName.ifBlank { "Unknown Equipment" }}",
-                                color = PendingColors.TextDark
-                            )
-
-                            Text(
-                                text = "Qty: ${request.quantity}",
-                                color = PendingColors.TextDark
-                            )
-
-                            Text(
-                                text = "Due: ${request.dueDate.ifBlank { "N/A" }}",
-                                color = PendingColors.TextDark
-                            )
-                        }
-                    }
+            onConfirm = {
+                if (selectedAction == "approve") {
+                    onApproveClick(request)
+                } else {
+                    onRejectClick(request)
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        isLoading = true
-
-                        if (isApprove) {
-                            onApproveClick(request)
-                        } else {
-                            onRejectClick(request)
-                        }
-
-                        selectedRequest = null
-                        dialogType = ""
-
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                if (isApprove) {
-                                    "Request approved successfully"
-                                } else {
-                                    "Request rejected successfully"
-                                }
-                            )
-                            isLoading = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isApprove) {
-                            PendingColors.GreenText
-                        } else {
-                            PendingColors.RedText
-                        }
-                    )
-                ) {
-                    Text(if (isApprove) "Approve" else "Reject")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        selectedRequest = null
-                        dialogType = ""
-                    }
-                ) {
-                    Text("Cancel", color = PendingColors.TextMuted)
-                }
+                selectedRequest = null
+                selectedAction = ""
             }
         )
     }
 
-    Scaffold(
-        snackbarHost = {
-            SnackbarHost(snackbarHostState)
-        },
-        containerColor = PendingColors.ModernBg
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = PendingColors.PrimaryIndigo)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = PendingReqColors.Bg
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            PendingRequestTopBar(
+                totalCount = requestList.size,
+                onBackClick = onBackClick
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PendingMiniStat(
+                    title = "Pending",
+                    value = requestList.size.toString(),
+                    bgColor = PendingReqColors.OrangeLight,
+                    textColor = PendingReqColors.OrangeText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                PendingMiniStat(
+                    title = "Showing",
+                    value = filteredRequests.size.toString(),
+                    bgColor = PendingReqColors.BlueLight,
+                    textColor = PendingReqColors.BlueText,
+                    modifier = Modifier.weight(1f)
+                )
+
+                PendingMiniStat(
+                    title = "Category",
+                    value = (categoryList.size - 1).coerceAtLeast(0).toString(),
+                    bgColor = PendingReqColors.PurpleLight,
+                    textColor = PendingReqColors.PurpleText,
+                    modifier = Modifier.weight(1f)
+                )
             }
-        } else {
-            Column(
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .fillMaxWidth()
+                    .height(50.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = PendingReqColors.TextMuted
+                    )
+                },
+                placeholder = {
+                    Text(
+                        text = "Search request",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
+                categoryList.forEach { category ->
+                    PendingFilterChip(
+                        text = category,
+                        selected = selectedCategory == category,
+                        onClick = { selectedCategory = category }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Showing ${filteredRequests.size} of ${requestList.size} request(s)",
+                color = PendingReqColors.TextDark,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            if (filteredRequests.isEmpty()) {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp, top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = PendingReqColors.Card),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .background(
-                                PendingColors.CardWhite,
-                                RoundedCornerShape(12.dp)
-                            )
-                            .shadow(
-                                2.dp,
-                                RoundedCornerShape(12.dp),
-                                spotColor = Color.Black.copy(alpha = 0.05f)
-                            )
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back",
-                            tint = PendingColors.TextDark
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text(
-                            text = "Pending Requests",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = PendingColors.TextDark,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-
-                        Text(
-                            text = "Search, filter, sort and review requests",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = PendingColors.TextMuted
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    PendingMiniStatCard(
-                        title = "Requests",
-                        value = requestList.size.toString(),
-                        bgColor = PendingColors.OrangeLight,
-                        textColor = PendingColors.OrangeText,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    PendingMiniStatCard(
-                        title = "Students",
-                        value = uniqueStudents.toString(),
-                        bgColor = PendingColors.BlueLight,
-                        textColor = PendingColors.BlueText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    PendingMiniStatCard(
-                        title = "Total Qty",
-                        value = totalQuantity.toString(),
-                        bgColor = PendingColors.PurpleLight,
-                        textColor = PendingColors.PurpleText,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    PendingMiniStatCard(
-                        title = "Showing",
-                        value = filteredRequests.size.toString(),
-                        bgColor = PendingColors.GreenLight,
-                        textColor = PendingColors.GreenText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = searchText,
-                    onValueChange = {
-                        searchText = it
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    label = {
-                        Text("Search student, ID, department, equipment or date")
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                PendingFilterTitle("Department")
-
-                PendingHorizontalFilterRow {
-                    departmentList.forEach { department ->
-                        PendingFilterChip(
-                            text = department,
-                            selected = selectedDepartment == department,
-                            onClick = {
-                                selectedDepartment = department
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                PendingFilterTitle("Category")
-
-                PendingHorizontalFilterRow {
-                    categoryList.forEach { category ->
-                        PendingFilterChip(
-                            text = category,
-                            selected = selectedCategory == category,
-                            onClick = {
-                                selectedCategory = category
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                PendingFilterTitle("Sort")
-
-                PendingHorizontalFilterRow {
-                    listOf(
-                        "Newest First",
-                        "Oldest First",
-                        "Due Date",
-                        "Student A-Z",
-                        "Equipment A-Z",
-                        "Quantity High-Low"
-                    ).forEach { sort ->
-                        PendingFilterChip(
-                            text = sort,
-                            selected = selectedSort == sort,
-                            onClick = {
-                                selectedSort = sort
-                            }
-                        )
-                    }
-                }
-
-                if (
-                    searchText.isNotBlank() ||
-                    selectedDepartment != "All" ||
-                    selectedCategory != "All" ||
-                    selectedSort != "Newest First"
-                ) {
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedButton(
-                        onClick = {
-                            searchText = ""
-                            selectedDepartment = "All"
-                            selectedCategory = "All"
-                            selectedSort = "Newest First"
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("Clear Search, Filters and Sort")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Showing ${filteredRequests.size} of ${requestList.size} pending request(s)",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = PendingColors.TextDark,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                if (filteredRequests.isEmpty()) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (requestList.isEmpty()) {
-                                "No pending requests found."
-                            } else {
-                                "No pending request matches your search/filter."
-                            },
-                            color = PendingColors.TextMuted,
-                            style = MaterialTheme.typography.titleMedium
+                            text = "No pending request found.",
+                            color = PendingReqColors.TextMuted,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        contentPadding = PaddingValues(bottom = 20.dp)
-                    ) {
-                        items(filteredRequests) { request ->
-                            PendingRequestCard(
-                                request = request,
-                                onApproveClick = {
-                                    selectedRequest = request
-                                    dialogType = "approve"
-                                },
-                                onRejectClick = {
-                                    selectedRequest = request
-                                    dialogType = "reject"
-                                }
-                            )
-                        }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(filteredRequests) { request ->
+                        PendingRequestCard(
+                            request = request,
+                            onApproveClick = {
+                                selectedRequest = request
+                                selectedAction = "approve"
+                            },
+                            onRejectClick = {
+                                selectedRequest = request
+                                selectedAction = "reject"
+                            }
+                        )
                     }
                 }
             }
@@ -579,71 +287,95 @@ fun PendingRequestsScreen(
 }
 
 @Composable
-private fun PendingMiniStatCard(
+private fun PendingRequestTopBar(
+    totalCount: Int,
+    onBackClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(42.dp)
+                .background(PendingReqColors.Card, RoundedCornerShape(14.dp))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
+                tint = PendingReqColors.TextDark
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(PendingReqColors.OrangeLight, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Inventory2,
+                contentDescription = null,
+                tint = PendingReqColors.OrangeText,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Pending Requests",
+                color = PendingReqColors.TextDark,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
+            Text(
+                text = "$totalCount request(s) waiting for approval",
+                color = PendingReqColors.TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun PendingMiniStat(
     title: String,
     value: String,
     bgColor: Color,
     textColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.height(76.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PendingColors.CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    Surface(
+        modifier = modifier.height(52.dp),
+        color = bgColor,
+        shape = RoundedCornerShape(18.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
         ) {
             Text(
                 text = title,
+                color = textColor.copy(alpha = 0.75f),
                 style = MaterialTheme.typography.labelSmall,
-                color = PendingColors.TextMuted,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
 
             Text(
                 text = value,
-                modifier = Modifier
-                    .background(
-                        color = bgColor,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.titleMedium,
                 color = textColor,
-                fontWeight = FontWeight.ExtraBold
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
             )
         }
-    }
-}
-
-@Composable
-private fun PendingFilterTitle(
-    text: String
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = PendingColors.TextMuted,
-        fontWeight = FontWeight.Bold
-    )
-}
-
-@Composable
-private fun PendingHorizontalFilterRow(
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        content()
     }
 }
 
@@ -656,21 +388,24 @@ private fun PendingFilterChip(
     if (selected) {
         Button(
             onClick = onClick,
+            modifier = Modifier.height(32.dp),
             shape = RoundedCornerShape(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = PendingColors.PrimaryIndigo,
+                containerColor = PendingReqColors.Primary,
                 contentColor = Color.White
             ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
-            Text(text)
+            Text(text = text, maxLines = 1)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50.dp)
+            modifier = Modifier.height(32.dp),
+            shape = RoundedCornerShape(50.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
         ) {
-            Text(text)
+            Text(text = text, maxLines = 1)
         }
     }
 }
@@ -681,191 +416,229 @@ private fun PendingRequestCard(
     onApproveClick: () -> Unit,
     onRejectClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = PendingColors.CardWhite),
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                4.dp,
-                RoundedCornerShape(16.dp),
-                spotColor = Color.Black.copy(alpha = 0.05f)
-            )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                RequestCardImage(
-                    imageName = request.equipmentImageName,
-                    imageUrl = request.equipmentImageUrl,
-                    contentDescription = request.equipmentName
-                )
+    val fallbackImageResId = EquipmentImageMapper.getImageRes(request.equipmentImageName)
+    val safeImageUrl = EquipmentImageMapper.getSafeImageUrl(request.equipmentImageUrl)
+    val hasImageUrl = EquipmentImageMapper.hasValidImageUrl(request.equipmentImageUrl)
 
-                Spacer(modifier = Modifier.width(14.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = PendingReqColors.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(86.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(PendingReqColors.GrayLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (hasImageUrl) {
+                        AsyncImage(
+                            model = safeImageUrl,
+                            contentDescription = request.equipmentName,
+                            placeholder = painterResource(id = fallbackImageResId),
+                            error = painterResource(id = fallbackImageResId),
+                            fallback = painterResource(id = fallbackImageResId),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = fallbackImageResId),
+                            contentDescription = request.equipmentName,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(9.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = request.equipmentName.ifBlank { "Unknown Equipment" },
+                            modifier = Modifier.weight(1f),
+                            color = PendingReqColors.TextDark,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = PendingColors.TextDark,
-                            modifier = Modifier.weight(1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        ProfessionalStatusBadge(
-                            text = request.status.ifBlank { "Pending" },
-                            type = request.status.ifBlank { "Pending" }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = PendingColors.TextMuted
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
                         Text(
-                            text = "${request.userName.ifBlank { "Unknown Student" }} • Qty: ${request.quantity}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = PendingColors.TextMuted
+                            text = "Pending",
+                            modifier = Modifier
+                                .background(PendingReqColors.OrangeLight, RoundedCornerShape(50.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = PendingReqColors.OrangeText,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
-                    if (request.studentId.isNotBlank() || request.department.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
 
-                        Text(
-                            text = buildString {
-                                if (request.studentId.isNotBlank()) {
-                                    append("ID: ${request.studentId}")
-                                }
-
-                                if (request.department.isNotBlank()) {
-                                    if (isNotBlank()) append(" • ")
-                                    append(request.department)
-                                }
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PendingColors.TextMuted
-                        )
-                    }
+                    Text(
+                        text = buildString {
+                            append(request.userName.ifBlank { "Unknown Student" })
+                            if (request.studentId.isNotBlank()) append(" • ID: ${request.studentId}")
+                            append(" • Qty: ${request.quantity}")
+                        },
+                        color = PendingReqColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = PendingColors.TextMuted
-                        )
+                    Text(
+                        text = "${request.equipmentCategory.ifBlank { "General" }} • ${request.department.ifBlank { "Department N/A" }}",
+                        color = PendingReqColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
-                        Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                        Text(
-                            text = "Borrow: ${request.borrowDate.ifBlank { "N/A" }}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PendingColors.TextMuted
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = PendingColors.TextMuted
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            text = "Due: ${request.dueDate.ifBlank { "N/A" }}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PendingColors.TextMuted
-                        )
-                    }
+                    Text(
+                        text = "Borrow: ${request.borrowDate.ifBlank { "N/A" }} • Due: ${request.dueDate.ifBlank { "N/A" }}",
+                        color = PendingReqColors.TextMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+            HorizontalDivider(color = PendingReqColors.Bg)
+            Spacer(modifier = Modifier.height(6.dp))
 
-            HorizontalDivider(color = PendingColors.ModernBg)
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onApproveClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(42.dp),
-                    shape = RoundedCornerShape(10.dp),
+                        .height(40.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = PendingColors.GreenLight,
-                        contentColor = PendingColors.GreenText
+                        containerColor = PendingReqColors.GreenText,
+                        contentColor = Color.White
                     )
                 ) {
                     Icon(
-                        Icons.Rounded.CheckCircle,
+                        imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    Text(
-                        text = "Approve",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Approve", fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedButton(
                     onClick = onRejectClick,
                     modifier = Modifier
                         .weight(1f)
-                        .height(42.dp),
-                    shape = RoundedCornerShape(10.dp),
+                        .height(40.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = PendingColors.RedText
-                    ),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = PendingColors.RedText.copy(alpha = 0.3f)
+                        contentColor = PendingReqColors.RedText
                     )
                 ) {
                     Icon(
-                        Icons.Rounded.Cancel,
+                        imageVector = Icons.Rounded.Cancel,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    Text(
-                        text = "Reject",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Reject", fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun PendingRequestConfirmDialog(
+    request: BorrowRequest,
+    action: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val isApprove = action == "approve"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        containerColor = PendingReqColors.Card,
+        title = {
+            Text(
+                text = if (isApprove) "Approve Request" else "Reject Request",
+                color = PendingReqColors.TextDark,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = if (isApprove) {
+                        "Approve this borrow request?"
+                    } else {
+                        "Reject this borrow request?"
+                    },
+                    color = PendingReqColors.TextMuted
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = PendingReqColors.Bg,
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = request.equipmentName.ifBlank { "Unknown Equipment" },
+                            color = PendingReqColors.TextDark,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "${request.userName.ifBlank { "Unknown Student" }} • Qty: ${request.quantity}",
+                            color = PendingReqColors.TextMuted,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isApprove) PendingReqColors.GreenText else PendingReqColors.RedText,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(if (isApprove) "Approve" else "Reject")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = PendingReqColors.TextMuted)
+            }
+        }
+    )
 }

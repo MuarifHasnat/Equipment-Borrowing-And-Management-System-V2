@@ -16,15 +16,16 @@ class UserRepository {
             "pending",
             "verified",
             "rejected",
+            "blocked",
             "suspended"
         )
     }
-
     private fun statusMessage(status: String): String {
         return when (normalizeStatus(status)) {
             "pending" -> "Student status changed to pending"
             "verified" -> "Student verified successfully"
             "rejected" -> "Student rejected successfully"
+            "blocked" -> "Student blocked successfully"
             "suspended" -> "Student suspended successfully"
             else -> "Student status updated successfully"
         }
@@ -135,7 +136,8 @@ class UserRepository {
                     studentId = document.getString("studentId")?.trim().orEmpty(),
                     department = document.getString("department")?.trim().orEmpty(),
                     semester = document.getString("semester")?.trim().orEmpty(),
-                    phone = document.getString("phone")?.trim().orEmpty()
+                    phone = document.getString("phone")?.trim().orEmpty(),
+                    profileImageUrl = document.getString("profileImageUrl")?.trim().orEmpty()
                 )
 
                 onResult(user)
@@ -148,9 +150,7 @@ class UserRepository {
     fun updateStudentProfile(
         userId: String,
         phone: String,
-        studentId: String,
-        department: String,
-        semester: String,
+        profileImageUrl: String,
         onResult: (Boolean, String) -> Unit
     ) {
         if (userId.isBlank()) {
@@ -163,9 +163,7 @@ class UserRepository {
             .update(
                 mapOf(
                     "phone" to phone.trim(),
-                    "studentId" to studentId.trim(),
-                    "department" to department.trim(),
-                    "semester" to semester.trim()
+                    "profileImageUrl" to profileImageUrl.trim()
                 )
             )
             .addOnSuccessListener {
@@ -179,6 +177,7 @@ class UserRepository {
     fun updateAdminProfile(
         userId: String,
         phone: String,
+        profileImageUrl: String,
         onResult: (Boolean, String) -> Unit
     ) {
         if (userId.isBlank()) {
@@ -190,7 +189,8 @@ class UserRepository {
             .document(userId)
             .update(
                 mapOf(
-                    "phone" to phone.trim()
+                    "phone" to phone.trim(),
+                    "profileImageUrl" to profileImageUrl.trim()
                 )
             )
             .addOnSuccessListener {

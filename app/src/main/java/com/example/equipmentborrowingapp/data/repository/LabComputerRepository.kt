@@ -3,6 +3,7 @@ package com.example.equipmentborrowingapp.data.repository
 import com.example.equipmentborrowingapp.data.model.ComputerSoftwareStatus
 import com.example.equipmentborrowingapp.data.model.LabComputer
 import com.example.equipmentborrowingapp.data.model.SoftwareIssueReport
+import com.example.equipmentborrowingapp.data.model.SoftwareInstallRequest
 import com.google.firebase.firestore.FirebaseFirestore
 
 
@@ -17,6 +18,7 @@ class LabComputerRepository {
         labRoom: String,
         locationNote: String,
         ipAddress: String,
+        computerImageUrl: String = "",
         status: String,
         remarks: String,
         onResult: (Boolean, String) -> Unit
@@ -36,6 +38,7 @@ class LabComputerRepository {
             labRoom = labRoom.trim(),
             locationNote = locationNote.trim(),
             ipAddress = ipAddress.trim(),
+            computerImageUrl = computerImageUrl.trim(),
             status = status.trim(),
             remarks = remarks.trim(),
             lastCheckedAt = System.currentTimeMillis()
@@ -155,10 +158,11 @@ class LabComputerRepository {
 
     fun addSoftwareStatus(
         institutionId: String,
-        roomId: String = "",
+        roomId: String,
         computerId: String,
         softwareName: String,
         version: String,
+        softwareLogoUrl: String,
         installed: Boolean,
         launchesProperly: Boolean,
         compileWorks: Boolean,
@@ -222,14 +226,40 @@ class LabComputerRepository {
             }
     }
 
+    fun getAllSoftwareStatusForInstitution(
+        institutionId: String,
+        onResult: (List<ComputerSoftwareStatus>) -> Unit
+    ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
+        firestore.collection("computer_software_status")
+            .whereEqualTo("institutionId", institutionId.trim())
+            .get()
+            .addOnSuccessListener { result ->
+                val list = result.documents.mapNotNull {
+                    it.toObject(ComputerSoftwareStatus::class.java)
+                }.sortedBy { it.softwareName.lowercase() }
+                onResult(list)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
     fun submitSoftwareIssueReport(
         institutionId: String,
         roomId: String = "",
         computerId: String,
         computerName: String,
+        computerImageUrl: String = "",
         softwareName: String,
         reportedByUserId: String,
         reportedByUserName: String,
+        reportedByStudentId: String = "",
+        reportedByDepartment: String = "",
         issueType: String,
         description: String,
         severity: String,
@@ -248,9 +278,12 @@ class LabComputerRepository {
             roomId = roomId,
             computerId = computerId,
             computerName = computerName,
+            computerImageUrl = computerImageUrl,
             softwareName = softwareName.trim(),
             reportedByUserId = reportedByUserId,
-            reportedByUserName = reportedByUserName,
+            reportedByUserName = reportedByUserName.trim(),
+            reportedByStudentId = reportedByStudentId.trim(),
+            reportedByDepartment = reportedByDepartment.trim(),
             issueType = issueType.trim(),
             description = description.trim(),
             severity = severity.trim(),
@@ -281,13 +314,34 @@ class LabComputerRepository {
             .whereEqualTo("institutionId", cleanInstitutionId)
             .get()
             .addOnSuccessListener { result ->
-                val list = result.documents.mapNotNull { document ->
+                val rawList = result.documents.mapNotNull { document ->
                     document.toObject(SoftwareIssueReport::class.java)
-                }.sortedByDescending { report ->
-                    report.timestamp
                 }
 
-                onResult(list)
+                firestore.collection("lab_computers")
+                    .whereEqualTo("institutionId", cleanInstitutionId)
+                    .get()
+                    .addOnSuccessListener { computerResult ->
+                        val computerById = computerResult.documents.mapNotNull {
+                            it.toObject(LabComputer::class.java)
+                        }.associateBy { it.id }
+
+                        val enrichedList = rawList.map { report ->
+                            if (report.computerImageUrl.isBlank()) {
+                                val imageUrl = computerById[report.computerId]?.computerImageUrl.orEmpty()
+                                report.copy(computerImageUrl = imageUrl)
+                            } else {
+                                report
+                            }
+                        }.sortedByDescending { report ->
+                            report.timestamp
+                        }
+
+                        onResult(enrichedList)
+                    }
+                    .addOnFailureListener {
+                        onResult(rawList.sortedByDescending { report -> report.timestamp })
+                    }
             }
             .addOnFailureListener {
                 onResult(emptyList())
@@ -483,6 +537,130 @@ class LabComputerRepository {
             }
             .addOnFailureListener { e ->
                 onResult(false, e.message ?: "Failed to delete software status")
+            }
+    }
+    fun submitSoftwareInstallRequest(
+        request: SoftwareInstallRequest,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (request.institutionId.isBlank()) {
+            onResult(false, "Institution not found")
+            return
+        }
+
+        if (request.computerId.isBlank()) {
+            onResult(false, "Please select a computer")
+            return
+        }
+
+        if (request.softwareName.isBlank()) {
+            onResult(false, "Software name is required")
+            return
+        }
+
+        if (request.requestedByUserId.isBlank()) {
+            onResult(false, "Student not found")
+            return
+        }
+
+        val docRef = firestore.collection("software_install_requests").document()
+        val now = System.currentTimeMillis()
+
+        val finalRequest = request.copy(
+            id = docRef.id,
+            softwareName = request.softwareName.trim(),
+            version = request.version.trim(),
+            reason = request.reason.trim(),
+            status = "Pending",
+            createdAt = now,
+            updatedAt = now
+        )
+
+        docRef.set(finalRequest)
+            .addOnSuccessListener {
+                onResult(true, "Software install request submitted successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to submit software install request")
+            }
+    }
+
+    fun getMySoftwareInstallRequests(
+        institutionId: String,
+        userId: String,
+        onResult: (List<SoftwareInstallRequest>) -> Unit
+    ) {
+        if (institutionId.isBlank() || userId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
+        firestore.collection("software_install_requests")
+            .whereEqualTo("institutionId", institutionId)
+            .whereEqualTo("requestedByUserId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                val list = result.documents.mapNotNull {
+                    it.toObject(SoftwareInstallRequest::class.java)
+                }.sortedByDescending { it.createdAt }
+
+                onResult(list)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+    fun getAllSoftwareInstallRequests(
+        institutionId: String,
+        onResult: (List<SoftwareInstallRequest>) -> Unit
+    ) {
+        if (institutionId.isBlank()) {
+            onResult(emptyList())
+            return
+        }
+
+        firestore.collection("software_install_requests")
+            .whereEqualTo("institutionId", institutionId)
+            .get()
+            .addOnSuccessListener { result ->
+                val list = result.documents.mapNotNull {
+                    it.toObject(SoftwareInstallRequest::class.java)
+                }.sortedByDescending { it.createdAt }
+
+                onResult(list)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+    fun updateSoftwareInstallRequestStatus(
+        requestId: String,
+        status: String,
+        adminMessage: String = "",
+        onResult: (Boolean, String) -> Unit
+    ) {
+        if (requestId.isBlank()) {
+            onResult(false, "Request not found")
+            return
+        }
+
+        val cleanStatus = status.trim().ifBlank { "Pending" }
+
+        val updateMap = hashMapOf<String, Any>(
+            "status" to cleanStatus,
+            "adminMessage" to adminMessage.trim(),
+            "updatedAt" to System.currentTimeMillis()
+        )
+
+        firestore.collection("software_install_requests")
+            .document(requestId)
+            .update(updateMap)
+            .addOnSuccessListener {
+                onResult(true, "Software install request updated successfully")
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Failed to update software install request")
             }
     }
 }

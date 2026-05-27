@@ -1,4 +1,6 @@
 package com.example.equipmentborrowingapp
+import com.example.equipmentborrowingapp.ui.screen.SplashScreen
+import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.example.equipmentborrowingapp.ui.common.UiMessages
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
@@ -99,6 +101,10 @@ import com.example.equipmentborrowingapp.ui.admin.StudentBorrowHistoryReportScre
 import com.example.equipmentborrowingapp.ui.admin.BorrowRequestReportScreen
 import com.example.equipmentborrowingapp.ui.admin.LowStockReportScreen
 import com.example.equipmentborrowingapp.ui.admin.SoftwareIssueReportAdminScreen
+import com.example.equipmentborrowingapp.ui.screen.SplashScreen
+import com.example.equipmentborrowingapp.data.model.SoftwareInstallRequest
+import com.example.equipmentborrowingapp.ui.student.SoftwareInstallRequestScreen
+import com.example.equipmentborrowingapp.ui.admin.SoftwareInstallRequestsAdminScreen
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -116,10 +122,13 @@ class MainActivity : ComponentActivity() {
             EquipmentBorrowingAppTheme {
 
                 // Auth / session state
-                var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Login) }
+                var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
+                var splashFinished by remember { mutableStateOf(false) }
                 var currentUserRole by remember { mutableStateOf<String?>(null) }
                 var currentUserName by remember { mutableStateOf("") }
                 var currentUserEmail by remember { mutableStateOf("") }
+                var currentStudentId by remember { mutableStateOf("") }
+                var currentDepartment by remember { mutableStateOf("") }
                 var currentInstitutionId by remember { mutableStateOf("") }
                 var currentVerificationStatus by remember { mutableStateOf("") }
                 var currentAppUser by remember {
@@ -137,7 +146,9 @@ class MainActivity : ComponentActivity() {
                 val roomViewModel = remember { RoomViewModel() }
                 var institutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
                 var allInstitutionList by remember { mutableStateOf<List<Institution>>(emptyList()) }
-
+                var isGoogleRegisterMode by remember { mutableStateOf(false) }
+                var googleRegisterName by remember { mutableStateOf("") }
+                var googleRegisterEmail by remember { mutableStateOf("") }
                 fun showMessage(message: String) {
                     scope.launch {
                         snackbarHostState.showSnackbar(message)
@@ -156,8 +167,12 @@ class MainActivity : ComponentActivity() {
                 var softwareIssueReports by remember {
                     mutableStateOf<List<SoftwareIssueReport>>(emptyList())
                 }
+
                 var mySoftwareIssueReports by remember {
                     mutableStateOf<List<SoftwareIssueReport>>(emptyList())
+                }
+                var softwareInstallRequestList by remember {
+                    mutableStateOf<List<SoftwareInstallRequest>>(emptyList())
                 }
                 var institutionAdminRequestList by remember {
                     mutableStateOf<List<InstitutionAdminRequest>>(emptyList())
@@ -294,6 +309,8 @@ class MainActivity : ComponentActivity() {
 
                             currentUserName = user.name
                             currentUserEmail = user.email
+                            currentStudentId = user.studentId
+                            currentDepartment = user.department
                             currentUserRole = user.role.trim().lowercase()
                             currentInstitutionId = user.institutionId.trim()
                             currentVerificationStatus = user.verificationStatus.trim().lowercase()
@@ -323,6 +340,9 @@ class MainActivity : ComponentActivity() {
                     institutionRepository.getApprovedInstitutions { list ->
                         runOnUiThread {
                             institutionList = list
+                            isGoogleRegisterMode = false
+                            googleRegisterName = ""
+                            googleRegisterEmail = ""
 
                             if (institutionList.isEmpty()) {
                                 showMessage("No approved institution found. Please contact admin.")
@@ -637,10 +657,28 @@ class MainActivity : ComponentActivity() {
                                     idToken = googleIdTokenCredential.idToken
                                 ) { success, message ->
                                     runOnUiThread {
-                                        showMessage(message)
+                                        if (message == "GOOGLE_PROFILE_REQUIRED") {
+                                            googleRegisterName = googleIdTokenCredential.displayName ?: ""
+                                            googleRegisterEmail = googleIdTokenCredential.id
 
-                                        if (success) {
-                                            openDashboardAfterLogin()
+                                            institutionRepository.getApprovedInstitutions { list ->
+                                                runOnUiThread {
+                                                    institutionList = list
+
+                                                    if (institutionList.isEmpty()) {
+                                                        showMessage("No approved institution found. Please contact admin.")
+                                                    } else {
+                                                        isGoogleRegisterMode = true
+                                                        currentScreen = AppScreen.Register
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            showMessage(message)
+
+                                            if (success) {
+                                                openDashboardAfterLogin()
+                                            }
                                         }
                                     }
                                 }
@@ -673,35 +711,35 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                    fun loadPendingRequestsAndOpen() {
-                        if (currentInstitutionId.isBlank()) {
-                            showMessage("Institution not found. Please login again.")
-                            return
-                        }
-
-                        adminRequestViewModel.loadPendingRequests(
-                            institutionId = currentInstitutionId
-                        ) {
-                            runOnUiThread {
-                                currentScreen = AppScreen.PendingRequests
-                            }
-                        }
+                fun loadPendingRequestsAndOpen() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
                     }
 
-                    fun loadApprovedRequestsAndOpen() {
-                        if (currentInstitutionId.isBlank()) {
-                            showMessage("Institution not found. Please login again.")
-                            return
-                        }
-
-                        adminRequestViewModel.loadApprovedRequests(
-                            institutionId = currentInstitutionId
-                        ) {
-                            runOnUiThread {
-                                currentScreen = AppScreen.ApprovedRequests
-                            }
+                    adminRequestViewModel.loadPendingRequests(
+                        institutionId = currentInstitutionId
+                    ) {
+                        runOnUiThread {
+                            currentScreen = AppScreen.PendingRequests
                         }
                     }
+                }
+
+                fun loadApprovedRequestsAndOpen() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    adminRequestViewModel.loadApprovedRequests(
+                        institutionId = currentInstitutionId
+                    ) {
+                        runOnUiThread {
+                            currentScreen = AppScreen.ApprovedRequests
+                        }
+                    }
+                }
 
                 fun loadLabComputersForAdmin() {
                     if (currentInstitutionId.isBlank()) {
@@ -731,6 +769,21 @@ class MainActivity : ComponentActivity() {
                             selectedLabComputer = null
                             softwareIssueReports = list
                             currentScreen = AppScreen.SoftwareIssueReports
+                        }
+                    }
+                }
+                fun loadSoftwareInstallRequests() {
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
+
+                    labComputerRepository.getAllSoftwareInstallRequests(
+                        institutionId = currentInstitutionId
+                    ) { list ->
+                        runOnUiThread {
+                            softwareInstallRequestList = list
+                            currentScreen = AppScreen.SoftwareInstallRequestsAdmin
                         }
                     }
                 }
@@ -818,6 +871,7 @@ class MainActivity : ComponentActivity() {
                                     "rejected" -> "Account Rejected"
                                     "suspended" -> "Account Suspended"
                                     "pending" -> "Account Set to Pending"
+                                    "blocked" -> "Account Blocked"
                                     else -> "Account Status Updated"
                                 }
 
@@ -826,6 +880,7 @@ class MainActivity : ComponentActivity() {
                                     "rejected" -> "Your student verification request has been rejected."
                                     "suspended" -> "Your student account has been suspended. Please contact your admin."
                                     "pending" -> "Your student account has been moved back to pending verification."
+                                    "blocked" -> "Your student account has been blocked. Please contact your admin."
                                     else -> "Your student account status has been updated."
                                 }
 
@@ -833,6 +888,7 @@ class MainActivity : ComponentActivity() {
                                     "verified" -> "success"
                                     "rejected" -> "error"
                                     "suspended" -> "warning"
+                                    "blocked" -> "warning"
                                     else -> "info"
                                 }
 
@@ -1162,29 +1218,29 @@ class MainActivity : ComponentActivity() {
                 }
 // Student helpers
 
-                    fun loadStudentRequestsAndOpenMyRequests() {
-                        val uid = authRepository.getCurrentUserUid()
+                fun loadStudentRequestsAndOpenMyRequests() {
+                    val uid = authRepository.getCurrentUserUid()
 
-                        if (uid == null) {
-                            showMessage(UiMessages.USER_NOT_LOGGED_IN)
-                            safeLogoutToLogin()
-                            return
-                        }
+                    if (uid == null) {
+                        showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                        safeLogoutToLogin()
+                        return
+                    }
 
-                        if (currentInstitutionId.isBlank()) {
-                            showMessage("Institution not found. Please login again.")
-                            return
-                        }
+                    if (currentInstitutionId.isBlank()) {
+                        showMessage("Institution not found. Please login again.")
+                        return
+                    }
 
-                        requestViewModel.loadUserRequests(
-                            institutionId = currentInstitutionId,
-                            userId = uid
-                        ) {
-                            runOnUiThread {
-                                currentScreen = AppScreen.MyRequests
-                            }
+                    requestViewModel.loadUserRequests(
+                        institutionId = currentInstitutionId,
+                        userId = uid
+                    ) {
+                        runOnUiThread {
+                            currentScreen = AppScreen.MyRequests
                         }
                     }
+                }
                 fun loadRoomsAndOpenStudentRoomSelection() {
                     if (currentInstitutionId.isBlank()) {
                         showMessage("Institution not found. Please login again.")
@@ -1237,8 +1293,13 @@ class MainActivity : ComponentActivity() {
                     labComputerViewModel.loadStudentLabComputers(
                         institutionId = currentInstitutionId
                     ) {
-                        runOnUiThread {
-                            currentScreen = AppScreen.LabComputerList
+                        labComputerRepository.getAllSoftwareStatusForInstitution(
+                            institutionId = currentInstitutionId
+                        ) { list ->
+                            runOnUiThread {
+                                computerSoftwareList = list
+                                currentScreen = AppScreen.LabComputerList
+                            }
                         }
                     }
                 }
@@ -1259,6 +1320,84 @@ class MainActivity : ComponentActivity() {
                             mySoftwareIssueReports = list
                             currentScreen = AppScreen.MySoftwareIssues
 
+                        }
+                    }
+                }
+                fun handleNotificationNavigation(notification: AppNotification) {
+                    val type = notification.type.trim().lowercase()
+                    val title = notification.title.trim().lowercase()
+                    val message = notification.message.trim().lowercase()
+                    val combinedText = "$type $title $message"
+
+                    fun containsAny(vararg keywords: String): Boolean {
+                        return keywords.any { keyword -> combinedText.contains(keyword) }
+                    }
+
+                    when {
+                        type in listOf(
+                            "request_approved",
+                            "request_rejected",
+                            "request_issued",
+                            "request_returned",
+                            "request_lost",
+                            "request_damaged",
+                            "fine_paid",
+                            "fine_waived"
+                        ) || containsAny(
+                            "request approved",
+                            "request rejected",
+                            "item issued",
+                            "item returned",
+                            "marked as lost",
+                            "marked as damaged",
+                            "fine paid",
+                            "fine waived"
+                        ) -> {
+                            loadStudentRequestsAndOpenMyRequests()
+                        }
+
+                        type in listOf(
+                            "software_issue_solved",
+                            "software_issue_rejected"
+                        ) || containsAny(
+                            "software issue solved",
+                            "software issue rejected"
+                        ) -> {
+                            loadMySoftwareIssuesAndOpen()
+                        }
+                        type == "software_install_request" || containsAny("software install request", "new software install request") -> {
+                            loadSoftwareInstallRequests()
+                        }
+                        type == "new_borrow_request" || containsAny("new borrow request", "requested") -> {
+                            loadPendingRequestsAndOpen()
+                        }
+
+                        type == "student_registered" || containsAny("student registered", "new student") -> {
+                            loadPendingStudentsAndOpen()
+                        }
+
+                        type == "software_issue" || containsAny("new software issue", "reported issue") -> {
+                            loadAllSoftwareReportsAndOpen()
+                        }
+
+                        type == "low_stock" || containsAny("low stock") -> {
+                            currentScreen = AppScreen.LowStockReport
+                        }
+
+                        type == "overdue_request" || containsAny("overdue") -> {
+                            currentScreen = AppScreen.OverdueItemReport
+                        }
+
+                        type == "lost_damaged" || containsAny("lost/damaged", "lost damaged") -> {
+                            currentScreen = AppScreen.LostDamagedReport
+                        }
+
+                        else -> {
+                            currentScreen = when {
+                                isSuperAdmin() -> AppScreen.SuperAdminDashboard
+                                isAdmin() -> AppScreen.AdminDashboard
+                                else -> AppScreen.StudentDashboard
+                            }
                         }
                     }
                 }
@@ -1313,7 +1452,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun handleUpdateAdminProfile(
-                    phone: String
+                    phone: String,
+                    profileImageUrl: String
                 ) {
                     val uid = authRepository.getCurrentUserUid()
 
@@ -1325,8 +1465,9 @@ class MainActivity : ComponentActivity() {
 
                     userRepository.updateAdminProfile(
                         userId = uid,
-                        phone = phone
-                    ) { success, message ->
+                        phone = phone,
+                        profileImageUrl = profileImageUrl
+                    ){ success, message ->
                         runOnUiThread {
                             showMessage(message)
 
@@ -1338,10 +1479,8 @@ class MainActivity : ComponentActivity() {
                 }
                 fun handleUpdateStudentProfile(
                     phone: String,
-                    studentId: String,
-                    department: String,
-                    semester: String
-                ) {
+                    profileImageUrl: String
+                )  {
                     val uid = authRepository.getCurrentUserUid()
 
                     if (uid.isNullOrBlank()) {
@@ -1353,10 +1492,8 @@ class MainActivity : ComponentActivity() {
                     userRepository.updateStudentProfile(
                         userId = uid,
                         phone = phone,
-                        studentId = studentId,
-                        department = department,
-                        semester = semester
-                    ) { success, message ->
+                        profileImageUrl = profileImageUrl
+                    ){ success, message ->
                         runOnUiThread {
                             showMessage(message)
 
@@ -1462,14 +1599,29 @@ class MainActivity : ComponentActivity() {
                 @Composable
                 fun renderStudentScreens() {
                     when (currentScreen) {
+
                         AppScreen.StudentDashboard -> {
                             if (!isStudent()) {
                                 redirectUnauthorized(AppScreen.StudentDashboard)
                             } else {
+                                LaunchedEffect(currentScreen, currentInstitutionId) {
+                                    val uid = authRepository.getCurrentUserUid()
+
+                                    if (
+                                        currentScreen == AppScreen.StudentDashboard &&
+                                        uid != null &&
+                                        currentInstitutionId.isNotBlank()
+                                    ) {
+                                        requestViewModel.loadUserRequests(
+                                            institutionId = currentInstitutionId,
+                                            userId = uid
+                                        )
+                                    }
+                                }
+
                                 StudentDashboardScreen(
                                     recentRequests = requestViewModel.myRequests
-                                        .sortedByDescending { request -> request.requestTimestamp }
-                                        .take(2),
+                                        .sortedByDescending { request -> request.requestTimestamp },
                                     onViewEquipmentClick = {
                                         loadRoomsAndOpenStudentRoomSelection()
                                     },
@@ -1481,6 +1633,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onMySoftwareIssuesClick = {
                                         loadMySoftwareIssuesAndOpen()
+                                    },
+                                    hasUnreadNotifications = notificationViewModel.notificationList.any {
+                                        !it.read
                                     },
                                     onProfileClick = {
                                         loadStudentProfileAndOpen()
@@ -1515,12 +1670,10 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 StudentProfileScreen(
                                     user = currentAppUser,
-                                    onSaveClick = { phone, studentId, department, semester ->
+                                    onSaveClick = { phone, profileImageUrl ->
                                         handleUpdateStudentProfile(
                                             phone = phone,
-                                            studentId = studentId,
-                                            department = department,
-                                            semester = semester
+                                            profileImageUrl = profileImageUrl
                                         )
                                     },
                                     onPasswordResetClick = { email ->
@@ -1601,7 +1754,7 @@ class MainActivity : ComponentActivity() {
                                 if (equipment != null) {
                                     BorrowRequestScreen(
                                         equipment = equipment,
-                                        onSubmitClick = { quantity, borrowDate, dueDate ->
+                                        onSubmitClick = { quantity, borrowDate, dueDate, purpose ->
                                             when {
                                                 !currentVerificationStatus.equals("verified", ignoreCase = true) ->  {
                                                     showMessage("Your account is not verified yet")
@@ -1610,7 +1763,7 @@ class MainActivity : ComponentActivity() {
                                                     showMessage(UiMessages.EQUIPMENT_NOT_FOUND)
                                                 }
 
-                                                !equipment.isBorrowable -> {
+                                                (!equipment.isBorrowable || equipment.borrowType == "LabUseOnly") -> {
                                                     showMessage("This equipment is lab-use-only")
                                                 }
 
@@ -1657,6 +1810,9 @@ class MainActivity : ComponentActivity() {
                                                                         roomId = selectedRoomId,
                                                                         userId = uid,
                                                                         userName = userName,
+                                                                        userEmail = currentUserEmail,
+                                                                        studentId = currentStudentId,
+                                                                        department = currentDepartment,
                                                                         equipmentId = equipment.id,
                                                                         equipmentName = equipment.name.ifBlank {
                                                                             UiMessages.UNKNOWN_EQUIPMENT
@@ -1666,7 +1822,8 @@ class MainActivity : ComponentActivity() {
                                                                         equipmentImageUrl = equipment.imageUrl,
                                                                         quantity = quantity,
                                                                         borrowDate = borrowDate,
-                                                                        dueDate = dueDate
+                                                                        dueDate = dueDate,
+                                                                        purpose = purpose
                                                                     ) { success, message ->
                                                                         runOnUiThread {
                                                                             showMessage(
@@ -1677,7 +1834,7 @@ class MainActivity : ComponentActivity() {
                                                                                 notificationRepository.sendNotificationToInstitutionAdmins(
                                                                                     institutionId = currentInstitutionId,
                                                                                     title = "New Borrow Request",
-                                                                                    message = "$userName requested ${equipment.name}",
+                                                                                    message = "$userName (${currentStudentId.ifBlank { "No ID" }} • ${currentDepartment.ifBlank { "No Department" }}) requested ${equipment.name}",
                                                                                     type = "warning"
                                                                                 )
                                                                                 equipmentViewModel.loadEquipment(
@@ -1688,7 +1845,7 @@ class MainActivity : ComponentActivity() {
                                                                                         submittedQuantity = quantity
                                                                                         submittedBorrowDate = borrowDate
                                                                                         submittedDueDate = dueDate
-                                                                                        submittedPurpose = "Lab Project"
+                                                                                        submittedPurpose = purpose.ifBlank { "Lab Project" }
 
                                                                                         currentScreen = AppScreen.RequestSubmitted
                                                                                     }
@@ -1796,9 +1953,24 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             LabComputerListScreen(
                                                 computerList = labComputerViewModel.studentLabComputerList,
+                                                softwareStatusList = computerSoftwareList,
+                                                onInstallRequestClick = { computer ->
+                                                    selectedLabComputer = computer
+                                                    currentScreen = AppScreen.SoftwareInstallRequest
+                                                },
                                                 onReportClick = { computer ->
                                                     selectedLabComputer = computer
-                                                    currentScreen = AppScreen.ReportSoftwareIssue
+
+                                                    labComputerRepository.getSoftwareStatusForComputer(
+                                                        institutionId = currentInstitutionId,
+                                                        computerId = computer.id
+                                                    ) { list ->
+                                                        runOnUiThread {
+                                                            computerSoftwareList = computerSoftwareList
+                                                                .filterNot { it.computerId == computer.id } + list
+                                                            currentScreen = AppScreen.ReportSoftwareIssue
+                                                        }
+                                                    }
                                                 },
                                                 onBackClick = {
                                                     currentScreen = AppScreen.StudentDashboard
@@ -1809,7 +1981,71 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+                        AppScreen.SoftwareInstallRequest -> {
+                            if (!isStudent()) {
+                                redirectUnauthorized(AppScreen.SoftwareInstallRequest)
+                            } else {
+                                val computer = selectedLabComputer
 
+                                if (computer != null) {
+                                    SoftwareInstallRequestScreen(
+                                        computer = computer,
+                                        studentName = currentUserName,
+                                        studentId = currentStudentId,
+                                        department = currentDepartment,
+                                        onSubmitClick = { softwareName, version, softwareLogoUrl, reason ->
+                                            val uid = authRepository.getCurrentUserUid()
+
+                                            if (uid.isNullOrBlank()) {
+                                                showMessage(UiMessages.USER_NOT_LOGGED_IN)
+                                                safeLogoutToLogin()
+                                            } else {
+                                                val request = SoftwareInstallRequest(
+                                                    institutionId = currentInstitutionId,
+                                                    computerId = computer.id,
+                                                    computerName = computer.pcName,
+                                                    computerImageUrl = computer.computerImageUrl,
+                                                    softwareName = softwareName,
+                                                    version = version,
+                                                    softwareLogoUrl = softwareLogoUrl,
+                                                    requestedByUserId = uid,
+                                                    requestedByUserName = currentUserName,
+                                                    requestedByStudentId = currentStudentId,
+                                                    requestedByDepartment = currentDepartment,
+                                                    requestedByEmail = currentUserEmail,
+                                                    reason = reason
+                                                )
+
+                                                labComputerRepository.submitSoftwareInstallRequest(
+                                                    request = request
+                                                ) { success, message ->
+                                                    runOnUiThread {
+                                                        showMessage(message)
+
+                                                        if (success) {
+                                                            notificationRepository.sendNotificationToInstitutionAdmins(
+                                                                institutionId = currentInstitutionId,
+                                                                title = "New Software Install Request",
+                                                                message = "${currentUserName.ifBlank { "Student" }} (${currentStudentId.ifBlank { "No ID" }} • ${currentDepartment.ifBlank { "No Department" }}) requested $softwareName for ${computer.pcName}",
+                                                                type = "software_install_request"
+                                                            )
+
+                                                            currentScreen = AppScreen.LabComputerList
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        onBackClick = {
+                                            currentScreen = AppScreen.LabComputerList
+                                        }
+                                    )
+                                } else {
+                                    showMessage(UiMessages.LAB_COMPUTER_NOT_FOUND)
+                                    currentScreen = AppScreen.LabComputerList
+                                }
+                            }
+                        }
                         AppScreen.ReportSoftwareIssue -> {
                             if (!isStudent()) {
                                 redirectUnauthorized(AppScreen.ReportSoftwareIssue)
@@ -1819,6 +2055,7 @@ class MainActivity : ComponentActivity() {
                                 if (computer != null) {
                                     ReportSoftwareIssueScreen(
                                         computer = computer,
+                                        softwareList = computerSoftwareList.filter { it.computerId == computer.id },
                                         onSubmitClick = { softwareName, issueType, description, severity ->
                                             val uid = authRepository.getCurrentUserUid()
 
@@ -1835,6 +2072,7 @@ class MainActivity : ComponentActivity() {
                                                             roomId = computer.roomId,
                                                             computerId = computer.id,
                                                             computerName = computer.pcName,
+                                                            computerImageUrl = computer.computerImageUrl,
                                                             softwareName = softwareName,
                                                             reportedByUserId = uid,
                                                             reportedByUserName = userName,
@@ -1892,7 +2130,9 @@ class MainActivity : ComponentActivity() {
                         else -> Unit
                     }
                 }
-                LaunchedEffect(Unit) {
+                LaunchedEffect(splashFinished) {
+                    if (!splashFinished) return@LaunchedEffect
+
                     if (authRepository.isUserLoggedIn()) {
                         loadLoggedInUserRole {
                             currentScreen = when (currentUserRole) {
@@ -1910,7 +2150,11 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(currentScreen, currentUserRole) {
 
-                    if (currentScreen == AppScreen.Login || currentScreen == AppScreen.Register) return@LaunchedEffect
+                    if (
+                        currentScreen == AppScreen.Splash ||
+                        currentScreen == AppScreen.Login ||
+                        currentScreen == AppScreen.Register
+                    ) return@LaunchedEffect
 
                     if (!authRepository.isUserLoggedIn()) {
                         showMessage(UiMessages.LOGIN_REQUIRED)
@@ -2061,7 +2305,9 @@ class MainActivity : ComponentActivity() {
                                     AppScreen.ManageLabComputers
                                 }
                         }
+                        else -> Unit
                     }
+
                 }
                 Scaffold(
                     snackbarHost = {
@@ -2074,6 +2320,13 @@ class MainActivity : ComponentActivity() {
                     ) {
 
                         when (currentScreen) {
+                            AppScreen.Splash -> {
+                                SplashScreen(
+                                    onSplashFinished = {
+                                        splashFinished = true
+                                    }
+                                )
+                            }
                             in listOf(
                                 AppScreen.StudentProfile,
                                 AppScreen.StudentDashboard,
@@ -2085,7 +2338,9 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.MyRequests,
                                 AppScreen.LabComputerList,
                                 AppScreen.ReportSoftwareIssue,
-                                AppScreen.MySoftwareIssues
+                                AppScreen.MySoftwareIssues,
+                                AppScreen.SoftwareInstallRequest,
+                                AppScreen.MySoftwareInstallRequests
                             ) -> {
                                 renderStudentScreens()
                             }
@@ -2131,24 +2386,57 @@ class MainActivity : ComponentActivity() {
                             AppScreen.Register -> {
                                 RegisterScreen(
                                     institutionList = institutionList,
-                                    onRegisterClick = { name, email, password, institutionId ->
-                                        authRepository.registerUser(
-                                            name = name,
-                                            email = email,
-                                            password = password,
-                                            role = "student",
-                                            institutionId = institutionId
-                                        ) { success, message ->
-                                            runOnUiThread {
-                                                showMessage(message)
+                                    isGoogleMode = isGoogleRegisterMode,
+                                    prefilledName = googleRegisterName,
+                                    prefilledEmail = googleRegisterEmail,
+                                    onRegisterClick = { name, email, password, institutionId, studentId, department, semester, phone ->
+                                        if (isGoogleRegisterMode) {
+                                            authRepository.completeGoogleRegistration(
+                                                name = name,
+                                                email = email,
+                                                institutionId = institutionId,
+                                                studentId = studentId,
+                                                department = department,
+                                                semester = semester,
+                                                phone = phone
+                                            ) { success, message ->
+                                                runOnUiThread {
+                                                    showMessage(message)
 
-                                                if (success) {
-                                                    currentScreen = AppScreen.Login
+                                                    if (success) {
+                                                        isGoogleRegisterMode = false
+                                                        googleRegisterName = ""
+                                                        googleRegisterEmail = ""
+                                                        currentScreen = AppScreen.Login
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            authRepository.registerUser(
+                                                name = name,
+                                                email = email,
+                                                password = password,
+                                                role = "student",
+                                                institutionId = institutionId,
+                                                studentId = studentId,
+                                                department = department,
+                                                semester = semester,
+                                                phone = phone
+                                            ) { success, message ->
+                                                runOnUiThread {
+                                                    showMessage(message)
+
+                                                    if (success) {
+                                                        currentScreen = AppScreen.Login
+                                                    }
                                                 }
                                             }
                                         }
                                     },
                                     onGoToLogin = {
+                                        isGoogleRegisterMode = false
+                                        googleRegisterName = ""
+                                        googleRegisterEmail = ""
                                         currentScreen = AppScreen.Login
                                     }
                                 )
@@ -2156,12 +2444,18 @@ class MainActivity : ComponentActivity() {
 
                             AppScreen.Notifications -> {
                                 NotificationScreen(
-                                    notificationList = notificationViewModel.notificationList,
+                                    notifications = notificationViewModel.notificationList,
                                     onMarkReadClick = { notification ->
                                         notificationViewModel.markAsRead(notification.id)
                                     },
                                     onDeleteClick = { notification ->
                                         notificationViewModel.deleteNotification(notification.id)
+                                    },
+                                    onNotificationClick = { notification ->
+                                        if (!notification.read) {
+                                            notificationViewModel.markAsRead(notification.id)
+                                        }
+                                        handleNotificationNavigation(notification)
                                     },
                                     onBackClick = {
                                         currentScreen = when {
@@ -2343,7 +2637,12 @@ class MainActivity : ComponentActivity() {
                                         verifiedStudentsCount = adminCounts.verifiedStudentsCount,
                                         totalLabComputersCount = adminCounts.totalLabComputersCount,
                                         openSoftwareIssuesCount = adminCounts.openSoftwareIssuesCount,
-
+                                        softwareInstallRequestsCount = softwareInstallRequestList.count {
+                                            it.status.equals("Pending", ignoreCase = true)
+                                        },
+                                        hasUnreadNotifications = notificationViewModel.notificationList.any {
+                                            !it.read
+                                        },
                                         onManageRoomsClick = {
                                             loadRoomsAndOpenManage()
                                         },
@@ -2370,6 +2669,9 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onReportsClick = {
                                             openReportsDashboard()
+                                        },
+                                        onSoftwareInstallRequestsClick = {
+                                            loadSoftwareInstallRequests()
                                         },
                                         onProfileClick = {
                                             loadAdminProfileAndOpen()
@@ -2422,8 +2724,11 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     AdminProfileScreen(
                                         user = currentAppUser,
-                                        onSaveClick = { phone ->
-                                            handleUpdateAdminProfile(phone)
+                                        onSaveClick = { phone, profileImageUrl ->
+                                            handleUpdateAdminProfile(
+                                                phone = phone,
+                                                profileImageUrl = profileImageUrl
+                                            )
                                         },
                                         onPasswordResetClick = { email ->
                                             sendProfilePasswordReset(email)
@@ -2442,6 +2747,19 @@ class MainActivity : ComponentActivity() {
                                         roomList = roomList,
                                         onAddRoomClick = {
                                             currentScreen = AppScreen.AddRoom
+                                        },
+                                        onDeleteRoomClick = { room ->
+                                            roomRepository.deleteRoom(
+                                                roomId = room.id
+                                            ) { success, message ->
+                                                runOnUiThread {
+                                                    showMessage(message)
+
+                                                    if (success) {
+                                                        loadRoomsAndOpenManage()
+                                                    }
+                                                }
+                                            }
                                         },
                                         onBackClick = {
                                             currentScreen = AppScreen.AdminDashboard
@@ -2967,7 +3285,7 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     AddLabComputerScreen(
                                         roomList = roomList,
-                                        onAddClick = { roomId, pcName, labRoom, locationNote, ipAddress, status, remarks ->
+                                        onAddClick = { roomId, pcName, labRoom, locationNote, ipAddress, computerImageUrl, status, remarks ->
                                             if (
                                                 roomId.isBlank() ||
                                                 pcName.isBlank() ||
@@ -2983,6 +3301,7 @@ class MainActivity : ComponentActivity() {
                                                     labRoom = labRoom,
                                                     locationNote = locationNote,
                                                     ipAddress = ipAddress,
+                                                    computerImageUrl = computerImageUrl,
                                                     status = status,
                                                     remarks = remarks
                                                 ) { success, message ->
@@ -3058,13 +3377,14 @@ class MainActivity : ComponentActivity() {
                                         ManageSoftwareStatusScreen(
                                             computer = computer,
                                             softwareList = computerSoftwareList,
-                                            onAddSoftwareClick = { softwareName, version, installed, launchesProperly, compileWorks, runWorks, remarks ->
+                                            onAddSoftwareClick = { softwareName, version, softwareLogoUrl, installed, launchesProperly, compileWorks, runWorks, remarks ->
                                                 labComputerRepository.addSoftwareStatus(
                                                     institutionId = currentInstitutionId,
                                                     roomId = computer.roomId,
                                                     computerId = computer.id,
                                                     softwareName = softwareName,
                                                     version = version,
+                                                    softwareLogoUrl = softwareLogoUrl,
                                                     installed = installed,
                                                     launchesProperly = launchesProperly,
                                                     compileWorks = compileWorks,
@@ -3188,9 +3508,59 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-
+                            AppScreen.SoftwareInstallRequestsAdmin -> {
+                                SoftwareInstallRequestsAdminScreen(
+                                    requestList = softwareInstallRequestList,
+                                    onApproveClick = { request ->
+                                        labComputerRepository.updateSoftwareInstallRequestStatus(
+                                            requestId = request.id,
+                                            status = "Approved",
+                                            adminMessage = "Your software install request has been approved."
+                                        ) { success, message ->
+                                            runOnUiThread {
+                                                showMessage(message)
+                                                if (success) {
+                                                    loadSoftwareInstallRequests()
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onRejectClick = { request ->
+                                        labComputerRepository.updateSoftwareInstallRequestStatus(
+                                            requestId = request.id,
+                                            status = "Rejected",
+                                            adminMessage = "Your software install request has been rejected."
+                                        ) { success, message ->
+                                            runOnUiThread {
+                                                showMessage(message)
+                                                if (success) {
+                                                    loadSoftwareInstallRequests()
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onInstalledClick = { request ->
+                                        labComputerRepository.updateSoftwareInstallRequestStatus(
+                                            requestId = request.id,
+                                            status = "Installed",
+                                            adminMessage = "Requested software has been installed."
+                                        ) { success, message ->
+                                            runOnUiThread {
+                                                showMessage(message)
+                                                if (success) {
+                                                    loadSoftwareInstallRequests()
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onBackClick = {
+                                        currentScreen = AppScreen.AdminDashboard
+                                    }
+                                )
+                            }
                             else -> Unit
                         }
+
                     }
                 }
             }

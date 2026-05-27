@@ -4,6 +4,7 @@ import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
+
 class NotificationRepository {
 
     private val firestore = FirebaseFirestore.getInstance()

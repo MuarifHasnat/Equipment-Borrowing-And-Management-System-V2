@@ -6,10 +6,13 @@ data class SoftwareIssueReport(
     val roomId: String = "",
     val computerId: String = "",
     val computerName: String = "",
+    val computerImageUrl: String = "",
     val softwareName: String = "",
 
     val reportedByUserId: String = "",
     val reportedByUserName: String = "",
+    val reportedByStudentId: String = "",
+    val reportedByDepartment: String = "",
 
     val issueType: String = "",
     val description: String = "",

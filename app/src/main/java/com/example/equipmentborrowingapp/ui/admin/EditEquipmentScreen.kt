@@ -99,7 +99,7 @@ fun EditEquipmentScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -141,13 +141,13 @@ fun EditEquipmentScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
+                ,
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = EditEquipmentColors.CardWhite)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "Image Preview",
@@ -159,7 +159,7 @@ fun EditEquipmentScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
+                            .height(190.dp)
                             .clip(RoundedCornerShape(18.dp))
                             .background(EditEquipmentColors.ModernBg),
                         contentAlignment = Alignment.Center
@@ -214,18 +214,18 @@ fun EditEquipmentScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
+                ,
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = EditEquipmentColors.CardWhite)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "Equipment Details",
@@ -391,7 +391,8 @@ fun EditEquipmentScreen(
                                         imageUrl = imageUrl.trim(),
                                         assetTag = assetTag.trim(),
                                         serialNumber = serialNumber.trim(),
-                                        isBorrowable = isBorrowable
+                                        isBorrowable = isBorrowable,
+                                        borrowType = if (isBorrowable) "OutsideLab" else "LabUseOnly",
                                     )
                                 )
                             }
@@ -446,7 +447,7 @@ fun EditEquipmentScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 

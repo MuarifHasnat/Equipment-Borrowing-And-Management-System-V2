@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.LockReset
 import androidx.compose.material.icons.rounded.Person
@@ -40,7 +41,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.equipmentborrowingapp.data.model.AppUser
-
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import coil.compose.AsyncImage
 private object StudentProfileColors {
     val Bg = Color(0xFFF4F7FB)
     val CardWhite = Color(0xFFFFFFFF)
@@ -63,23 +66,19 @@ fun StudentProfileScreen(
     user: AppUser?,
     onSaveClick: (
         phone: String,
-        studentId: String,
-        department: String,
-        semester: String
+        profileImageUrl: String
     ) -> Unit,
     onPasswordResetClick: (String) -> Unit,
     onBackClick: () -> Unit
 ) {
     var phone by remember { mutableStateOf("") }
-    var studentId by remember { mutableStateOf("") }
-    var department by remember { mutableStateOf("") }
-    var semester by remember { mutableStateOf("") }
+    var profileImageUrl by remember { mutableStateOf("") }
+    var isEditMode by remember { mutableStateOf(false) }
 
     LaunchedEffect(user?.uid) {
         phone = user?.phone.orEmpty()
-        studentId = user?.studentId.orEmpty()
-        department = user?.department.orEmpty()
-        semester = user?.semester.orEmpty()
+        profileImageUrl = user?.profileImageUrl.orEmpty()
+        isEditMode = false
     }
 
     Surface(
@@ -139,12 +138,39 @@ fun StudentProfileScreen(
                 colors = CardDefaults.cardColors(containerColor = StudentProfileColors.CardWhite)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    Text(
-                        text = "Editable Information",
-                        color = StudentProfileColors.TextDark,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Profile Information",
+                                color = StudentProfileColors.TextDark,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isEditMode) "Update your details and save" else "Tap Edit to update your details",
+                                color = StudentProfileColors.TextMuted,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        if (!isEditMode) {
+                            OutlinedButton(
+                                onClick = { isEditMode = true },
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Edit", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -157,75 +183,112 @@ fun StudentProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = isEditMode
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value = studentId,
-                        onValueChange = { studentId = it },
+                        value = profileImageUrl,
+                        onValueChange = { profileImageUrl = it },
+                        label = { Text("Profile Image URL") },
+                        leadingIcon = {
+                            Icon(Icons.Rounded.Person, contentDescription = null)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        singleLine = true,
+                        enabled = isEditMode
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = user?.studentId.orEmpty(),
+                        onValueChange = { },
                         label = { Text("Student ID") },
                         leadingIcon = {
                             Icon(Icons.Rounded.Badge, contentDescription = null)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = false
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value = department,
-                        onValueChange = { department = it },
+                        value = user?.department.orEmpty(),
+                        onValueChange = { },
                         label = { Text("Department") },
                         leadingIcon = {
                             Icon(Icons.Rounded.School, contentDescription = null)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = false
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value = semester,
-                        onValueChange = { semester = it },
+                        value = user?.semester.orEmpty(),
+                        onValueChange = { },
                         label = { Text("Semester") },
                         leadingIcon = {
                             Icon(Icons.Rounded.School, contentDescription = null)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = false
                     )
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    Button(
-                        onClick = {
-                            onSaveClick(
-                                phone.trim(),
-                                studentId.trim(),
-                                department.trim(),
-                                semester.trim()
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StudentProfileColors.Primary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Save,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save Profile", fontWeight = FontWeight.Bold)
+                    if (isEditMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    phone = user?.phone.orEmpty()
+                                    profileImageUrl = user?.profileImageUrl.orEmpty()
+                                    isEditMode = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Text("Cancel")
+                            }
+
+                            Button(
+                                onClick = {
+                                    onSaveClick(
+                                        phone.trim(),
+                                        profileImageUrl.trim()
+                                    )
+                                    isEditMode = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = StudentProfileColors.Primary
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Save,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Save", fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -269,16 +332,26 @@ private fun ProfileHeroCard(user: AppUser?) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(58.dp)
-                        .background(StudentProfileColors.Primary.copy(alpha = 0.12f), CircleShape),
+                        .size(86.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Color(0xFFEFF6FF)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Person,
-                        contentDescription = null,
-                        tint = StudentProfileColors.Primary,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    if (user?.profileImageUrl.orEmpty().isNotBlank()) {
+                        AsyncImage(
+                            model = user?.profileImageUrl.orEmpty().trim(),
+                            contentDescription = "Profile Image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Person,
+                            contentDescription = null,
+                            tint = Color(0xFF4F46E5),
+                            modifier = Modifier.size(42.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(14.dp))
@@ -309,7 +382,9 @@ private fun ProfileHeroCard(user: AppUser?) {
             ProfileInfoRow(
                 icon = Icons.Rounded.VerifiedUser,
                 label = "Verification Status",
-                value = user?.verificationStatus.orEmpty().ifBlank { "pending" }
+                value = user?.verificationStatus.orEmpty()
+                    .ifBlank { "pending" }
+                    .replaceFirstChar { it.uppercase() }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
