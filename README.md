@@ -1,4 +1,4 @@
-# 📦 Equipment Borrowing and Management App
+# 📦 Equipment Borrowing and Lab Computer Software Tracking
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-1DA1F2?style=for-the-badge&logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
@@ -8,7 +8,7 @@
 ---
 
 ## 📖 Overview
-Equipment Borrowing And Management System is an Android application built with **Kotlin**, **Jetpack Compose**, and **Firebase** for managing equipment borrowing in an academic or lab environment.
+Equipment Borrowing and Lab Computer Software Tracking is an Android application built with **Kotlin**, **Jetpack Compose**, and **Firebase** for managing equipment borrowing in an academic or lab environment.
 
 The system supports two user roles:
 - 🎓 **Student**
@@ -52,11 +52,11 @@ Admins can manage equipment, review borrowing requests, manage lab computers, tr
 ---
 
 ## 🛠️ Tech Stack
-- **Kotlin**  
-- **Jetpack Compose**  
-- **Firebase Authentication**  
-- **Cloud Firestore**  
-- **Android Studio**  
+- **Kotlin**
+- **Jetpack Compose**
+- **Firebase Authentication**
+- **Cloud Firestore**
+- **Android Studio**
 
 ---
 
@@ -76,6 +76,7 @@ com/example/equipmentborrowingapp/
 │   └── theme/
 ├── utils/
 └── screenshots/
+```
 
 ## 📱 App Screenshots
 
