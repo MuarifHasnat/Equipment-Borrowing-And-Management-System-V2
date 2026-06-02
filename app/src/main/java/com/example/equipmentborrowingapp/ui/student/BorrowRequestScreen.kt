@@ -676,12 +676,17 @@ private fun validateBorrowRequestInput(
     dueDate: String
 ): String? {
     if (!isBorrowable) return "This equipment is lab-use-only"
-    if (availableQuantity <= 0) return "This equipment is out of stock"
-    if (quantity == null) return "Please enter a valid quantity"
-    if (quantity <= 0) return "Quantity must be greater than 0"
-    if (quantity > availableQuantity) return "Requested quantity exceeds available stock"
-    if (borrowDate.isBlank() || dueDate.isBlank()) return "Please select borrow date and due date"
 
+    val quantityValidationMessage = validateBorrowQuantity(
+        quantity = quantity,
+        availableQuantity = availableQuantity
+    )
+
+    if (quantityValidationMessage != null) {
+        return quantityValidationMessage
+    }
+
+    if (borrowDate.isBlank() || dueDate.isBlank()) return "Please select borrow date and due date"
     val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     format.isLenient = false
 
@@ -726,7 +731,16 @@ private fun validateBorrowRequestInput(
 
     return null
 }
-
+private fun validateBorrowQuantity(
+    quantity: Int?,
+    availableQuantity: Int
+): String? {
+    if (quantity == null) return "Please enter a valid quantity"
+    if (availableQuantity <= 0) return "This equipment is out of stock"
+    if (quantity <= 0) return "Quantity must be greater than 0"
+    if (quantity > availableQuantity) return "Requested quantity exceeds available stock"
+    return null
+}
 private fun formatEquipmentName(name: String): String {
     return name
         .replace("_", " ")

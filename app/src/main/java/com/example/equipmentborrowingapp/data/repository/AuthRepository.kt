@@ -3,7 +3,7 @@ package com.example.equipmentborrowingapp.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
-
+private const val USERS_COLLECTION = "users"
 class AuthRepository {
 
     private val auth = FirebaseAuth.getInstance()
@@ -64,7 +64,7 @@ class AuthRepository {
                     "createdAt" to System.currentTimeMillis()
                 )
 
-                firestore.collection("users")
+                firestore.collection(USERS_COLLECTION)
                     .document(uid)
                     .set(userMap)
                     .addOnSuccessListener {
@@ -118,7 +118,7 @@ class AuthRepository {
                     return@addOnSuccessListener
                 }
 
-                val userRef = firestore.collection("users").document(uid)
+                val userRef = firestore.collection(USERS_COLLECTION).document(uid)
 
                 userRef.get()
                     .addOnSuccessListener { document ->
@@ -198,7 +198,7 @@ class AuthRepository {
             "createdAt" to System.currentTimeMillis()
         )
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(uid)
             .set(userMap)
             .addOnSuccessListener {
@@ -213,7 +213,7 @@ class AuthRepository {
         uid: String,
         onResult: (String?) -> Unit
     ) {
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(uid.trim())
             .get()
             .addOnSuccessListener { document ->
@@ -229,7 +229,7 @@ class AuthRepository {
         uid: String,
         onResult: (String?) -> Unit
     ) {
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(uid.trim())
             .get()
             .addOnSuccessListener { document ->
@@ -250,7 +250,7 @@ class AuthRepository {
             return
         }
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(uid)
             .get()
             .addOnSuccessListener { document ->

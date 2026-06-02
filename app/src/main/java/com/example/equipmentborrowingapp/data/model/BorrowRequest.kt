@@ -1,5 +1,6 @@
 package com.example.equipmentborrowingapp.data.model
-
+private const val DEFAULT_REQUEST_STATUS = "Pending"
+private const val DEFAULT_FINE_STATUS = "None"
 data class BorrowRequest(
     val requestId: String = "",
 
@@ -26,7 +27,7 @@ data class BorrowRequest(
     val returnedDate: String = "",
 
 
-    val status: String = "Pending",
+
 
     val approvedBy: String = "",
     val approvedAt: Long = 0L,
@@ -37,7 +38,7 @@ data class BorrowRequest(
     val returnedBy: String = "",
     val returnedAt: Long = 0L,
 
-    
+    val status: String = DEFAULT_REQUEST_STATUS,
     val returnedTo: String = "",
 
     val rejectedReason: String = "",
@@ -46,7 +47,7 @@ data class BorrowRequest(
 
     val fineAmount: Int = 0,
     val fineReason: String = "",
-    val fineStatus: String = "None",
+    val fineStatus: String = DEFAULT_FINE_STATUS,
     val penaltyUpdatedAt: Long = 0L,
 
     val requestTimestamp: Long = System.currentTimeMillis()

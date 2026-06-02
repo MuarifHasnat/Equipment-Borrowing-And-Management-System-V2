@@ -115,55 +115,17 @@ fun ManageEquipmentScreen(
         val usedRoomIds = equipmentList.map { it.roomId }.filter { it.isNotBlank() }.distinct()
         listOf("All") + roomList.filter { it.id in usedRoomIds }.map { it.id }
     }
+    val filteredEquipment = filterAndSortAdminEquipment(
+        equipmentList = equipmentList,
+        roomById = roomById,
+        searchText = searchText,
+        selectedRoomId = selectedRoomId,
+        selectedCategory = selectedCategory,
+        selectedStock = selectedStock,
+        selectedBorrowType = selectedBorrowType,
+        selectedSort = selectedSort
+    )
 
-    val filteredEquipment = equipmentList
-        .filter { equipment ->
-            val query = searchText.trim().lowercase()
-            val room = roomById[equipment.roomId]
-
-            val matchesSearch =
-                query.isBlank() ||
-                        equipment.name.lowercase().contains(query) ||
-                        equipment.category.lowercase().contains(query) ||
-                        equipment.condition.lowercase().contains(query) ||
-                        room?.name.orEmpty().lowercase().contains(query) ||
-                        room?.department.orEmpty().lowercase().contains(query) ||
-                        room?.building.orEmpty().lowercase().contains(query)
-
-            val matchesRoom =
-                selectedRoomId == "All" || equipment.roomId == selectedRoomId
-
-            val matchesCategory =
-                selectedCategory == "All" ||
-                        equipment.category.equals(selectedCategory, ignoreCase = true)
-
-            val matchesStock = when (selectedStock) {
-                "Available" -> equipment.availableQuantity > 2
-                "Low Stock" -> equipment.availableQuantity in 1..2
-                "Out of Stock" -> equipment.availableQuantity <= 0
-                else -> true
-            }
-
-            val isActuallyBorrowable =
-                equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
-
-            val matchesBorrowType = when (selectedBorrowType) {
-                "Borrowable" -> isActuallyBorrowable
-                "Lab-use-only" -> !isActuallyBorrowable
-                else -> true
-            }
-
-            matchesSearch && matchesRoom && matchesCategory && matchesStock && matchesBorrowType
-        }
-        .let { list ->
-            when (selectedSort) {
-                "Name Z-A" -> list.sortedByDescending { it.name.lowercase() }
-                "Category A-Z" -> list.sortedBy { it.category.lowercase() }
-                "Stock Low-High" -> list.sortedBy { it.availableQuantity }
-                "Stock High-Low" -> list.sortedByDescending { it.availableQuantity }
-                else -> list.sortedBy { it.name.lowercase() }
-            }
-        }
 
     val availableCount = equipmentList.count { it.availableQuantity > 0 }
     val lowStockCount = equipmentList.count { it.availableQuantity in 1..2 }
@@ -338,7 +300,78 @@ fun ManageEquipmentScreen(
         }
     }
 }
+private fun filterAndSortAdminEquipment(
+    equipmentList: List<Equipment>,
+    roomById: Map<String, Room>,
+    searchText: String,
+    selectedRoomId: String,
+    selectedCategory: String,
+    selectedStock: String,
+    selectedBorrowType: String,
+    selectedSort: String
+): List<Equipment> {
+    val query = searchText.trim().lowercase()
 
+    val filteredList = equipmentList.filter { equipment ->
+        val room = roomById[equipment.roomId]
+
+        val matchesSearch =
+            query.isBlank() ||
+                    equipment.name.lowercase().contains(query) ||
+                    equipment.category.lowercase().contains(query) ||
+                    equipment.condition.lowercase().contains(query) ||
+                    room?.name.orEmpty().lowercase().contains(query) ||
+                    room?.department.orEmpty().lowercase().contains(query) ||
+                    room?.building.orEmpty().lowercase().contains(query)
+
+        val matchesRoom =
+            selectedRoomId == "All" || equipment.roomId == selectedRoomId
+
+        val matchesCategory =
+            selectedCategory == "All" ||
+                    equipment.category.equals(selectedCategory, ignoreCase = true)
+
+        val matchesStock = when (selectedStock) {
+            "Available" -> equipment.availableQuantity > 2
+            "Low Stock" -> equipment.availableQuantity in 1..2
+            "Out of Stock" -> equipment.availableQuantity <= 0
+            else -> true
+        }
+
+        val isActuallyBorrowable =
+            equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
+
+        val matchesBorrowType = when (selectedBorrowType) {
+            "Borrowable" -> isActuallyBorrowable
+            "Lab-use-only" -> !isActuallyBorrowable
+            else -> true
+        }
+
+        matchesSearch && matchesRoom && matchesCategory && matchesStock && matchesBorrowType
+    }
+
+    return when (selectedSort) {
+        "Name Z-A" -> filteredList.sortedByDescending { equipment ->
+            equipment.name.lowercase()
+        }
+
+        "Category A-Z" -> filteredList.sortedBy { equipment ->
+            equipment.category.lowercase()
+        }
+
+        "Stock Low-High" -> filteredList.sortedBy { equipment ->
+            equipment.availableQuantity
+        }
+
+        "Stock High-Low" -> filteredList.sortedByDescending { equipment ->
+            equipment.availableQuantity
+        }
+
+        else -> filteredList.sortedBy { equipment ->
+            equipment.name.lowercase()
+        }
+    }
+}
 @Composable
 private fun ManageEquipmentTopBar(
     totalCount: Int,

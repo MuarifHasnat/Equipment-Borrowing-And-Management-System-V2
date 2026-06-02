@@ -2,7 +2,7 @@ package com.example.equipmentborrowingapp.data.repository
 
 import com.example.equipmentborrowingapp.data.model.AppUser
 import com.google.firebase.firestore.FirebaseFirestore
-
+private const val USERS_COLLECTION = "users"
 class UserRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
@@ -40,7 +40,7 @@ class UserRepository {
             return
         }
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("role", "student")
             .get()
@@ -78,7 +78,7 @@ class UserRepository {
 
         val targetStatus = normalizeStatus(status)
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("role", "student")
             .get()
@@ -120,7 +120,7 @@ class UserRepository {
             return
         }
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(userId)
             .get()
             .addOnSuccessListener { document ->
@@ -158,7 +158,7 @@ class UserRepository {
             return
         }
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(userId)
             .update(
                 mapOf(
@@ -185,7 +185,7 @@ class UserRepository {
             return
         }
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(userId)
             .update(
                 mapOf(
@@ -228,7 +228,7 @@ class UserRepository {
             return
         }
 
-        firestore.collection("users")
+        firestore.collection(USERS_COLLECTION)
             .document(studentUid)
             .update("verificationStatus", normalizedStatus)
             .addOnSuccessListener {

@@ -5,7 +5,10 @@ import com.example.equipmentborrowingapp.data.model.LabComputer
 import com.example.equipmentborrowingapp.data.model.SoftwareIssueReport
 import com.example.equipmentborrowingapp.data.model.SoftwareInstallRequest
 import com.google.firebase.firestore.FirebaseFirestore
-
+private const val LAB_COMPUTERS_COLLECTION = "lab_computers"
+private const val COMPUTER_SOFTWARE_STATUS_COLLECTION = "computer_software_status"
+private const val SOFTWARE_ISSUE_REPORTS_COLLECTION = "software_issue_reports"
+private const val SOFTWARE_INSTALL_REQUESTS_COLLECTION = "software_install_requests"
 
 class LabComputerRepository {
 
@@ -28,7 +31,7 @@ class LabComputerRepository {
             return
         }
 
-        val docRef = firestore.collection("lab_computers").document()
+        val docRef = firestore.collection(LAB_COMPUTERS_COLLECTION).document()
 
         val computer = LabComputer(
             id = docRef.id,
@@ -62,7 +65,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("lab_computers")
+        firestore.collection(LAB_COMPUTERS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
@@ -94,7 +97,7 @@ class LabComputerRepository {
             lastCheckedAt = System.currentTimeMillis()
         )
 
-        firestore.collection("lab_computers")
+        firestore.collection(LAB_COMPUTERS_COLLECTION)
             .document(computer.id)
             .set(updatedComputer)
             .addOnSuccessListener {
@@ -114,7 +117,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("computer_software_status")
+        firestore.collection(COMPUTER_SOFTWARE_STATUS_COLLECTION)
             .whereEqualTo("computerId", computerId)
             .get()
             .addOnSuccessListener { softwareResult ->
@@ -123,7 +126,7 @@ class LabComputerRepository {
                     return@addOnSuccessListener
                 }
 
-                firestore.collection("software_issue_reports")
+                firestore.collection(SOFTWARE_ISSUE_REPORTS_COLLECTION)
                     .whereEqualTo("computerId", computerId)
                     .get()
                     .addOnSuccessListener { issueResult ->
@@ -137,7 +140,7 @@ class LabComputerRepository {
                             return@addOnSuccessListener
                         }
 
-                        firestore.collection("lab_computers")
+                        firestore.collection(LAB_COMPUTERS_COLLECTION)
                             .document(computerId)
                             .delete()
                             .addOnSuccessListener {
@@ -175,7 +178,7 @@ class LabComputerRepository {
             return
         }
 
-        val docRef = firestore.collection("computer_software_status").document()
+        val docRef =firestore.collection(COMPUTER_SOFTWARE_STATUS_COLLECTION).document()
 
         val softwareStatus = ComputerSoftwareStatus(
             id = docRef.id,
@@ -211,7 +214,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("computer_software_status")
+        firestore.collection(COMPUTER_SOFTWARE_STATUS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("computerId", computerId)
             .get()
@@ -235,7 +238,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("computer_software_status")
+        firestore.collection(COMPUTER_SOFTWARE_STATUS_COLLECTION)
             .whereEqualTo("institutionId", institutionId.trim())
             .get()
             .addOnSuccessListener { result ->
@@ -270,7 +273,7 @@ class LabComputerRepository {
             return
         }
 
-        val docRef = firestore.collection("software_issue_reports").document()
+        val docRef = firestore.collection(SOFTWARE_ISSUE_REPORTS_COLLECTION).document()
 
         val report = SoftwareIssueReport(
             id = docRef.id,
@@ -310,7 +313,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("software_issue_reports")
+        firestore.collection(SOFTWARE_ISSUE_REPORTS_COLLECTION)
             .whereEqualTo("institutionId", cleanInstitutionId)
             .get()
             .addOnSuccessListener { result ->
@@ -318,7 +321,7 @@ class LabComputerRepository {
                     document.toObject(SoftwareIssueReport::class.java)
                 }
 
-                firestore.collection("lab_computers")
+                firestore.collection(LAB_COMPUTERS_COLLECTION)
                     .whereEqualTo("institutionId", cleanInstitutionId)
                     .get()
                     .addOnSuccessListener { computerResult ->
@@ -359,7 +362,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("software_issue_reports")
+        firestore.collection(SOFTWARE_ISSUE_REPORTS_COLLECTION)
             .whereEqualTo("reportedByUserId", cleanUserId)
             .get()
             .addOnSuccessListener { result ->
@@ -419,7 +422,7 @@ class LabComputerRepository {
             updateMap["status"] = "Solved"
         }
 
-        firestore.collection("software_issue_reports")
+        firestore.collection(SOFTWARE_ISSUE_REPORTS_COLLECTION)
             .document(reportId)
             .update(updateMap)
             .addOnSuccessListener {
@@ -444,7 +447,7 @@ class LabComputerRepository {
             return
         }
 
-        val reportRef = firestore.collection("software_issue_reports")
+        val reportRef = firestore.collection(SOFTWARE_ISSUE_REPORTS_COLLECTION)
             .document(reportId)
 
         reportRef.get()
@@ -509,7 +512,7 @@ class LabComputerRepository {
             checkedAt = System.currentTimeMillis()
         )
 
-        firestore.collection("computer_software_status")
+        firestore.collection(COMPUTER_SOFTWARE_STATUS_COLLECTION)
             .document(softwareStatus.id)
             .set(updatedStatus)
             .addOnSuccessListener {
@@ -529,7 +532,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("computer_software_status")
+        firestore.collection(COMPUTER_SOFTWARE_STATUS_COLLECTION)
             .document(softwareStatusId)
             .delete()
             .addOnSuccessListener {
@@ -563,7 +566,7 @@ class LabComputerRepository {
             return
         }
 
-        val docRef = firestore.collection("software_install_requests").document()
+        val docRef = firestore.collection(SOFTWARE_INSTALL_REQUESTS_COLLECTION).document()
         val now = System.currentTimeMillis()
 
         val finalRequest = request.copy(
@@ -595,7 +598,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("software_install_requests")
+        firestore.collection(SOFTWARE_INSTALL_REQUESTS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("requestedByUserId", userId)
             .get()
@@ -619,7 +622,7 @@ class LabComputerRepository {
             return
         }
 
-        firestore.collection("software_install_requests")
+        firestore.collection(SOFTWARE_INSTALL_REQUESTS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
@@ -653,7 +656,7 @@ class LabComputerRepository {
             "updatedAt" to System.currentTimeMillis()
         )
 
-        firestore.collection("software_install_requests")
+        firestore.collection(SOFTWARE_INSTALL_REQUESTS_COLLECTION)
             .document(requestId)
             .update(updateMap)
             .addOnSuccessListener {

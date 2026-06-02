@@ -31,8 +31,7 @@ class AdminRequestViewModel(
         requestRepository.getPendingRequests(
             institutionId = institutionId
         ) { list ->
-            pendingRequests = list
-            pendingUiState = UiState.Success(list)
+            updatePendingRequestState(list)
             onLoaded?.invoke()
         }
     }
@@ -46,12 +45,23 @@ class AdminRequestViewModel(
         requestRepository.getApprovedRequests(
             institutionId = institutionId
         ) { list ->
-            approvedRequests = list
-            approvedUiState = UiState.Success(list)
+            updateApprovedRequestState(list)
             onLoaded?.invoke()
         }
     }
+    private fun updatePendingRequestState(
+        list: List<BorrowRequest>
+    ) {
+        pendingRequests = list
+        pendingUiState = UiState.Success(list)
+    }
 
+    private fun updateApprovedRequestState(
+        list: List<BorrowRequest>
+    ) {
+        approvedRequests = list
+        approvedUiState = UiState.Success(list)
+    }
     fun clearAdminRequests() {
         pendingRequests = emptyList()
         approvedRequests = emptyList()

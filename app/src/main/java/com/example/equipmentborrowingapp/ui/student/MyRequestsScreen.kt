@@ -112,25 +112,11 @@ fun MyRequestsScreen(
         "Cancelled"
     )
 
-    val filteredRequests = requestList
-        .filter { request ->
-            val statusMatched =
-                selectedStatus == "All" ||
-                        request.status.equals(selectedStatus, ignoreCase = true)
-
-            val query = searchText.trim().lowercase()
-
-            val searchMatched =
-                query.isBlank() ||
-                        request.equipmentName.lowercase().contains(query) ||
-                        request.equipmentCategory.lowercase().contains(query) ||
-                        request.status.lowercase().contains(query) ||
-                        request.borrowDate.lowercase().contains(query) ||
-                        request.dueDate.lowercase().contains(query)
-
-            statusMatched && searchMatched
-        }
-        .sortedByDescending { it.requestTimestamp }
+    val filteredRequests = filterMyRequests(
+        requestList = requestList,
+        selectedStatus = selectedStatus,
+        searchText = searchText
+    )
 
     val pendingCount = requestList.count { it.status.equals("Pending", ignoreCase = true) }
     val activeCount = requestList.count { request ->
@@ -295,7 +281,33 @@ fun MyRequestsScreen(
         }
     }
 }
+private fun filterMyRequests(
+    requestList: List<BorrowRequest>,
+    selectedStatus: String,
+    searchText: String
+): List<BorrowRequest> {
+    val query = searchText.trim().lowercase()
 
+    return requestList
+        .filter { request ->
+            val statusMatched =
+                selectedStatus == "All" ||
+                        request.status.equals(selectedStatus, ignoreCase = true)
+
+            val searchMatched =
+                query.isBlank() ||
+                        request.equipmentName.lowercase().contains(query) ||
+                        request.equipmentCategory.lowercase().contains(query) ||
+                        request.status.lowercase().contains(query) ||
+                        request.borrowDate.lowercase().contains(query) ||
+                        request.dueDate.lowercase().contains(query)
+
+            statusMatched && searchMatched
+        }
+        .sortedByDescending { request ->
+            request.requestTimestamp
+        }
+}
 @Composable
 private fun MyRequestSearchBox(
     value: String,

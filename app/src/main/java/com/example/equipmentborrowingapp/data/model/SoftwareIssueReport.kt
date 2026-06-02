@@ -1,5 +1,6 @@
 package com.example.equipmentborrowingapp.data.model
-
+private const val DEFAULT_SOFTWARE_ISSUE_STATUS = "Open"
+private const val DEFAULT_SOFTWARE_ISSUE_SEVERITY = "Medium"
 data class SoftwareIssueReport(
     val id: String = "",
     val institutionId: String = "",
@@ -17,11 +18,8 @@ data class SoftwareIssueReport(
     val issueType: String = "",
     val description: String = "",
 
-    // Status flow:
-    // Open -> In Progress -> Solved
-    // Extra: Rejected
-    val status: String = "Open",
-    val severity: String = "Medium",
+    val status: String = DEFAULT_SOFTWARE_ISSUE_STATUS,
+    val severity: String = DEFAULT_SOFTWARE_ISSUE_SEVERITY,
 
 
     val assignedTo: String = "",

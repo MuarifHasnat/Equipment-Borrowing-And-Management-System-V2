@@ -79,31 +79,12 @@ fun LabComputerListScreen(
     }
 
     val filteredComputers = remember(computerList, softwareStatusList, searchQuery, selectedStatus) {
-        computerList
-            .filter { computer ->
-                val matchesStatus = selectedStatus == "All" ||
-                        computer.status.equals(selectedStatus, ignoreCase = true) ||
-                        (selectedStatus == "Unknown" && computer.status.isBlank())
-
-                val query = searchQuery.trim().lowercase()
-                val matchesSearch = query.isBlank() ||
-                        computer.pcName.lowercase().contains(query) ||
-                        computer.labRoom.lowercase().contains(query) ||
-                        computer.ipAddress.lowercase().contains(query) ||
-                        computer.locationNote.lowercase().contains(query) ||
-                        computer.remarks.lowercase().contains(query) ||
-                        computer.status.lowercase().contains(query) ||
-                        softwareStatusList.any { software ->
-                            software.computerId == computer.id &&
-                                    (
-                                            software.softwareName.lowercase().contains(query) ||
-                                                    software.version.lowercase().contains(query)
-                                            )
-                        }
-
-                matchesStatus && matchesSearch
-            }
-            .sortedBy { it.pcName.lowercase() }
+        filterLabComputers(
+            computerList = computerList,
+            softwareStatusList = softwareStatusList,
+            searchQuery = searchQuery,
+            selectedStatus = selectedStatus
+        )
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = StudentLabColors.Background) {
@@ -160,7 +141,41 @@ fun LabComputerListScreen(
         }
     }
 }
+private fun filterLabComputers(
+    computerList: List<LabComputer>,
+    softwareStatusList: List<ComputerSoftwareStatus>,
+    searchQuery: String,
+    selectedStatus: String
+): List<LabComputer> {
+    val query = searchQuery.trim().lowercase()
 
+    return computerList
+        .filter { computer ->
+            val matchesStatus = selectedStatus == "All" ||
+                    computer.status.equals(selectedStatus, ignoreCase = true) ||
+                    (selectedStatus == "Unknown" && computer.status.isBlank())
+
+            val matchesSearch = query.isBlank() ||
+                    computer.pcName.lowercase().contains(query) ||
+                    computer.labRoom.lowercase().contains(query) ||
+                    computer.ipAddress.lowercase().contains(query) ||
+                    computer.locationNote.lowercase().contains(query) ||
+                    computer.remarks.lowercase().contains(query) ||
+                    computer.status.lowercase().contains(query) ||
+                    softwareStatusList.any { software ->
+                        software.computerId == computer.id &&
+                                (
+                                        software.softwareName.lowercase().contains(query) ||
+                                                software.version.lowercase().contains(query)
+                                        )
+                    }
+
+            matchesStatus && matchesSearch
+        }
+        .sortedBy { computer ->
+            computer.pcName.lowercase()
+        }
+}
 @Composable
 private fun LabComputerTopBar(onBackClick: () -> Unit) {
     Row(

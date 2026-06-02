@@ -3,6 +3,7 @@ package com.example.equipmentborrowingapp.data.repository
 import com.example.equipmentborrowingapp.data.model.AppNotification
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+private const val NOTIFICATIONS_COLLECTION = "notifications"
 
 
 class NotificationRepository {
@@ -10,7 +11,7 @@ class NotificationRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     fun sendNotification(notification: AppNotification) {
-        val docRef = firestore.collection("notifications").document()
+        val docRef = firestore.collection(NOTIFICATIONS_COLLECTION).document()
 
         val cleanNotification = notification.copy(
             id = docRef.id,
@@ -107,7 +108,7 @@ class NotificationRepository {
         val cleanUserId = userId.trim()
         val cleanRole = role.trim().lowercase()
 
-        return firestore.collection("notifications")
+        return firestore.collection(NOTIFICATIONS_COLLECTION)
             .whereIn("role", listOf(cleanRole, "all"))
             .addSnapshotListener { snapshot, _ ->
                 if (snapshot == null) {
@@ -174,7 +175,7 @@ class NotificationRepository {
     fun markAsRead(notificationId: String) {
         if (notificationId.isBlank()) return
 
-        firestore.collection("notifications")
+        firestore.collection(NOTIFICATIONS_COLLECTION)
             .document(notificationId)
             .update("read", true)
     }
@@ -192,7 +193,7 @@ class NotificationRepository {
     fun deleteNotification(notificationId: String) {
         if (notificationId.isBlank()) return
 
-        firestore.collection("notifications")
+        firestore.collection(NOTIFICATIONS_COLLECTION)
             .document(notificationId)
             .delete()
     }

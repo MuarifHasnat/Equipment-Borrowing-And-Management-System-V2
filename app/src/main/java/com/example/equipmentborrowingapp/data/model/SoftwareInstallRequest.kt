@@ -1,5 +1,5 @@
 package com.example.equipmentborrowingapp.data.model
-
+private const val DEFAULT_SOFTWARE_INSTALL_STATUS = "Pending"
 data class SoftwareInstallRequest(
     val id: String = "",
     val institutionId: String = "",
@@ -21,7 +21,7 @@ data class SoftwareInstallRequest(
     val reason: String = "",
 
     // Pending, Approved, Rejected, Installed
-    val status: String = "Pending",
+    val status: String = DEFAULT_SOFTWARE_INSTALL_STATUS,
 
     val adminMessage: String = "",
     val createdAt: Long = System.currentTimeMillis(),

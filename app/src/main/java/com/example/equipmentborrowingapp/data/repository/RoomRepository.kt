@@ -2,7 +2,7 @@ package com.example.equipmentborrowingapp.data.repository
 
 import com.example.equipmentborrowingapp.data.model.Room
 import com.google.firebase.firestore.FirebaseFirestore
-
+private const val ROOMS_COLLECTION = "Room"
 class RoomRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
@@ -26,7 +26,7 @@ class RoomRepository {
             return
         }
 
-        val docRef = firestore.collection("Room").document()
+        val docRef = firestore.collection(ROOMS_COLLECTION).document()
 
         val room = Room(
             id = docRef.id,
@@ -58,7 +58,7 @@ class RoomRepository {
             return
         }
 
-        firestore.collection("Room")
+        firestore.collection(ROOMS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("active", true)
             .get()
@@ -85,7 +85,7 @@ class RoomRepository {
             return
         }
 
-        firestore.collection("Room")
+        firestore.collection(ROOMS_COLLECTION)
             .document(room.id)
             .set(room)
             .addOnSuccessListener {
@@ -105,7 +105,7 @@ class RoomRepository {
             return
         }
 
-        firestore.collection("Room")
+        firestore.collection(ROOMS_COLLECTION)
             .document(roomId)
             .update("active", false)
             .addOnSuccessListener {

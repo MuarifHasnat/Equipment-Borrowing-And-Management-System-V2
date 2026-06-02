@@ -4,7 +4,8 @@ import com.example.equipmentborrowingapp.data.model.BorrowRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
-
+private const val EQUIPMENT_COLLECTION = "equipment"
+private const val BORROW_REQUESTS_COLLECTION = "borrow_requests"
 class RequestRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
@@ -44,7 +45,7 @@ class RequestRepository {
             return
         }
 
-        firestore.collection("equipment")
+        firestore.collection(EQUIPMENT_COLLECTION)
             .document(equipmentId)
             .get()
             .addOnSuccessListener { equipmentSnapshot ->
@@ -74,7 +75,7 @@ class RequestRepository {
                     return@addOnSuccessListener
                 }
 
-                firestore.collection("borrow_requests")
+                firestore.collection(BORROW_REQUESTS_COLLECTION)
                     .whereEqualTo("institutionId", institutionId)
                     .whereEqualTo("userId", userId)
                     .get()
@@ -91,7 +92,7 @@ class RequestRepository {
                             return@addOnSuccessListener
                         }
 
-                        val docRef = firestore.collection("borrow_requests").document()
+                        val docRef = firestore.collection(BORROW_REQUESTS_COLLECTION).document()
 
                         val request = BorrowRequest(
                             requestId = docRef.id,
@@ -146,7 +147,7 @@ class RequestRepository {
             return
         }
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
@@ -178,7 +179,7 @@ class RequestRepository {
             return
         }
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
@@ -228,7 +229,7 @@ class RequestRepository {
             return
         }
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .get()
             .addOnSuccessListener { result ->
@@ -259,7 +260,7 @@ class RequestRepository {
             return
         }
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
             .whereEqualTo("userId", userId)
             .get()
@@ -286,8 +287,8 @@ class RequestRepository {
         approvedBy: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
-        val equipmentRef = firestore.collection("equipment").document(request.equipmentId)
+        val requestRef = firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
+        val equipmentRef = firestore.collection(EQUIPMENT_COLLECTION).document(request.equipmentId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -360,7 +361,7 @@ class RequestRepository {
         adminNote: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+        val requestRef =firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -396,7 +397,7 @@ class RequestRepository {
         adminNote: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+        val requestRef = firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -434,8 +435,8 @@ class RequestRepository {
         adminNote: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
-        val equipmentRef = firestore.collection("equipment").document(request.equipmentId)
+        val requestRef = firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
+        val equipmentRef = firestore.collection(EQUIPMENT_COLLECTION).document(request.equipmentId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -551,7 +552,7 @@ class RequestRepository {
         request: BorrowRequest,
         onResult: (Boolean, String) -> Unit
     ) {
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+        val requestRef = firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -596,7 +597,7 @@ class RequestRepository {
             return
         }
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .document(requestId)
             .get()
             .addOnSuccessListener { snapshot ->
@@ -666,7 +667,7 @@ class RequestRepository {
             "penaltyUpdatedAt" to System.currentTimeMillis()
         )
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .document(requestId.trim())
             .update(updates)
             .addOnSuccessListener {
@@ -690,7 +691,7 @@ class RequestRepository {
             "penaltyUpdatedAt" to System.currentTimeMillis()
         )
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .document(requestId.trim())
             .update(updates)
             .addOnSuccessListener {
@@ -716,7 +717,7 @@ class RequestRepository {
             "penaltyUpdatedAt" to System.currentTimeMillis()
         )
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .document(requestId.trim())
             .update(updates)
             .addOnSuccessListener {
@@ -741,7 +742,7 @@ class RequestRepository {
             return
         }
 
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+        val requestRef =firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -783,7 +784,7 @@ class RequestRepository {
         request: BorrowRequest,
         onResult: (Boolean, String) -> Unit
     ) {
-        val requestRef = firestore.collection("borrow_requests").document(request.requestId)
+        val requestRef = firestore.collection(BORROW_REQUESTS_COLLECTION).document(request.requestId)
 
         firestore.runTransaction { transaction ->
             val requestSnapshot = transaction.get(requestRef)
@@ -887,7 +888,7 @@ class RequestRepository {
                     "penaltyUpdatedAt" to System.currentTimeMillis()
                 )
 
-                firestore.collection("borrow_requests")
+                firestore.collection(BORROW_REQUESTS_COLLECTION)
                     .document(request.requestId)
                     .update(updates)
             }

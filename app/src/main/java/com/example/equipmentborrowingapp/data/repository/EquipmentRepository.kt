@@ -2,7 +2,8 @@ package com.example.equipmentborrowingapp.data.repository
 
 import com.example.equipmentborrowingapp.data.model.Equipment
 import com.google.firebase.firestore.FirebaseFirestore
-
+private const val EQUIPMENT_COLLECTION = "equipment"
+private const val BORROW_REQUESTS_COLLECTION = "borrow_requests"
 class EquipmentRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
@@ -31,7 +32,7 @@ class EquipmentRepository {
             onResult(false, "Room/Lab not selected")
             return
         }
-        val docRef = firestore.collection("equipment").document()
+        val docRef = firestore.collection(EQUIPMENT_COLLECTION).document()
 
         val equipment = Equipment(
             id = docRef.id,
@@ -71,7 +72,7 @@ class EquipmentRepository {
             return
         }
 
-        var query = firestore.collection("equipment")
+        var query =firestore.collection(EQUIPMENT_COLLECTION)
             .whereEqualTo("institutionId", institutionId)
 
         if (!roomId.isNullOrBlank()) {
@@ -95,7 +96,7 @@ class EquipmentRepository {
         equipmentId: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        val docRef = firestore.collection("equipment").document(equipmentId)
+        val docRef = firestore.collection(EQUIPMENT_COLLECTION).document(equipmentId)
 
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
@@ -122,7 +123,7 @@ class EquipmentRepository {
         equipmentId: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        val docRef = firestore.collection("equipment").document(equipmentId)
+        val docRef = firestore.collection(EQUIPMENT_COLLECTION).document(equipmentId)
 
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
@@ -185,7 +186,7 @@ class EquipmentRepository {
             return
         }
 
-        val docRef = firestore.collection("equipment").document(equipment.id)
+        val docRef = firestore.collection(EQUIPMENT_COLLECTION).document(equipment.id)
 
         docRef.set(
             equipment.copy(
@@ -214,7 +215,7 @@ class EquipmentRepository {
             return
         }
 
-        firestore.collection("borrow_requests")
+        firestore.collection(BORROW_REQUESTS_COLLECTION)
             .whereEqualTo("equipmentId", equipmentId)
             .get()
             .addOnSuccessListener { result ->
@@ -230,7 +231,7 @@ class EquipmentRepository {
                     return@addOnSuccessListener
                 }
 
-                firestore.collection("equipment")
+                firestore.collection(EQUIPMENT_COLLECTION)
                     .document(equipmentId)
                     .delete()
                     .addOnSuccessListener {

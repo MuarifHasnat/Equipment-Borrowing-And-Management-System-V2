@@ -73,28 +73,12 @@ fun EquipmentListScreen(
 
     val borrowableOptions = listOf("All", "Borrowable", "Lab Use Only")
 
-    val filteredEquipmentList = equipmentList.filter { equipment ->
-        val query = searchQuery.trim()
-        val matchesSearch =
-            query.isBlank() ||
-                    equipment.name.trim().contains(query, ignoreCase = true) ||
-                    equipment.description.trim().contains(query, ignoreCase = true) ||
-                    equipment.category.trim().contains(query, ignoreCase = true)
-
-        val matchesCategory =
-            selectedCategory == "All" ||
-                    equipment.category.equals(selectedCategory, ignoreCase = true)
-
-        val isActuallyBorrowable =
-            equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
-
-        val matchesBorrowableStatus = when (selectedBorrowableStatus) {
-            "Borrowable" -> isActuallyBorrowable
-            "Lab Use Only" -> !isActuallyBorrowable
-            else -> true
-        }
-        matchesSearch && matchesCategory && matchesBorrowableStatus
-    }
+    val filteredEquipmentList = filterEquipmentList(
+        equipmentList = equipmentList,
+        searchQuery = searchQuery,
+        selectedCategory = selectedCategory,
+        selectedBorrowableStatus = selectedBorrowableStatus
+    )
 
     val totalCount = equipmentList.size
     val availableCount = equipmentList.count { it.availableQuantity > 0 }
@@ -743,7 +727,37 @@ private fun EmptyEquipmentState(
         }
     }
 }
+private fun filterEquipmentList(
+    equipmentList: List<Equipment>,
+    searchQuery: String,
+    selectedCategory: String,
+    selectedBorrowableStatus: String
+): List<Equipment> {
+    val query = searchQuery.trim()
 
+    return equipmentList.filter { equipment ->
+        val matchesSearch =
+            query.isBlank() ||
+                    equipment.name.trim().contains(query, ignoreCase = true) ||
+                    equipment.description.trim().contains(query, ignoreCase = true) ||
+                    equipment.category.trim().contains(query, ignoreCase = true)
+
+        val matchesCategory =
+            selectedCategory == "All" ||
+                    equipment.category.equals(selectedCategory, ignoreCase = true)
+
+        val isActuallyBorrowable =
+            equipment.isBorrowable && equipment.borrowType != "LabUseOnly"
+
+        val matchesBorrowableStatus = when (selectedBorrowableStatus) {
+            "Borrowable" -> isActuallyBorrowable
+            "Lab Use Only" -> !isActuallyBorrowable
+            else -> true
+        }
+
+        matchesSearch && matchesCategory && matchesBorrowableStatus
+    }
+}
 private fun getStockStatus(
     available: Int,
     total: Int

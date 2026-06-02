@@ -156,13 +156,7 @@ fun ProfessionalStatusBadge(
     type: String,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, textColor) = when (type.trim().lowercase()) {
-        "success", "approved", "returned", "active", "available" -> Pair(SuccessLight, Success)
-        "warning", "pending", "low stock", "maintenance", "low" -> Pair(WarningLight, Warning)
-        "error", "rejected", "overdue", "problematic", "out of stock", "out", "damaged", "lost" -> Pair(ErrorLight, AppError)
-        "info" -> Pair(InfoLight, Info)
-        else -> Pair(BorderLight, TextSecondary)
-    }
+    val (bgColor, textColor) = getStatusBadgeColors(type)
 
     Box(
         modifier = modifier
@@ -396,13 +390,8 @@ fun NotificationCard(
     type: String,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, textColor) = when (type.lowercase()) {
-        "warning" -> Pair(WarningLight, Warning)
-        "error" -> Pair(ErrorLight, AppError)
-        "success" -> Pair(SuccessLight, Success)
-        else -> Pair(InfoLight, Info)
-    }
 
+    val (bgColor, textColor) = getNotificationCardColors(type)
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -447,5 +436,46 @@ fun AnimatedListItem(
                 )
     ) {
         content()
+    }
+}
+private fun getStatusBadgeColors(
+    type: String
+): Pair<Color, Color> {
+    return when (type.trim().lowercase()) {
+        "success",
+        "approved",
+        "returned",
+        "active",
+        "available" -> Pair(SuccessLight, Success)
+
+        "warning",
+        "pending",
+        "low stock",
+        "maintenance",
+        "low" -> Pair(WarningLight, Warning)
+
+        "error",
+        "rejected",
+        "overdue",
+        "problematic",
+        "out of stock",
+        "out",
+        "damaged",
+        "lost" -> Pair(ErrorLight, AppError)
+
+        "info" -> Pair(InfoLight, Info)
+
+        else -> Pair(BorderLight, TextSecondary)
+    }
+}
+
+private fun getNotificationCardColors(
+    type: String
+): Pair<Color, Color> {
+    return when (type.trim().lowercase()) {
+        "warning" -> Pair(WarningLight, Warning)
+        "error" -> Pair(ErrorLight, AppError)
+        "success" -> Pair(SuccessLight, Success)
+        else -> Pair(InfoLight, Info)
     }
 }

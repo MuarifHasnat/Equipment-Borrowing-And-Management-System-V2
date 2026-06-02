@@ -101,10 +101,25 @@ import com.example.equipmentborrowingapp.ui.admin.StudentBorrowHistoryReportScre
 import com.example.equipmentborrowingapp.ui.admin.BorrowRequestReportScreen
 import com.example.equipmentborrowingapp.ui.admin.LowStockReportScreen
 import com.example.equipmentborrowingapp.ui.admin.SoftwareIssueReportAdminScreen
-import com.example.equipmentborrowingapp.ui.screen.SplashScreen
 import com.example.equipmentborrowingapp.data.model.SoftwareInstallRequest
 import com.example.equipmentborrowingapp.ui.student.SoftwareInstallRequestScreen
 import com.example.equipmentborrowingapp.ui.admin.SoftwareInstallRequestsAdminScreen
+
+private const val ROLE_SUPER_ADMIN = "super_admin"
+private const val ROLE_ADMIN = "admin"
+private const val ROLE_STUDENT = "student"
+
+private const val STATUS_PENDING = "Pending"
+private const val STATUS_APPROVED = "Approved"
+private const val STATUS_REJECTED = "Rejected"
+private const val STATUS_ISSUED = "Issued"
+private const val STATUS_RETURNED = "Returned"
+private const val STATUS_OVERDUE = "Overdue"
+private const val STATUS_LOST = "Lost"
+private const val STATUS_DAMAGED = "Damaged"
+
+private const val BORROW_TYPE_LAB_USE_ONLY = "LabUseOnly"
+
 class MainActivity : ComponentActivity() {
 
     private val authRepository = AuthRepository()
@@ -202,21 +217,11 @@ class MainActivity : ComponentActivity() {
                             it.availableQuantity in 1..2
                         },
 
-                        pendingRequestsCount = adminAllRequests.count {
-                            it.status.equals("Pending", ignoreCase = true)
-                        },
-                        approvedRequestsCount = adminAllRequests.count {
-                            it.status.equals("Approved", ignoreCase = true)
-                        },
-                        issuedItemsCount = adminAllRequests.count {
-                            it.status.equals("Issued", ignoreCase = true)
-                        },
-                        returnedItemsCount = adminAllRequests.count {
-                            it.status.equals("Returned", ignoreCase = true)
-                        },
-                        overdueItemsCount = adminAllRequests.count {
-                            it.status.equals("Overdue", ignoreCase = true)
-                        },
+                        pendingRequestsCount = adminAllRequests.countByStatus(STATUS_PENDING),
+                        approvedRequestsCount = adminAllRequests.countByStatus(STATUS_APPROVED),
+                        issuedItemsCount = adminAllRequests.countByStatus(STATUS_ISSUED),
+                        returnedItemsCount = adminAllRequests.countByStatus(STATUS_RETURNED),
+                        overdueItemsCount = adminAllRequests.countByStatus(STATUS_OVERDUE),
 
                         pendingStudentsCount = studentList.count {
                             it.verificationStatus.equals("pending", ignoreCase = true)
@@ -260,9 +265,9 @@ class MainActivity : ComponentActivity() {
                     currentVerificationStatus = ""
                     currentAppUser = null
                 }
-                fun isSuperAdmin(): Boolean = currentUserRole == "super_admin"
-                fun isAdmin(): Boolean = currentUserRole == "admin"
-                fun isStudent(): Boolean = currentUserRole == "student"
+                fun isSuperAdmin(): Boolean = currentUserRole == ROLE_SUPER_ADMIN
+                fun isAdmin(): Boolean = currentUserRole == ROLE_ADMIN
+                fun isStudent(): Boolean = currentUserRole == ROLE_STUDENT
 
 // Auth helpers
 
@@ -316,7 +321,7 @@ class MainActivity : ComponentActivity() {
                             currentVerificationStatus = user.verificationStatus.trim().lowercase()
 
                             when (currentUserRole) {
-                                "super_admin", "admin", "student" -> {
+                                ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_STUDENT -> {
                                     onReady?.invoke()
                                 }
 
@@ -331,7 +336,7 @@ class MainActivity : ComponentActivity() {
                             notificationViewModel.startListening(
                                 institutionId = currentInstitutionId.trim(),
                                 userId = uid.trim(),
-                                role = currentUserRole ?: "student"
+                                role = currentUserRole ?: ROLE_STUDENT
                             )
                         }
                     }
@@ -600,15 +605,15 @@ class MainActivity : ComponentActivity() {
                 fun openDashboardAfterLogin() {
                     loadLoggedInUserRole {
                         when (currentUserRole) {
-                            "super_admin" -> {
+                            ROLE_SUPER_ADMIN -> {
                                 currentScreen = AppScreen.SuperAdminDashboard
                             }
 
-                            "student" -> {
+                            ROLE_STUDENT -> {
                                 currentScreen = AppScreen.StudentDashboard
                             }
 
-                            "admin" -> {
+                            ROLE_ADMIN -> {
                                 refreshAdminDashboardData(
                                     refreshPending = true,
                                     refreshApproved = true
@@ -1763,7 +1768,7 @@ class MainActivity : ComponentActivity() {
                                                     showMessage(UiMessages.EQUIPMENT_NOT_FOUND)
                                                 }
 
-                                                (!equipment.isBorrowable || equipment.borrowType == "LabUseOnly") -> {
+                                                (!equipment.isBorrowable || equipment.borrowType == BORROW_TYPE_LAB_USE_ONLY) -> {
                                                     showMessage("This equipment is lab-use-only")
                                                 }
 
@@ -2136,9 +2141,9 @@ class MainActivity : ComponentActivity() {
                     if (authRepository.isUserLoggedIn()) {
                         loadLoggedInUserRole {
                             currentScreen = when (currentUserRole) {
-                                "super_admin" -> AppScreen.SuperAdminDashboard
-                                "admin" -> AppScreen.AdminDashboard
-                                "student" -> AppScreen.StudentDashboard
+                                ROLE_SUPER_ADMIN -> AppScreen.SuperAdminDashboard
+                                ROLE_ADMIN -> AppScreen.AdminDashboard
+                                ROLE_STUDENT -> AppScreen.StudentDashboard
                                 else -> AppScreen.Login
                             }
                         }
@@ -2416,7 +2421,7 @@ class MainActivity : ComponentActivity() {
                                                 name = name,
                                                 email = email,
                                                 password = password,
-                                                role = "student",
+                                                role = ROLE_STUDENT,
                                                 institutionId = institutionId,
                                                 studentId = studentId,
                                                 department = department,
@@ -2638,7 +2643,7 @@ class MainActivity : ComponentActivity() {
                                         totalLabComputersCount = adminCounts.totalLabComputersCount,
                                         openSoftwareIssuesCount = adminCounts.openSoftwareIssuesCount,
                                         softwareInstallRequestsCount = softwareInstallRequestList.count {
-                                            it.status.equals("Pending", ignoreCase = true)
+                                            it.status.equals(STATUS_PENDING, ignoreCase = true)
                                         },
                                         hasUnreadNotifications = notificationViewModel.notificationList.any {
                                             !it.read
@@ -3037,10 +3042,7 @@ class MainActivity : ComponentActivity() {
                                         issuedItemsCount = adminCounts.issuedItemsCount,
                                         returnedItemsCount = adminCounts.returnedItemsCount,
                                         overdueItemsCount = adminCounts.overdueItemsCount,
-                                        lostDamagedItemsCount = adminAllRequests.count {
-                                            it.status.equals("Lost", ignoreCase = true) ||
-                                                    it.status.equals("Damaged", ignoreCase = true)
-                                        },
+                                        lostDamagedItemsCount = adminAllRequests.countLostOrDamaged(),
                                         lowStockCount = adminCounts.lowStockCount,
                                         softwareIssuesCount = softwareIssueReports.size,
 
@@ -3114,7 +3116,7 @@ class MainActivity : ComponentActivity() {
                                         title = "Pending Request Report",
                                         subtitle = "Borrow requests waiting for admin approval",
                                         requestList = adminAllRequests,
-                                        fixedStatus = "Pending",
+                                        fixedStatus = STATUS_PENDING,
                                         onBackClick = {
                                             currentScreen = AppScreen.ReportsDashboard
                                         }
@@ -3130,7 +3132,7 @@ class MainActivity : ComponentActivity() {
                                         title = "Approved Request Report",
                                         subtitle = "Approved requests waiting to be issued",
                                         requestList = adminAllRequests,
-                                        fixedStatus = "Approved",
+                                        fixedStatus = STATUS_APPROVED,
                                         onBackClick = {
                                             currentScreen = AppScreen.ReportsDashboard
                                         }
@@ -3146,7 +3148,7 @@ class MainActivity : ComponentActivity() {
                                         title = "Issued Item Report",
                                         subtitle = "Items currently issued to students",
                                         requestList = adminAllRequests,
-                                        fixedStatus = "Issued",
+                                        fixedStatus = STATUS_ISSUED,
                                         onBackClick = {
                                             currentScreen = AppScreen.ReportsDashboard
                                         }
@@ -3162,7 +3164,7 @@ class MainActivity : ComponentActivity() {
                                         title = "Returned Item Report",
                                         subtitle = "Completed returned borrow records",
                                         requestList = adminAllRequests,
-                                        fixedStatus = "Returned",
+                                        fixedStatus = STATUS_RETURNED,
                                         onBackClick = {
                                             currentScreen = AppScreen.ReportsDashboard
                                         }
@@ -3178,7 +3180,7 @@ class MainActivity : ComponentActivity() {
                                         title = "Overdue Item Report",
                                         subtitle = "Issued items that passed due date",
                                         requestList = adminAllRequests,
-                                        fixedStatus = "Overdue",
+                                        fixedStatus = STATUS_OVERDUE,
                                         onBackClick = {
                                             currentScreen = AppScreen.ReportsDashboard
                                         }
@@ -3565,5 +3567,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+}
+
+private fun List<BorrowRequest>.countByStatus(
+    status: String
+): Int {
+    return count { request ->
+        request.status.equals(status, ignoreCase = true)
+    }
+}
+
+private fun List<BorrowRequest>.countLostOrDamaged(): Int {
+    return count { request ->
+        request.status.equals(STATUS_LOST, ignoreCase = true) ||
+                request.status.equals(STATUS_DAMAGED, ignoreCase = true)
     }
 }

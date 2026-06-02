@@ -3,6 +3,8 @@ package com.example.equipmentborrowingapp.data.repository
 import com.example.equipmentborrowingapp.data.model.Institution
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.equipmentborrowingapp.data.model.InstitutionAdminRequest
+private const val INSTITUTIONS_COLLECTION = "institutions"
+private const val INSTITUTION_ADMIN_REQUESTS_COLLECTION = "institution_admin_requests"
 
 class InstitutionRepository {
 
@@ -31,7 +33,7 @@ class InstitutionRepository {
             return
         }
 
-        val docRef = firestore.collection("institution_admin_requests").document()
+        val docRef = firestore.collection(INSTITUTION_ADMIN_REQUESTS_COLLECTION).document()
 
         val request = mapOf(
             "id" to docRef.id,
@@ -81,7 +83,7 @@ class InstitutionRepository {
             return
         }
 
-        val docRef = firestore.collection("institutions")
+        val docRef = firestore.collection(INSTITUTIONS_COLLECTION)
             .document(normalizedInstitutionId)
 
         docRef.get()
@@ -117,7 +119,7 @@ class InstitutionRepository {
     fun getApprovedInstitutions(
         onResult: (List<Institution>) -> Unit
     ) {
-        firestore.collection("institutions")
+        firestore.collection(INSTITUTIONS_COLLECTION)
             .whereEqualTo("status", "Approved")
             .get()
             .addOnSuccessListener { result ->
@@ -137,7 +139,7 @@ class InstitutionRepository {
     fun getAllInstitutions(
         onResult: (List<Institution>) -> Unit
     ) {
-        firestore.collection("institutions")
+        firestore.collection(INSTITUTIONS_COLLECTION)
             .get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull { document ->
@@ -163,7 +165,7 @@ class InstitutionRepository {
             return
         }
 
-        firestore.collection("institutions")
+        firestore.collection(INSTITUTIONS_COLLECTION)
             .document(institutionId)
             .update("status", status)
             .addOnSuccessListener {
@@ -176,7 +178,7 @@ class InstitutionRepository {
     fun getInstitutionAdminRequests(
         onResult: (List<InstitutionAdminRequest>) -> Unit
     ) {
-        firestore.collection("institution_admin_requests")
+        firestore.collection(INSTITUTION_ADMIN_REQUESTS_COLLECTION)
             .get()
             .addOnSuccessListener { result ->
                 val list = result.documents.mapNotNull { document ->
@@ -202,7 +204,7 @@ class InstitutionRepository {
             return
         }
 
-        firestore.collection("institution_admin_requests")
+        firestore.collection(INSTITUTION_ADMIN_REQUESTS_COLLECTION)
             .document(requestId)
             .update(
                 mapOf(
