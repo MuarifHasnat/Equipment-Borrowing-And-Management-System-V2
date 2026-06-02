@@ -1,4 +1,4 @@
-# 📦 Equipment Borrowing and Management App
+# 📦 Equipment Borrowing and Lab Computer Software Tracking
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-1DA1F2?style=for-the-badge&logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
@@ -8,7 +8,7 @@
 ---
 
 ## 📖 Overview
-Equipment Borrowing And Management System is an Android application built with **Kotlin**, **Jetpack Compose**, and **Firebase** for managing equipment borrowing in an academic or lab environment.
+Equipment Borrowing and Lab Computer Software Tracking is an Android application built with **Kotlin**, **Jetpack Compose**, and **Firebase** for managing equipment borrowing in an academic or lab environment.
 
 The system supports two user roles:
 - 🎓 **Student**
@@ -76,36 +76,3 @@ com/example/equipmentborrowingapp/
 │   └── theme/
 ├── utils/
 └── screenshots/
-
-## 📱 App Screenshots
-
-### 🔑 Authentication
-| Splash Screen | Login | Register |
-|---------------|-------|----------|
-| ![Splash Screen](screenshots/Splash_Screen.jpg) | ![Login](screenshots/Login.jpg) | ![Register](screenshots/Register.jpg) |
-
----
-
-### 🎓 Student Features
-| Student Dashboard | Equipment List | Equipment Details |
-|-------------------|----------------|-------------------|
-| ![Student Dashboard](screenshots/Student_dashboard.jpg) | ![Equipment List](screenshots/Equipment_list.jpg) | ![Equipment Details](screenshots/Equipment_details.jpg) |
-
-| Borrow Request | Submit Request | My Requests |
-|----------------|----------------|-------------|
-| ![Borrow Request](screenshots/Borrow_request.jpg) | ![Submit Request](screenshots/Submit_request.jpg) | ![My Requests](screenshots/My_request.jpg) |
-
-| Room Selection | Report Software Issue |
-|----------------|------------------------|
-| ![Room Selection](screenshots/room_selection.jpg) | ![Software Issue](screenshots/software_issue.jpg) |
-
----
-
-### 🛠️ Admin Features
-| Admin Dashboard | Manage Equipment | Pending Requests |
-|-----------------|------------------|------------------|
-| ![Admin Dashboard](screenshots/admin_dashboard.jpg) | ![Manage Equipment](screenshots/manage_equipment.jpg) | ![Pending Requests](screenshots/pending_request.jpg) |
-
-| Lab Computers |
-|---------------|
-| ![Lab Computers](screenshots/Lab_computer.jpg) |
